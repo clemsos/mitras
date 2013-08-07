@@ -1,0 +1,20 @@
+{ 
+"dev":
+  { "driver":   "mongoose"
+  , "database": ""
+  }
+
+, "test":
+  { "driver":   "memory"
+  }
+
+, "redis":
+  { "driver":   "redis"
+    ,"port" :   ""
+    ,"host" :   ""
+  }
+, "prod":
+  { "driver":   "mongoose"
+  , "database": ""
+  }
+}

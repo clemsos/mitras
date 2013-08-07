@@ -1,0 +1,19 @@
+{
+    "twitter":{
+          "consumerKey":""
+        , "consumerSecret":""
+        , "redirectUrl" : ""
+    },
+    "weibo" : {
+          "appKey" : ""
+        , "appSecret" : ""
+        , "redirectUrl" : ""
+    },
+    "google" : {
+        "appKey" : "",
+        "appSecret" : ""
+    },
+    "alchemy" : {
+        "key" : ""
+    }
+}
