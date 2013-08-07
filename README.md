@@ -2,6 +2,8 @@
 
 Mitras is a SNA prototype developed for my phD thesis
 
+// Work in Progress : not ready to use yet
+
 ###  Purpose 
 The general idea is to see how individuals and communities react after a meme spread.
 
