@@ -11,7 +11,7 @@ class FileStorage():
             os.makedirs(self.path)
 
         self.info_f_path = os.path.join(self.path, "out",'info.txt')
-        self.info_f = open(self.info_f_path, 'w')
+        self.info_f = open(self.info_f_path, 'w+')
 
         self.users_f_path = os.path.join(self.path, "out",'users.txt')
         self.users_f = open(self.users_f_path, 'w+')
@@ -32,6 +32,7 @@ class FileStorage():
 
     def save_weibo(self, weibo):
         result = unicode(weibo['content'])
+        print json.dumps(weibo);
         if 'forward' in weibo:
             result += '// %s' % weibo['forward']
         self.weibo_f.write(result + ' ' + str(weibo['ts']) + '\n')

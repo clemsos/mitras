@@ -17,7 +17,7 @@ from parser import (
     CnWeiboParser,
     check_page_right,
 )
-from storage import FileStorage
+from mongostorage import FileStorage
 from log import logger
 
 def iterable(obj):
@@ -158,9 +158,9 @@ class UserCrawler():
         except Exception, e:
             logger.info('error when crawl: %s' % self.user)
             logger.exception(e)
-        finally:
-            if hasattr(self.storage, 'close'):
-                self.storage.close()
+        # finally:
+        #     if hasattr(self.storage, 'close'):
+        #         self.storage.close()
 
 
 class SearchCrawler():
@@ -202,7 +202,7 @@ class SearchCrawler():
                 600 * (tries - 2) if tries < 6 else 3600)
             time.sleep(sec)
             html = self.fetcher.fetch(url)
-            if not self._check_user_exist(html):
+            if not self._check_word_exist(html):
                 return
             right = check_page_right(html)
             if right:
@@ -272,7 +272,6 @@ class SearchCrawler():
 
         # Add to completes when finished
         self.storage.complete()
-
 
     def run(self):
         assert self.storage is not None

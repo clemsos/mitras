@@ -64,5 +64,5 @@ if __name__ == "__main__":
 
     uids = args.uids
     # print uids
-    crawlUsers(uids)
-    # crawlSearch(uids)
+    # crawlUsers(uids)
+    crawlSearch(uids)

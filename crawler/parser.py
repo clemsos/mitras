@@ -127,18 +127,79 @@ class CnWeiboParser(object):
             weibo = {}
             is_forward = True if len(divs) == 2 else False
             content = pq(divs[0]).children('span.ctt').text()
+            links=pq(divs[0]).children('span.ctt').find('a')
+            
+            quotes = []
+            hashtags = []
+            weblinks = []
+
+            # print unicode(content)
+            for l in links:
+                ltxt=pq(l).text()
+                # print ltxt
+                if u'@' in ltxt :
+                    quotes.append(ltxt)
+                elif u'#' in ltxt :
+                    hashtags.append(ltxt)
+                else: 
+                    weblinks.append(ltxt)
+            
+            print len(links)
+            if len(quotes)!=0:
+                weibo["quotes"]=quotes
+            if len(hashtags)!=0:
+                weibo["hashtags"]=hashtags
+            if len(weblinks)!=0:
+                weibo["links"]=weblinks
+
+
+            weibo['username']=pq(divs[0]).children('a.nk').text()
+            # weibo['userurl']=pq(divs[0]).children('a.nk').attrib('href')
             if is_forward:
-                weibo['forward'] = content
+                weibo['forward']= content
             else:
                 weibo['content'] = content
             if is_forward:
                 div = pq(divs[-1])
                 weibo['content'] = div.text().split(u'赞')[0].strip(u'转发理由:').strip()
+                
+                forward_links=pq(divs[0]).children('span.cmt').find('a')
+            
+                forward_quotes = []
+                forward_hashtags = []
+                forward_weblinks = []
+
+                # print unicode(content)
+                for l in forward_links:
+                    ltxt=pq(l).text()
+                    # print ltxt
+                    if u'@' in ltxt :
+                        print "quote"
+                        forward_quotes.append(ltxt)
+                    elif u'#' in ltxt :
+                        print "hashtag"
+                        forward_hashtags.append(ltxt)
+                    else: 
+                        print "link"
+                        forward_weblinks.append(ltxt)
+                
+                print len(links)
+                if len(forward_quotes)!=0:
+                    weibo["forward_quotes"]=forward_quotes
+                if len(forward_hashtags)!=0:
+                    weibo["forward_hashtags"]=forward_hashtags
+                if len(forward_weblinks)!=0:
+                    weibo["links"]=forward_weblinks
+                
             # get weibo's datetime
             dt_str = pq(divs[-1]).children('span.ct').text()
             if dt_str is not None:
                 dt_str = dt_str.replace('&nbsp;', ' ').split(u'来自', 1)[0].strip()
             weibo['ts'] = int(self.parse_datetime(dt_str))
+            
+            # weibo['mid'] = 
+            # weibo['username']="nick-name"
+
             self.storage.save_weibo(weibo)
 
         self.doc.find('div.c').each(_parse_weibo)

@@ -23,4 +23,3 @@ for t in terms: #extract the important words from the sentence
 #     print l.encode('utf-8')
 
 gkseg.destroy()
-
