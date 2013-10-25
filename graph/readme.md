@@ -24,7 +24,6 @@ Some important tips from http://aseemk.com/talks/neo4j-with-nodejs
 Using [Bulbs](http://bulbflow.com/) for Python
 
 
-
 ## Pandas
 
 [Pandas](http://pandas.pydata.org/) is a library to handle data frames in Python - like R does. Great also to deal with large files
@@ -39,3 +38,4 @@ Using [Bulbs](http://bulbflow.com/) for Python
     tar zxvf numpy-1.7.1.tar.gz && cd numpy-1.7.1/
     sudo python setup.py install
     pip install pandas
+
