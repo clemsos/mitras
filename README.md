@@ -9,7 +9,8 @@ This tool analyse data from Sina Weibo with following goals:
 
 * identify memes from randomly sampled data (using clustering /unsepervised learning) 
 * extract entities from Chinese text using Stanford NER
-* map relationships between entities and memes
+* extract active social graph (conversational graph)
+* visualize relationships between entities and memes
 
 
 ## Data
@@ -20,11 +21,40 @@ To create this project we will use the data provided by the project Weiboscope f
 	# to download the data
 	wget -r http://147.8.142.179/datazip/
 
-Other data source could be crawled using the [cola](https://github.com/chineking/cola) framework 
+Note : this data has been anonymized
 
+## Detect memes
 
-### Meme corpus
-Using clustering algorithm
+### Extract Protomemes 
+To detect memes in this large corpus, we design a clustering algorithm using the concept of protomeme as described in [Ferrara, 2013](http://www.emilio.ferrara.name/2013/08/01/clustering-memes-in-social-media/). Protomemes are minimum units contained in tweets :
 
-### Semantic corpus
-for each user, extract entities (places and topics) from his timeline 
+* hastag
+* urls
+* mentions/RT
+* text
+
+### Semantic Entities
+For each tweet, we can also extract entities using Stanford NER
+
+* Segmentation using Guokr's [segmentation tool](https://github.com/guokr/gkseg) and [corpus](https://github.com/guokr/corpus)
+* NER using Stanford Parser
+
+### Clustering 
+After building the general set of protomemes vectors, we can compute their cosine similiarity to build clusters. We can compute different aspects :
+
+* txt_similarity : TF-IDF vectors 
+* tweets_similarity : hashtags/urls vectors 
+* user_similarity : users vectors 
+* conversation_similarity : directed graph of the conversation
+* coord_similarity : coordinates (from Weibo geo lat,lon)
+* geo_similarity : geo (from NER entities)
+* topic_similarity : keywords (from NER entities)
+* people_similarity : people (from NER entities)
+
+## Computing clusters
+Once we have computed those different clusters, we can observe different ways for messages to create clusters i.e. memes. By using different combinations and parameters, we can therefore study how different aspects of similarity between messages and users can influence the constitution of different memes.
+
+## Visualization
+The visualization engine will show multi-layered navigation with different dimension for different similarity. We need to have pre-computed set of data to create powerful visualization.
+
+Viz engine will be developed in NodeJS, HTML5, ProcessingJS, d3.js, MapBox - using WebGL.
