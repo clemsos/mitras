@@ -2,15 +2,15 @@
 # -*- coding: utf-8 -*-
 
 from bulbs.model import Node, Relationship
-from bulbs.property import String, Integer, DateTime
+from bulbs.property import String, Integer, DateTime, Null
 from bulbs.utils import current_datetime
 
 class User(Node):
     element_type = "user"
     uid = Integer(nullable=False)
     name = String()
-    gender = Boolean() # Self-reported gender
-    verified = Boolean() # verified - VIP status ("V")
+    gender = String() # Self-reported gender
+    verified = Null() # verified - VIP status ("V")
 
 class isFromProvince(Relationship):
     #Self-reported province of origin
