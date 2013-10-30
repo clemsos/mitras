@@ -9,7 +9,7 @@ import json
 import pandas as pd
 import numpy as np
 import gkseg
-# import ner
+import ner
 
 ######################## 
 # IMPORT DATA
@@ -50,6 +50,9 @@ class Tweet:
         self.mentions=[]
         self.urls=[]
         self.hashtags=[]
+
+        self.keywords=[]  # keywords
+        self.tags=[] # NER entities
 
         # self.creationTime=rawTweet[0]
         self.id=rawTweet[1]
@@ -142,24 +145,43 @@ print tweets[1].to_JSON()
 print 'start NLP'
 
 gkseg.init('gkseg/data/model.txt')
+tagger = ner.SocketNER(host='localhost', port=1234)
 
-#segment the sentence into a list of words
 for t in tweets:
-    print t.txt
-    seg = gkseg.seg(t.txt)
-    # for s in seg: 
-    #     print s.encode('utf-8')
+
+    txt=t.txt.decode('utf-8')
+
+    #segment the sentence into a list of words
+    seg = gkseg.seg(txt)
 
     #extract the important words from the sentence
-    terms = gkseg.term(t.txt)
-    for term in terms: 
-        print term.encode('utf-8')
+    terms = gkseg.term(txt)
+    t.keywords=terms
+
+    # for term in terms: 
+    #     print term.encode('utf-8')
+
+    # prepare Chinese seg for ENR
+    seg_str =""
+    for s in seg: 
+        seg_str += s.encode('utf-8')+" "
+
+    # get all entities 
+    tags= tagger.get_entities(seg_str)
+    t.tags=tags
+    # for t in tags: 
+    #     print t.encode('utf-8')
 
 #label the sentence
 # labels = gkseg.label(text)
 # for l in labels: 
 #     print l.encode('utf-8')
 
+for t in tweets:
+    geo=t.tags.get("LOC")
+    if geo is not None:
+        for g in geo:
+            print g.encode('utf-8')
 
 ######################## 
 # Protomemes
