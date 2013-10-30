@@ -8,6 +8,8 @@ import pandas.io.sql as psql
 import json
 import pandas as pd
 import numpy as np
+import gkseg
+# import ner
 
 ######################## 
 # IMPORT DATA
@@ -93,7 +95,7 @@ class Tweet:
         return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True, indent=4)
 
 ######################## 
-# Detect Entities 
+# Detect Tweet Entities 
 ######################## 
 
 RTpattern =r"@([^:：,，\)\(（）|\\\s]+)"
@@ -132,6 +134,32 @@ print str(len(tweets))+" tweets processed"
 print "mentions:"+str(len(mentions))+ " urls:"+str(len(urls)) + " hashtags:"+str(len(hashtags))
 print "total entities found: " +str(len(mentions)+ len(urls) + len(hashtags))
 print tweets[1].to_JSON()
+
+
+######################## 
+# NLP
+######################## 
+print 'start NLP'
+
+gkseg.init('gkseg/data/model.txt')
+
+#segment the sentence into a list of words
+for t in tweets:
+    print t.txt
+    seg = gkseg.seg(t.txt)
+    # for s in seg: 
+    #     print s.encode('utf-8')
+
+    #extract the important words from the sentence
+    terms = gkseg.term(t.txt)
+    for term in terms: 
+        print term.encode('utf-8')
+
+#label the sentence
+# labels = gkseg.label(text)
+# for l in labels: 
+#     print l.encode('utf-8')
+
 
 ######################## 
 # Protomemes
@@ -220,20 +248,22 @@ def get_protomeme(entity):
     return 0 
 
 # create protomemes
-for t in tweets:
-    # print t.get_entities()
-    for entity in t.get_entities():
-        # check if protomeme exists
-        pm=get_protomeme(entity)
-        if(pm==0):
-            pm=Protomeme(entity)
-            pm.addTweet(t)
-            pm.save()
-        else:
-            pm.addTweet(t)
-            pm.save()
+def create_protomemes(tweets):
+    for t in tweets:
+        # print t.get_entities()
+        for entity in t.get_entities():
+            # check if protomeme exists
+            pm=get_protomeme(entity)
+            if(pm==0):
+                pm=Protomeme(entity)
+                pm.addTweet(t)
+                pm.save()
+            else:
+                pm.addTweet(t)
+                pm.save()
 
-print "total protomemes: " +str(len(proto["memes"]))
+    print "total protomemes: " +str(len(proto["memes"]))
+
 # for p in proto["memes"]:
 #     if len(p.tweets) > 3:
 #         print p.to_JSON()
