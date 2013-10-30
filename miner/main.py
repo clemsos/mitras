@@ -140,7 +140,8 @@ print tweets[1].to_JSON()
 
 
 ######################## 
-# NLP
+# NLP + NER
+# NER server should be up: see ner-server/
 ######################## 
 print 'start NLP'
 
@@ -172,16 +173,18 @@ for t in tweets:
     # for t in tags: 
     #     print t.encode('utf-8')
 
-#label the sentence
-# labels = gkseg.label(text)
+# label words in the the sentence
+# labels = gkseg.label(txt)
 # for l in labels: 
 #     print l.encode('utf-8')
 
-for t in tweets:
-    geo=t.tags.get("LOC")
-    if geo is not None:
-        for g in geo:
-            print g.encode('utf-8')
+# Display geo content
+# for t in tweets:
+#     geo=t.tags.get("LOC")
+#     if geo is not None:
+#         for g in geo:
+#             print g.encode('utf-8')
+
 
 ######################## 
 # Protomemes
