@@ -16,14 +16,19 @@ This tool analyse data from Sina Weibo with following goals:
 ## Data
 
 ### Tweet corpus 
-To create this project we will use the data provided by the project Weiboscope from HKU University - [link](http://147.8.142.179/datazip/)
+To create this project we will use the data provided by the project Weiboscope from HKU University - [link](http://147.8.142.179/datazip/). Note : this data has been anonymized
 
 	# to download the data
-	wget -r http://147.8.142.179/datazip/
+	wget -r http://147.8.142.179/datazip/ # 80+Go - take a while...
+	cd 147.8.142.179/datazip/
+	unzip *.zip
 
-Note : this data has been anonymized
+	# push data to mysql
+	cd [mitras]/data
+	bash data/data_csv_to_mysql.sh
 
-## Detect memes
+
+## Mining memes
 
 ### Extract Protomemes 
 To detect memes in this large corpus, we design a clustering algorithm using the concept of protomeme as described in [Ferrara, 2013](http://www.emilio.ferrara.name/2013/08/01/clustering-memes-in-social-media/). Protomemes are minimum units contained in tweets :
