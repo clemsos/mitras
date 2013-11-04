@@ -8,7 +8,7 @@ text = '【哈尔滨雾霾舆论数据分析】哈尔滨PM2.5爆表，微博讨�
 # http://weibo.com/2392261910/Afjg5e6bQ
 
 # init
-gkseg.init('gkseg/data/model.txt')
+gkseg.init('../miner/gkseg/data/model.txt')
 # for tagger to work, we need to launch Stanford NER Java socket server 
 tagger = ner.SocketNER(host='localhost', port=1234)
 

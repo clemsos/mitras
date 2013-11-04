@@ -19,7 +19,10 @@ This tool analyse data from Sina Weibo with following goals:
 To create this project we will use the data provided by the project Weiboscope from HKU University - [link](http://147.8.142.179/datazip/). Note : this data has been anonymized
 
 	# to download the data
-	wget -r http://147.8.142.179/datazip/ # 80+Go - take a while...
+	wget -r http://147.8.142.179/datazip/ 
+
+	#  Downloaded: 57 files, 18G in 6h 42m 3s (803 KB/s)
+
 	cd 147.8.142.179/datazip/
 	unzip *.zip
 

@@ -145,10 +145,12 @@ print tweets[1].to_JSON()
 ######################## 
 print 'start NLP'
 
-gkseg.init('gkseg/data/model.txt')
+gkseg.init('../miner/gkseg/data/model.txt')
 tagger = ner.SocketNER(host='localhost', port=1234)
 
 for t in tweets:
+
+    # 
 
     txt=t.txt.decode('utf-8')
 
