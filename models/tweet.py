@@ -1,31 +1,53 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from minimongo import Model, Index, configure
 import json
 
-class Tweet:
+# mongo db
+configure(host="localhost", port=27017)
+
+db_name="weibodata"
+
+class Tweet(Model):
+
+    class Meta:
+        # Here, we specify the database and collection names.
+        # A connection to your DB is automatically created.
+        database = db_name
+        collection = "week1"
+
+        # Now, we programatically declare what indices we want.
+        # The arguments to the Index constructor are identical to
+        # the args to pymongo"s ensure_index function.
+        # indices = (
+        #     Index("a"),
+        # )
+
     def __init__(self, rawTweet):
         
         self.mentions=[]
         self.urls=[]
         self.hashtags=[]
+        # self.keywords=[]  # keywords
+        self.entities=[] # NER entities
 
-        self.keywords=[]  # keywords
-        self.tags=[] # NER entities
 
-        self.clean=rawTweet[7] # txt without web entities for NLP
+        self.mid=rawTweet[0]
+        self.retweetFromPostId=rawTweet[1]
+        self.userId=rawTweet[2]
+        self.retweetFromUserId=rawTweet[3]
+        self.source=rawTweet[4]
+        self.hasImage=rawTweet[5]
 
-        self.mid=rawTweet[1]
-        self.retweetFromPostId=rawTweet[2]
-        self.userId=rawTweet[3]
-        self.retweetFromUserId=rawTweet[4]
-        self.source=rawTweet[5]
-        self.hasImage=rawTweet[6]
-        self.txt=rawTweet[7]
-        self.geo=rawTweet[8]
-        self.created_at=rawTweet[9]
-        self.deleted_last_seen=rawTweet[10]
-        self.permission_denied=rawTweet[11]
+        # self.clean=rawTweet[6] # txt without web entities for NLP
+        self.txt=rawTweet[6]
+
+        self.geo=rawTweet[7]
+        self.created_at=rawTweet[8]
+        self.deleted_last_seen=rawTweet[9]
+        self.permission_denied=rawTweet[10]
+
         # self.latitude=rawTweet[23]
         # self.longitude=rawTweet[24
 

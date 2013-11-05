@@ -12,34 +12,40 @@ import jieba.analyse
 ######################## 
 
 
-def init_NLP(): 
+stopwords_file="miner/stopwords/zh-stopwords"
 
-    print "init NLP toolkit"
-    tagger = ner.SocketNER(host='localhost', port=1234)
+class NLPMiner:
+    def __init__(self): 
 
-    # better support for traditional character
-    jieba.set_dictionary('dict/dict.txt.big')
+        print "init NLP toolkit"
+
+        self.tagger = ner.SocketNER(host='localhost', port=1234)
+
+        # parse list of stopwords
+        self.stoplist=[i.strip() for i in open(stopwords_file)]
+
+        # better support for traditional character
+        jieba.set_dictionary('miner/dict/dict.txt.big')
 
 
-def extract_keywords(txt):
-    tags = jieba.analyse.extract_tags(txt, 20)
-    return tags
+    def extract_keywords(self,txt):
+        tags = jieba.analyse.extract_tags(txt, 20)
+        # dico=extract_dictionary(txt)
+        # tags=remove_stopwords(txt)
+        return tags
 
-def extract_dictionary(txt):
-    seg_list = jieba.cut(txt, cut_all=False)  # 搜索引擎模式
-    # print ", ".join(seg_list)
-    return list(seg_list)
+    def extract_dictionary(self,txt):
+        seg_list = jieba.cut(txt, cut_all=False)  # 搜索引擎模式
+        # print ", ".join(seg_list)
+        return list(seg_list)
 
-def extract_named_entities(txt):
+    def remove_stopwords(self,txt):
+        txt_wo_stopwords=[w for w in txt if w.encode('utf-8') not in self.stoplist and w.encode('utf-8') !=" "]
+        return txt_wo_stopwords
 
-    #segment the sentence into a list of words
-    seg=jieba.cut(txt)
-    # print "Seg:", "/ ".join(seg)  # 全模式
-
-    # prepare Chinese seg for ENR
-    seg_str=" ".join(seg_txt)
-
-    # get all entities 
-    tags= tagger.get_entities(seg_str)
-
-    return tags
+    def extract_named_entities_from_dico(self,dico):
+        # prepare Chinese seg for ENR
+        seg_str=" ".join(dico)
+        # get all entities 
+        tags= self.tagger.get_entities(seg_str)
+        return tags

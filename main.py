@@ -5,8 +5,8 @@ import logging
 import MySQLdb
 from datetime import datetime
 
-import miner.tweet as minetweet
-import miner.nlp as nlp
+# import miner.tweet as minetweet
+# import miner.nlp as nlp
 # import miner.geo as geo
 
 from gensim import corpora, models, similarities
@@ -25,13 +25,6 @@ from sklearn.metrics.pairwise import cosine_similarity
 # SETTINGS
 ######################## 
 
-# data mysql DB
-db_name="test"
-db_user="miner"
-db_password="WmQNV465pWcqq8K8"
-db_table="sampleweibo"
-
-
 # graph DB
 graph_name="test"
 graph_password="secret"
@@ -41,109 +34,23 @@ graph_host=NEO4J_URI
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
 
 
-######################## 
-# VAR 
-######################## 
+''' 
+1. Prepare the Data 
+-----------------------
+ * Read CSV file
+ * Extract all entities
+ * Format properly
+ * Store to MongoDB
+'''
 
-# this should be changed to mongo!
-tweets=[]
+# see prepare.py
 
-# var for logging
-mentions_count=0
-urls_count=0
-hashtags_count=0
-tags_count=0
+''' 
+# CREATE PROTOMEMES
+# process the data
+'''
 
-
-######################## 
-# IMPORT DATA
-######################## 
-
-nbRecords=str(500)
-
-# connect to Mysql
-db = MySQLdb.connect(host="localhost", user=db_user, passwd=db_password,
-db=db_name)
-db.set_character_set('utf8')
-
-cursor = db.cursor()
-cursor.execute('SET NAMES utf8;')
-cursor.execute('SET CHARACTER SET utf8;')
-cursor.execute('SET character_set_connection=utf8;')
-
-# execute SQL select statement
-statement="SELECT * FROM  "+'`'+db_table+'`'+" LIMIT 0 ," +nbRecords
-cursor.execute(statement)
-
-# commit your changes
-db.commit()
-
-# get the number of rows in the resultset
-numrows = int(cursor.rowcount)
-
-######################## 
-# PROCESS DATA
-######################## 
-
-# miner.init_NLP()
-
-# Create and process all tweets
-for x in range(0,numrows):
-    
-    # one row at a time
-    row = cursor.fetchone()
-
-    # create Tweet object
-    t=Tweet(row)
-    
-    # extract tweet entities
-    mentions,urls,hashtags,clean=minetweet.extract_tweet_entities(t.txt)
-    
-    # add to Tweet
-    t.mentions=mentions
-    t.urls=urls
-    t.hashtags=hashtags
-    t.clean=clean # text-only version of the tweet for NLP
-
-    # some count
-    mentions_count+=len(mentions)
-    urls_count+=len(urls)
-    hashtags_count+=len(hashtags)
-
-    # Extract Keywords 
-    t.keywords=[]
-    # t.keywords=nlp.extract_keywords(t.txt)
-    # print ",".join(t.keywords)
-    
-    # NER Named Entities Recognition
-    # t.tags=nlp.extract_named_entities(t.txt.decode('utf-8'))
-    # tags_count+=len(t.tags) # count entities
-
-
-    # Geocode LOC entities
-    # loc_count=0
-    # for t in tweets:
-    #     loc=t.get_loc_entities()
-    #     if loc is not None :
-    #         for l in loc:
-    #             print geo.geocode(l)
-    #         loc_count+=len(loc)
-
-    # print str(loc_count) + " LOC entities"
-
-
-    # TODO : add clean data to MONGOdb
-    tweets.append(t)
-
-
-# LOG
-# print "tweets processed          : "+str(len(tweets))
-# print "mentions_count            : "+str(mentions_count)
-# print "urls_count                : "+str(urls_count)
-# print "hashtags_count            : "+str(hashtags_count)
-# print "TOTAL tweet entities      : "+str(mentions_count+urls_count+hashtags_count)
-# print "TOTAL named entities (NER): "+ str(tags_count)
-
+# request mongo
 
 
 ###################
@@ -151,9 +58,6 @@ for x in range(0,numrows):
 ##################
 
 stop_tweets=["转发微博","轉發微博","分享图片"]
-
-stopwords_file="miner/stopwords/zh-stopwords"
-stoplist=[i.strip() for i in open(stopwords_file)]
 
 
 texts=[]
