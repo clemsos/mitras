@@ -26,7 +26,7 @@ class Protomeme(Model):
 
     def __init__(self):
 
-        self.valid_types=['hashtag','mention','url','phrase','geo']
+        self.valid_types=['hashtags','mentions','urls','txt','entities']
 
         # description
         self.desc={}
@@ -75,20 +75,25 @@ class Protomeme(Model):
         print "txt      :"+stats["txt"]
         print "entities :"+stats["entities"]
 
-
     def get_query(self):
 
         # check if type has been setup
         if self.desc.type == "" :
             raise ValueError('Protomeme type should be setup first')
 
-        # process queries by case
-        if self.desc.type == 'hashtag':
-            return { "hashtags":  self.desc.content }
-        elif self.desc.type == "mention":
-            return { "mentions":  self.desc.content }
-        else :
+        if self.desc.type=="geo" or self.desc.type=="txt":
             raise Exception('Not implemented yet...')
+        else:
+            return { self.desc.type:  self.desc.content }
+
+        # process queries by case
+        # if self.desc.type == 'hashtags':
+        # elif self.desc.type == "mentions":
+        #     return { "mentions":  self.desc.content }
+        # elif self.desc.type == "urls":
+        #     return { "urls":  self.desc.content }
+
+        # else :
 
 
     def add_tweet(self,_tweet):

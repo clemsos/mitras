@@ -9,7 +9,7 @@ import io, json
 
 # Variables
 collection="week1"  
-proto_count=10
+proto_count=0 # number of protomemes to extract. Use zero to process all
 
 # Connect to Mongo
 db=MongoDB("weibodata").db
@@ -18,6 +18,7 @@ tweets_count=data.count()
 print 10*"-"
 print str(tweets_count)+" tweets in the db"
 
+Protomeme
 def create_protomemes_list(_type,_nb_items):
     
     # measure time
@@ -63,13 +64,20 @@ def create_protomeme(_type, _content):
     
     # Find all elements in db
     query= proto.get_query() # get query based on protomeme type
+    print query 
     tweets= list(data.find(query).limit(tweets_count)) 
 
     # add each tweet info to protomeme
     for tweet in tweets:
-        proto.users.append(tweet['userId']) # users
         proto.tweets.append(tweet['mid'])   # messages
         proto.txt.append(tweet['dico'])  # text
+        
+        proto.users.append(tweet['userId']) # users
+        
+        # add mentions
+        for m in tweet['mentions']:
+            proto.users.append(m) # users
+
         # TODO : add RT/mentions graph
         # proto.tweets.append(tweet['graph'])  # graph
 
@@ -77,7 +85,7 @@ def create_protomeme(_type, _content):
     proto.save()
 
     # return basic info about the protomemes
-    # proto.print_description()
+    proto.print_description()
     return proto.get_description()
 
 def write_to_JSON_file(_data,_file):
@@ -102,7 +110,7 @@ def create_protomemes(_type,_count):
     results=[] # store logs
 
     for h in proto_list:
-        proto_stats=create_protomeme("hashtag",h)
+        proto_stats=create_protomeme(_type,h)
         results.append(proto_stats)
 
     # measure time
@@ -116,4 +124,13 @@ def create_protomemes(_type,_count):
     write_to_JSON_file(results,log_file)
     print "results stored in file : "+log_file
 
-create_protomemes("mentions",proto_count)
+# Compute protomemes for each type
+# Protomeme.valid_types=['hashtags','mentions','urls','phrases','entities']
+
+create_protomemes("hashtags",proto_count)
+# create_protomemes("mentions",proto_count)
+# create_protomemes("urls",proto_count)
+
+# TODO
+# create_protomemes("txt",proto_count)
+# create_protomemes("entities",proto_count)
