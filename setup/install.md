@@ -134,3 +134,35 @@ Then you can deploy
 
 Fill the config files with your db information and API credentials
 
+## Install NEO4J
+
+Install as a service
+    
+    # get java
+    sudo apt-get install openjdk-6-jre-headless
+
+    #get latest release
+    curl -O http://dist.neo4j.org/neo4j-community-1.9.2-unix.tar.gz
+    tar -xf neo4j-community-*.tar.gz
+    rm neo4j-community-*.tar.gz
+    
+    # test it
+    neo4j-community-1.9.2/bin/neo4j start
+    neo4j-community-1.9.2/bin/neo4j stop
+
+    # Install as a service
+
+    # add path 
+    export NEO4J_HOME=/home/clemsos/Softwares/neo4j-community-1.9.2 >> ~/.bashrc
+
+    # install
+    sudo neo4j-community-1.9.2/bin/neo4j install
+
+    # now you can do
+    sudo service neo4j-service start
+
+
+
+
+
+http://www.genericarticles.com/mediawiki/index.php?title=Installing_Neo4j_in_Linux#As_a_Linux_Service

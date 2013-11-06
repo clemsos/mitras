@@ -54,7 +54,6 @@ logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=lo
 # Request mongo
 
 
-
 ###################
 # COMPUTE TF-IDF
 ##################
