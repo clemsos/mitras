@@ -11,8 +11,8 @@ import jieba.analyse
 # NER server should be up: ../see ner-server/
 ######################## 
 
-
-stopwords_file="miner/stopwords/zh-stopwords"
+# TODO : change to relative URL
+stopwords_file="lib/stopwords/zh-stopwords"
 
 class NLPMiner:
     def __init__(self): 
@@ -25,7 +25,8 @@ class NLPMiner:
         self.stoplist=[i.strip() for i in open(stopwords_file)]
 
         # better support for traditional character
-        jieba.set_dictionary('miner/dict/dict.txt.big')
+        # TODO : change to relative URL
+        jieba.set_dictionary('lib/dict/dict.txt.big')
 
 
     def extract_keywords(self,txt):

@@ -8,8 +8,8 @@ Output : mongo db
 '''
 
 from models.tweet import Tweet # Connect to mongo
-import miner.tweetminer as minetweet
-from miner.nlp import NLPMiner
+import lib.tweetminer as minetweet
+from lib.nlp import NLPMiner
 from minimongo import configure
 import timeit
 import csv
