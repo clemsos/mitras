@@ -6,7 +6,6 @@ import json
 
 # mongo db
 configure(host="localhost", port=27017)
-
 db_name="weibodata"
 
 class Tweet(Model):
@@ -24,30 +23,29 @@ class Tweet(Model):
         #     Index("a"),
         # )
 
-    def __init__(self, rawTweet):
+    def __init__(self):
         
         self.mentions=[]
         self.urls=[]
         self.hashtags=[]
-        # self.keywords=[]  # keywords
         self.entities=[] # NER entities
 
+        # self.row=0 # store csv row
 
-        self.mid=rawTweet[0]
-        self.retweetFromPostId=rawTweet[1]
-        self.userId=rawTweet[2]
-        self.retweetFromUserId=rawTweet[3]
-        self.source=rawTweet[4]
-        self.hasImage=rawTweet[5]
+        # self.mid=rawTweet[0]
+        # self.retweetFromPostId=rawTweet[1]
+        # self.userId=rawTweet[2]
+        # self.retweetFromUserId=rawTweet[3]
+        # self.source=rawTweet[4]
+        # self.hasImage=rawTweet[5]
+        # self.txt=rawTweet[6]
+        # self.geo=rawTweet[7]
+        # self.created_at=rawTweet[8]
+        # self.deleted_last_seen=rawTweet[9]
+        # self.permission_denied=rawTweet[10]
 
         # self.clean=rawTweet[6] # txt without web entities for NLP
-        self.txt=rawTweet[6]
-
-        self.geo=rawTweet[7]
-        self.created_at=rawTweet[8]
-        self.deleted_last_seen=rawTweet[9]
-        self.permission_denied=rawTweet[10]
-
+        
         # self.latitude=rawTweet[23]
         # self.longitude=rawTweet[24
 

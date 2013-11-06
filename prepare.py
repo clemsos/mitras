@@ -54,7 +54,20 @@ with open(csv_file, 'r') as f:
         # progress_bar(tweets_count)
 
         # create Tweet object
-        t=Tweet(row)
+        t=Tweet()
+
+        # Populate Tweet
+        t.mid=row[0]
+        t.retweetFromPostId=row[1]
+        t.userId=row[2]
+        t.retweetFromUserId=row[3]
+        t.source=row[4]
+        t.hasImage=row[5]
+        t.txt=row[6]
+        t.geo=row[7]
+        t.created_at=row[8]
+        t.deleted_last_seen=row[9]
+        t.permission_denied=row[10]
 
         # Extract tweet entities
         mentions,urls,hashtags,clean=minetweet.extract_tweet_entities(t.txt)
