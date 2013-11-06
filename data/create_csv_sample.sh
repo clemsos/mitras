@@ -1,2 +1,12 @@
 #!/bin/bash
-head -n5000 ~/Data/HKU/weiboscope/week1.csv > sampleweibo.csv
+die () {
+    echo >&2 "$@"
+    exit 1
+}
+
+[ "$#" -eq 1 ] || die "1 argument required, $# provided"
+
+f=~/Data/HKU/weiboscope/week1.csv
+
+echo "Creating a sample from ${f} of ${1} lines "
+head -n${1} ${f} > sampleweibo.csv

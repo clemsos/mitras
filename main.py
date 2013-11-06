@@ -46,11 +46,13 @@ logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=lo
 # see prepare.py
 
 ''' 
-# CREATE PROTOMEMES
-# process the data
+2. Create Protomemes
+* process the data
+* 
 '''
 
-# request mongo
+# Request mongo
+
 
 
 ###################
@@ -59,8 +61,8 @@ logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=lo
 
 stop_tweets=["转发微博","轉發微博","分享图片"]
 
-
 texts=[]
+
 for t in tweets:
     doc=t.clean
     # prevent common tweets from being added

@@ -30,6 +30,16 @@ def init_tweet_regex():
 # init 
 regHash, regRT, regURL = init_tweet_regex()
 
+
+def sanitize_url(url):
+    valid_utf8 = True
+    try:
+        url.decode('utf-8')
+    except UnicodeDecodeError:
+        valid_utf8 = False
+        return url[:-1]
+    return url
+
 def extract_tweet_entities(txt):
     
     mentions=[]
@@ -50,7 +60,8 @@ def extract_tweet_entities(txt):
     for url in regURL.findall(txt):
         if url[0][0] == "h":
             # all urls follow the same pattern http://t.cn/aE5XRc (18 characters)
-            urls.append(url[0][0:18]) 
+            u=sanitize_url(url[0][0:18])
+            urls.append(u) 
         # t.urls.append(url[0])
         clean=clean.replace(url[0][0:18],"")
 
@@ -61,6 +72,3 @@ def extract_tweet_entities(txt):
         clean=clean.replace(h,"")
 
     return mentions,urls,hashtags,clean
-
-
-

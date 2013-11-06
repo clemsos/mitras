@@ -13,13 +13,13 @@ from miner.nlp import NLPMiner
 from minimongo import configure
 import timeit
 import csv
-
-# from pprint import pprint
+from pprint import pprint
+import bson
 
 # SETTINGS
 nbRecords=str(500)
-csv_file="data/sampleweibo.csv"
-# csv_file="/home/clemsos/Data/HKU/weiboscope/week1.csv"
+# csv_file="data/sampleweibo.csv"
+csv_file="/home/clemsos/Data/HKU/weiboscope/week1.csv"
 
 
 # LOGGING
@@ -40,6 +40,7 @@ def progress_bar(progress):
 # PROCESS all tweets in csv file
 nlp=NLPMiner()
 
+i=1 # iteroator to remember row number on csv
 with open(csv_file, 'r') as f:
 
     print 'processing data...'
@@ -71,6 +72,7 @@ with open(csv_file, 'r') as f:
         t.dico=nlp.remove_stopwords(dico)
 
         # extract entities
+        # TODO : ignore stopwords
         t.entities=nlp.extract_named_entities_from_dico(t.dico)
         
         # Some count for stats
@@ -79,18 +81,27 @@ with open(csv_file, 'r') as f:
         hashtags_count+=len(hashtags)
         tags_count+=len(t.entities)
 
-        
+        t.row=i
+
         valid_utf8 = True
         try:
             t.txt.decode('utf-8')
         except UnicodeDecodeError:
             unvalid_tweets+=1
             valid_utf8 = False
-            # pprint(t)
+            print 'Tweet not utf-8 compatible'
+            pprint(t)
         
+
         if valid_utf8 is True:
-            t.save()
-            tweets_count+=1
+            try:
+                t.save()
+                tweets_count+=1
+            except bson.errors.InvalidStringData:
+                print 'URL not utf-8 compatible'
+                pprint(t)
+
+
         
 
 stop = timeit.default_timer()

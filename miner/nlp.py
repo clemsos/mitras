@@ -45,6 +45,7 @@ class NLPMiner:
 
     def extract_named_entities_from_dico(self,dico):
         # prepare Chinese seg for ENR
+        # TODO : remove punctuation / stopwords ".","[","]",etc.
         seg_str=" ".join(dico)
         # get all entities 
         tags= self.tagger.get_entities(seg_str)
