@@ -48,10 +48,12 @@ logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=lo
 ''' 
 2. Create Protomemes
 * process the data
-* 
+* store protomemes to mongo
 '''
 
-# Request mongo
+# see create_corpus.py
+
+
 
 
 ###################

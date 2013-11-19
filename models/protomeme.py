@@ -95,7 +95,6 @@ class Protomeme(Model):
 
         # else :
 
-
     def add_tweet(self,_tweet):
     	self.tweets.append(_tweet)
 
