@@ -19,9 +19,14 @@ class Tweet(Model):
         # Now, we programatically declare what indices we want.
         # The arguments to the Index constructor are identical to
         # the args to pymongo"s ensure_index function.
-        # indices = (
-        #     Index("a"),
-        # )
+        # TODO : indexes have not been tested
+        indices = (
+            # Index("mid"),
+            # Index("mid"),
+            Index("hashtags"),
+            Index("urls")
+            Index("mentions")
+        )
 
     def __init__(self):
         

@@ -38,6 +38,7 @@ class Protomeme(Model):
         self.users=[]
         self.txt=[]
         self.entities=[]
+        self.diffusion=[]
 
         # print "protomeme created"
     
