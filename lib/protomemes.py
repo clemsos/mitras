@@ -21,8 +21,8 @@ print 10*"-"
 # Protomeme.valid_types=['hashtags','mentions','urls','phrases','entities']
 
 # Mongo
-def get_protomemes(_type, _collection):
-    print 'Getting ' + _type + ' data as protomemes'
+def get_protomemes(_type, _count, _collection):
+    print 'Getting ' + _type + ' protomemes...'
 
     t0=time()
 
@@ -36,7 +36,7 @@ def get_protomemes(_type, _collection):
             "dico" :1
             }
         },
-        { "$limit" : 10000 },
+        { "$limit" : _count },
         { "$unwind" : "$"+_type } ,
         { "$unwind" : "$mentions"}, 
         { "$unwind" : "$dico"}, 
@@ -57,19 +57,37 @@ def get_protomemes(_type, _collection):
 
 
     t1=time()-t0
-    if q["ok"] == 1.0 :
-        print "Data was extracted succesfully"
-    print _type +" :  %d results" % len(q["result"])
-    print " done in %fs" % (time() - t0)
+    
+    print " Data was extracted succesfully in %fs" % (time() - t0)
+    print " "+_type +" count :  %d results" % len(q["result"])
     # print " Matrix : n_samples: %d, n_features: %d" % tfidf_matrix.shape
     print
 
-    return q["result"]
+    # get protomemes data
+    protomemes = q["result"]
+    print 'Computing diffusion graph vector'
+    t1=time()-t0
+    for p in protomemes:
+        count=len(p["poster"])
+        p["diffusion"]=[]
 
-hashtags_proto= get_protomemes("hashtags",collection)
+        for i in range(count):
+            if p["poster"][i] != '':
+                p["diffusion"].append(p["poster"][i]) 
+            if p["mentions"][i] != '':
+                p["diffusion"].append(p["mentions"][i]) 
+            if p["rts"][i] != "":
+                p["diffusion"].append(p["rts"][i]) 
 
-# compute graph 
-# hashtags_proto
+    print " done in %fs" % (time() - t0)
+    print
+    # print protomemes[0]["diffusion"]
+    # print protomemes
+    return protomemes
+
+# hashtags_proto= get_protomemes("hashtags",collection)
+
+# compute graph
 
 
 

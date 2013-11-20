@@ -57,8 +57,6 @@ print "spread_matrix:%d " % len(matrix["spread"])
 #     print matrix_indexes[MAX]
 
 
-
-
 # linear combination of similarity measures,
 wt = 0.0
 wc = 0.7 

@@ -16,7 +16,7 @@ port = 27017
 class MongoDB:
 
     def __init__(self, db):
-        print """Connecting to MongoDB """
+        print """Connecting to MongoDB... """
 
         try:
             # connect to mongo
@@ -25,6 +25,7 @@ class MongoDB:
             # connect to db
             self.db = self.connection[db]
             print "Connected successfully MongoDB at %s:%s" %(host, str(port))
+            print 
 
         except ConnectionFailure, e:
             sys.stderr.write("Could not connect to MongoDB: %s" % e)
