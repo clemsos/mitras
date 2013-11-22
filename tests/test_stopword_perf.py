@@ -100,7 +100,7 @@ def main():
     number = 10000
  
     stop_file_zh="miner/stopwords/zh-stopwords"
-    user_input=[str(i) for i in open("miner/test_corpus.txt")]
+    user_input=[str(i) for i in open("corpus.txt")]
     # print corpus
 
     # stop_words = ['the', 'that', 'to', 'as', 'there', 'has', 'and', 'or', 'is', 'not', 'a', 'of', 'but', 'in', 'by', 'on', 'are', 'it', 'if']
