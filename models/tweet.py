@@ -6,7 +6,7 @@ import json
 
 # mongo db
 configure(host="localhost", port=27017)
-db_name="weibodata"
+db_name="test"
 
 class Tweet(Model):
 
@@ -14,17 +14,17 @@ class Tweet(Model):
         # Here, we specify the database and collection names.
         # A connection to your DB is automatically created.
         database = db_name
-        collection = "week1"
+        collection = "tweets"
 
         # Now, we programatically declare what indices we want.
         # The arguments to the Index constructor are identical to
         # the args to pymongo"s ensure_index function.
-        # TODO : indexes have not been tested
+        # TODO : add indexes 
         indices = (
             # Index("mid"),
-            # Index("mid"),
+            Index("mid"),
             Index("hashtags"),
-            Index("urls")
+            Index("urls"),
             Index("mentions")
         )
 

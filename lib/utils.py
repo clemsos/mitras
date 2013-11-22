@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+def progress_bar(progress):
+    print '\r[{0}] {1}'.format('#'*(progress/10), progress)
 
 def slugify(value):
     import unicodedata

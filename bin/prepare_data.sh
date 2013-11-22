@@ -5,11 +5,6 @@ die () {
     exit 1
 }
 
-[ "$#" -eq 1 ] || die "1 argument required, $# provided"
-
-# test extension 
-if test ${1##*.} != "csv"; then die "Invalid file extension. File should be csv"; fi
-
 # get current dir for script
 CUR="${BASH_SOURCE[0]}";
 if([ -h "${CUR}" ]) then
@@ -20,5 +15,28 @@ cd `dirname ${CUR}` > /dev/null
 CUR=`pwd`;
 popd  > /dev/null
 
+
+# define directory containing CSV files
+_csv_directory="`dirname ${CUR}`/data"
+
+# go into directory
+cd $_csv_directory
+
+# get a list of CSV files in directory
+_csv_files=`ls -1 *.csv`
+
+
+# loop through csv files
+for _csv_file in ${_csv_files[@]}
+do
+
+    python `dirname ${CUR}`/prepare.py $_csv_file
+
+done
+exit
+
+# find  data/datazip/ -name week*.csv
+# test extension 
+# if test ${1##*.} != "csv"; then die "Invalid file extension. File should be .csv"; fi
+
 # launch script
-python `dirname ${CUR}`/prepare.py $1

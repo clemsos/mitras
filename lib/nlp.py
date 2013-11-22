@@ -4,15 +4,17 @@
 import ner
 import jieba # import mmseg
 import jieba.analyse
-
+from os import path
 
 ######################## 
 # NLP + NER
 # NER server should be up: ../see ner-server/
 ######################## 
 
-# TODO : change to relative URL
-stopwords_file="lib/stopwords/zh-stopwords"
+# set relative URLs
+here=path.dirname(path.dirname(path.abspath(__file__)))
+stopwords_file=here+"/lib/stopwords/zh-stopwords"
+dico_file=here+'/lib/dict/dict.txt.big'
 
 class NLPMiner:
     def __init__(self): 
@@ -25,9 +27,7 @@ class NLPMiner:
         self.stoplist=[i.strip() for i in open(stopwords_file)]
 
         # better support for traditional character
-        # TODO : change to relative URL
-        jieba.set_dictionary('lib/dict/dict.txt.big')
-
+        jieba.set_dictionary(dico_file)
 
     def extract_keywords(self,txt):
         tags = jieba.analyse.extract_tags(txt, 20)
