@@ -5,7 +5,6 @@
 from gensim import corpora, models, similarities
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.feature_extraction import DictVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
 
 from time import time
