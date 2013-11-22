@@ -1,210 +1,146 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-
-from lib.mongo import MongoDB
 from time import time
-import io, json
-
-# Variables
-collection="week1"  
-proto_count=10000 # number of tweets to process. Use zero to process all
+from bson.code import Code
+from lib.mongo import MongoDB
 
 # Connect to Mongo
 db=MongoDB("weibodata").db
-data=db[collection]
-tweets_count=data.count()
-print
-print str(tweets_count)+" tweets in the db"
-print 10*"-"
 
-# Compute protomemes for each type
-# Protomeme.valid_types=['hashtags','mentions','urls','phrases','entities']
+# valid protomemes
+valid_types =["hashtags","mentions","urls","phrase"]
 
-# Mongo
-def get_protomemes(_type, _count, _collection):
-    print 'Getting ' + _type + ' protomemes...'
+def build_corpus(_type, _collection, _count, _destination):
+    """
+    Compute protomemes from tweets using MongoDB map reduce function
+    see js files for details
 
-    t0=time()
+    # Usage
+    _type           String : should be a valid type of protomemes (see valid_types)
+    _collection     String : is the mongo db source 
+    _count          Int : number of tweets to process
+    _destination    * String: name of the db to store results
+                    * None  : return results as a dict
 
-    pipeline = [
-        { "$project" : { 
-            _type : 1,
-            "mid" : 1,
-            "userId" : 1,
-            "mentions" : 1,
-            "retweetFromUserId" : 1,
-            "dico" :1
-            }
-        },
-        { "$limit" : _count },
-        { "$unwind" : "$"+_type } ,
-        { "$unwind" : "$mentions"}, 
-        { "$unwind" : "$dico"}, 
-        { "$group" : {
-            "_id"       : "$"+_type, 
-            "count"     : { "$sum" : 1 } ,         # tweets count
-            "tweets"    : { "$addToSet" : "$mid"}, # tweet Ids
-            "txt"       : { "$push" : "$dico"},
-            "users"     : { "$addToSet" : "$userId"}, # unique Ids    
-            "poster"    : { "$push" : "$userId"},
-            "mentions"  : { "$push" : "$mentions"},
-            "rts"       : { "$push" : "$retweetFromUserId"}
-            } 
-        }
-    ]
-
-    q = db.command('aggregate', _collection, pipeline=pipeline )
-
-
-    t1=time()-t0
+    """
     
-    print " Data was extracted succesfully in %fs" % (time() - t0)
-    print " "+_type +" count :  %d results" % len(q["result"])
-    # print " Matrix : n_samples: %d, n_features: %d" % tfidf_matrix.shape
-    print
+    # check protomemes
+    if _type not in valid_types:
+        raise TypeError('Wrong type for protomemes. Valid types are :', valid_types)
 
-    # get protomemes data
-    protomemes = q["result"]
-    print 'Computing diffusion graph vector'
+    print "Processing %s"%_type
+    print " starting map reduce on %d records" % _count
+    t0 =time()
+
+    # Load map and reduce function from js files
+    mapjs=open("/home/clemsos/Dev/mitras/lib/mapreduce/map.js", "r").read()
+    reducejs=open("/home/clemsos/Dev/mitras/lib/mapreduce/reduce.js", "r").read()
+
+    
+    # compile JS code
+    mapper = Code(mapjs.replace("TO_BE_CHANGED", _type)) # apply type to js map file
+    reducer = Code(reducejs)
+
+    # print mapper
+
     t1=time()-t0
-    for p in protomemes:
-        count=len(p["poster"])
-        p["diffusion"]=[]
 
-        for i in range(count):
-            if p["poster"][i] != '':
-                p["diffusion"].append(p["poster"][i]) 
-            if p["mentions"][i] != '':
-                p["diffusion"].append(p["mentions"][i]) 
-            if p["rts"][i] != "":
-                p["diffusion"].append(p["rts"][i]) 
+    if _destination == None :
+        result = db[_collection].inline_map_reduce( mapper, reducer, limit=_count)
+        return result
+    else :
+        result = db[_collection].map_reduce( mapper, reducer, _destination, limit=_count)
 
+
+    print " %d new protomemes extracted" % result.count()
+    print " stored in collection : %s " % db[_destination]
     print " done in %fs" % (time() - t0)
+    print "-"*12
     print
-    # print protomemes[0]["diffusion"]
-    # print protomemes
-    return protomemes
-
-# hashtags_proto= get_protomemes("hashtags",collection)
-
-# compute graph
 
 
+def get_protomemes(_type, _count):
+    """
+    Return formatted protomemes from the db as a list
+    _type   : None, get a mix of all types
+            : String, should be a valid type (see valid_types)
+    _count  : Int
 
-# get_protomemes("urls",collection)
+    """
 
-# get_protomemes("hashtags")
-# get_protomemes("mentions")
+    pm_count=_count
 
-# TODO
-# create_protomemes("txt",proto_count)
-# create_protomemes("entities",proto_count)
-
-
-
-###############################################################
-#USELESS
-'''
-def create_protomeme(_type, _content):
-    
-    # create protomeme
-    proto= Protomeme()
-
-    # validate type
-    if _type not in proto.valid_types:
-        raise ValueError('protomeme has invalid type', _type)
-
-    # set desc
-    proto.set_description(_type,_content)
-    
-    # Find all elements in db
-    query= proto.get_query() # get query based on protomeme type
-    print query 
-    tweets= list(data.find(query).limit(tweets_count)) 
-
-    # add each tweet info to protomeme
-    for tweet in tweets:
-        proto.tweets.append(tweet['mid'])   # messages
-        proto.txt.append(tweet['dico'])  # text
+    if _type != None:
+        # check protomemes
+        if _type not in valid_types:
+            raise TypeError('Wrong type for protomemes. Valid types are :', valid_types)
         
-        proto.users.append(tweet['userId']) # users
+        print _type
+
+        my_db=db[_type]
+
+        print "Total protomemes in the db :",
+        print " %d"%my_db.count(),
+        print "%s"%_type
+
+        data=list(my_db.find().limit(_count))
+
+        print "%d protomemes in this set"% (len(data))
+
+        try:
+            print data[0]["value"]["type"]
+        except KeyError:
+            print 'WARNING : --- type not defined'
+            for value in data: 
+                value["value"]["type"]=_type
+
+    else :
         
-        # add mentions
-        for m in tweet['mentions']:
-            proto.users.append(m) # users
+        h_db=db["hashtags"]
+        m_db=db["mentions"]
+        u_db=db["urls"]
 
-        # TODO : add RT/mentions graph
-        # proto.tweets.append(tweet['graph'])  # graph
+        print "Total protomemes in the db :"
+        print " %d hashtags"%h_db.count()
+        print " %d mentions"%m_db.count()
+        print " %d urls"%u_db.count()
+        print 10*"-"
 
-    # save to protomemes db
-    proto.save()
+        c=int(round(pm_count/3))
+        h=list(h_db.find().limit(c))
+        m=list(m_db.find().limit(c))
+        u=list(u_db.find().limit(c))
 
-    # return basic info about the protomemes
-    proto.print_description()
-    return proto.get_description()
+        print "%d protomemes in this set"% (len(h)+len(m)+len(u)),
+        print "(%d required) " % pm_count
+        print " %d hashtags" % len(h)
+        print " %d mentions" % len(m)
+        print " %d urls" % len(u)
+        print
+        print 10*"-"
 
-def write_to_JSON_file(_data,_file):
-    json_results=json.dumps(_data,ensure_ascii=False)
-    with io.open(_file, 'w', encoding='utf-8') as f:
-      f.write(json_results)
+        
+        # TODO : remove dirty hack (already added to map reduce)7
+        try:
+            print m[0]["value"]["type"]
+        except KeyError:
+            print 'WARNING : --- type not defined'
+            for user in u: 
+                user["value"]["type"]="user"
+            for hashtag in h:
+                 hashtag["value"]["type"]="hashtag"
+            for mention in u:
+                 mention["value"]["type"]="mention" 
 
-def create_protomemes(_type,_count):
+        # concanate lists
+        data=u+h+m
+
+    # proto_count=h_db.count()
+    # test acquisition
+    # protomemes.get_protomemes("hashtags",100)
+
+    # TODO : make list
     
-    log_file='log/'+_type+'.json'
-    proto_list=create_protomemes_list(_type,_count)
 
-    # Create Protomemes
-    print 10*"-"
-    print "creating protomemes..."
+    return data
 
-    start_proto = timeit.default_timer() # measure time
-    results=[] # store logs
-
-    t0 = time() # measure time
-    
-    elapsed_proto=time()-t0
-    for h in proto_list:
-        proto_stats=create_protomeme(_type,h)
-        results.append(proto_stats)
-
-    # some console log 
-    print str(len(results))+" protomemes created in "+ str(elapsed_proto)+" s"
-
-    # write log to JSON for later analysis
-    write_to_JSON_file(results,log_file)
-    print "results stored in file : "+log_file
-
-# Create a list of all unique protomemes in corpus (hashtags, mentions, etc.)
-def create_protomemes_list(_type,_nb_items):
-    
-    print 'Creating a list of all '+_type+' in the collection :'+collection
-
-    # measure time
-    start = time()
-
-    # get all tweets with at least 1 hashtag
-    # query = {'$where' : "this.hashtags.length > 0"}
-    query = {_type: {"$not": {"$size": 0} } }
-    tweets=data.find(query).limit(_nb_items)
-
-    # TODO : use redis queue?
-    unique_results=[]
-
-    # create list of unique hashtags
-    for t in list(tweets):
-        for h in t[_type]:
-            if h not in unique_results: 
-                unique_results.append(h)
-    
-    elapsed = time()- start
-
-    # log
-    print
-    print "nb of "+_type+" processed : "+str(_nb_items)
-    print "unique  "+_type+"         : "+str(len(unique_results))
-    print "processed in "+str(elapsed)+"s"
-    print 10*"-"
-
-    # print hashtags
-    return unique_results
-'''
