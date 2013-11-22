@@ -3,16 +3,21 @@
 
 from lib.mongo import MongoDB
 from lib.protomemes import get_protomemes
-from lib.vectorizer import vectorize_text, tdidf, create_dictionary,get_frequency_vectors,create_matrix_from_vectors, cosine_similarity
+from lib.vectorizer import vectorize_text, tdidf, create_dictionary,get_frequency_vectors,create_matrix_from_vectors
+from sklearn.metrics.pairwise import cosine_similarity
+from lib.plot import augmented_dendrogram
+
+from time import time
+from multiprocessing import Pool
 
 import numpy as np
-from time import time
-import pylab
+
 from scipy import array as sparray
-from scipy.cluster.hierarchy import linkage, dendrogram,leaves_list
+from scipy.cluster.hierarchy import linkage, dendrogram, leaves_list
 from scipy.cluster.vq import kmeans,vq
 from scipy.spatial.distance import pdist, squareform
 
+import pylab
 import matplotlib.pyplot as plt
 
 # Variables
@@ -23,7 +28,7 @@ import matplotlib.pyplot as plt
 
 t00=time()
 
-count=60
+count=100
 pms=get_protomemes("hashtags",count)
 # convert to numpy array 
 protomemes=np.array(pms)
@@ -69,7 +74,6 @@ dictionary=create_dictionary(diffusion)
 vector_diffusion_corpus=get_frequency_vectors(diffusion,dictionary)
 diffusion_matrix=create_matrix_from_vectors(vector_diffusion_corpus)
 
-
 ##################################################################
 # Binary tweets
 #
@@ -109,13 +113,41 @@ print " diffusion_matrix - n_samples: %d, n_features: %d "%diffusion_matrix.shap
 print
 print "Compute cosine similarities from corpus"
 
+def compute_cosine(matrix):
+
+    """Worker function for multiprocessing"""
+    print ' worker : computation process started'
+    t1=time()
+    cos=[cosine_similarity(matrix, pm)[0] for pm in matrix]
+    # sleep(2)
+    print " Cosine computed in now",
+    print " in %fs"%(time()-t1)
+    return cos
+
+def compute_cosine_using_multiple_processes(l):
+    # process the test list elements in parallel
+    pool = Pool()
+    results = pool.map(compute_cosine, l)
+    return results
+
+# start_thread(text_matrix)
+# start_thread(diffusion_matrix)
+# start_thread(tweets_matrix)
+
 t0=time()
 
-text_sim=[cosine_similarity(pm, text_matrix)[0] for pm in text_matrix]
-diffusion_sim=[cosine_similarity(pm, diffusion_matrix)[0] for pm in diffusion_matrix]
-tweets_sim= [cosine_similarity(pm, tweets_matrix) for pm in tweets_matrix]
+results=compute_cosine_using_multiple_processes([text_matrix,diffusion_matrix,tweets_matrix])
 
 print " done in %fs" % (time() - t0)
+
+text_sim=results[0]
+diffusion_sim=results[1]
+tweets_sim=results[2]
+
+# text_sim=[cosine_similarity(pm, text_matrix)[0] for pm in text_matrix]
+# diffusion_sim=[cosine_similarity(pm, diffusion_matrix)[0] for pm in diffusion_matrix]
+# tweets_sim= [cosine_similarity(pm, tweets_matrix) for pm in tweets_matrix]
+
 
 print 
 # linear combination of similarity measures,
@@ -137,95 +169,36 @@ print " calculate matrix w average linkage algorithm"
 linkage_matrix=linkage(combi, method='average')
 print " clusters: n_samples: %d, n_features: %d" % linkage_matrix.shape
 
-def explain_clusters(clusters):
-    for row in clusters:
-        i=int(row[0])
-        value1="cluster"
-        if i in range(0,len(protomemes)):
-            value1=labels[i]    
 
-        j=int(row[0])
-        value2="cluster"
-        if j in range(0,len(protomemes)):
-            value2=labels[j]
-
-        print row
-        print "---> [",value1,value2, row[2],"]"
-
-
-print " get order from dendrogram leaves"
+# get order from dendrogram leaves
 reordered = leaves_list(linkage_matrix)
 
-#reorder the data matrix and row headers according to leaves
+# reorder the data matrix and row headers according to leaves
 ordered_data_matrix = combi[reordered,:]
 
-#do the same for the row headers
+# do the same for the row headers
 row_headers = np.array(labels)
 ordered_row_headers = row_headers[reordered,:]
 
-#output data for visualization in a browser with javascript/d3.js
-matrixOutput = []
-row = 0
-for rowData in ordered_data_matrix:
-    col = 0
-    rowOutput = []
-    for colData in rowData:
-        rowOutput.append([colData, row, col])
-        col += 1
-    matrixOutput.append(rowOutput)
-    row += 1
-
-
-# Export to js vars for visualization with d3.js
-# BUG : not working
-jsfile=""
-jsfile+='var maxData = ' + str( np.amax(protomemes) ) + ";"
-jsfile+='\n\n'
-jsfile+= 'var minData = ' + str(np.amin(protomemes)) + ";"
-jsfile+='\n\n'
-jsfile+= 'var data = ' + str(matrixOutput) + ";"
-jsfile+='\n\n'
-jsfile+= 'var cols = ' + str(labels) + ";"
-jsfile+='\n\n'
-jsfile+= 'var rows = ' + str([x for x in ordered_row_headers]) + ";"
-
-with open('ui/data/data.js', 'w') as myFile:
-    myFile.write(jsfile)
-
 print
 print " plotting data and generating images"
+
 # use vq() to get as assignment for each obs.
 # assignment,cdist = vq(clusters,clusters)
 # plt.scatter(clusters[:,0], clusters[:,1], c=assignment)
 # plt.show()
-
 # plt.clf()
 
-def augmented_dendrogram(*args, **kwargs):
 
-    ddata = dendrogram(*args, **kwargs)
+show_leaf_counts = False
+ddata = augmented_dendrogram(linkage_matrix,
+               color_threshold=1,
+               p=60,
+               truncate_mode='lastp',
+               show_leaf_counts=show_leaf_counts,
+               )
 
-    if not kwargs.get('no_plot', False):
-        for i, d in zip(ddata['icoord'], ddata['dcoord']):
-            x = 0.5 * sum(i[1:3])
-            y = d[1]
-            plt.plot(x, y, 'ro')
-            plt.annotate("%.3g" % y, (x, y), xytext=(0, -8),
-                         textcoords='offset points',
-                         va='top', ha='center')
-
-#     return ddata
-# print clusters
-
-# # ss=dendrogram(clusters)
-# show_leaf_counts = True
-# ddata = augmented_dendrogram(clusters,
-#                color_threshold=1,
-#                p=60,
-#                truncate_mode='lastp',
-#                show_leaf_counts=show_leaf_counts,
-#                )
-# # plt.title("show_leaf_counts = %s" % show_leaf_counts)
+plt.title("Dendogram for %s protomemes"%len(protomemes))
 
 # plt.show()
 
