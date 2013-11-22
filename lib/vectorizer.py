@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from collections import Counter
-
 
 from gensim import corpora, models, similarities
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -23,11 +21,11 @@ def get_text_vector(protomeme):
 
 # concanate text as a vector
 def vectorize_text(_protomemes):
-    print " Computing text vectors from protomemes"
-
+    print " Create text corpus"
     corpus_text=[]
     for proto in _protomemes:
-        corpus_text.append(get_text_vector(proto))
+        # corpus_text.append(get_text_vector(proto))
+        corpus_text.append(proto["value"]["txt"])
     return corpus_text
 
 # compute term frequency / inverse term frequency

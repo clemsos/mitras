@@ -16,6 +16,7 @@ port = 27017
 class MongoDB:
 
     def __init__(self, db):
+        print 
         print """Connecting to MongoDB... """
 
         try:
