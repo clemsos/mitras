@@ -1,0 +1,35 @@
+#!/bin/bash
+
+die () {
+    echo >&2 "$@"
+    help
+    exit 1
+}
+
+help () {
+    echo "Usage: deploy  {list|prod|status}"
+}
+
+[ "$#" -eq 1 ] || die "ERROR : Missing argument "
+
+case "$1" in
+
+        list)
+                fab --list -f config/fabfile.py
+                ;;
+
+        prod)
+                echo 'should deploy to prod'
+                ;;        
+
+        status)
+                echo 'should show status to prod'
+                ;;
+
+        *)
+                help
+                exit 1
+                ;;
+esac
+exit 0
+
