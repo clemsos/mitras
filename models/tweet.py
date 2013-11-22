@@ -6,7 +6,7 @@ import json
 
 # mongo db
 configure(host="localhost", port=27017)
-db_name="test"
+db_name="tweets"
 
 class Tweet(Model):
 
