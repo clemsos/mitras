@@ -28,8 +28,8 @@ import matplotlib.pyplot as plt
 
 t00=time()
 
-count=100
-pms=get_protomemes("hashtags",count)
+count=2000
+pms=get_protomemes(None,count)
 # convert to numpy array 
 protomemes=np.array(pms)
 
@@ -39,7 +39,11 @@ print
 print
 print "Label matrix with protomemes description"
 
-labels=[p["value"]["type"] +" : "+p["_id"] for p in protomemes]
+try:
+    labels=[ p["value"]["type"] +" : "+p["_id"] for p in protomemes ]
+except KeyError:
+    labels=[]
+
 
 print " length of labels %d"%len(labels)
 
@@ -111,16 +115,16 @@ print " text_matrix - n_samples: %d, n_features: %d "%text_matrix.shape
 print " tweets_matrix - n_samples: %d, n_features: %d "%tweets_matrix.shape
 print " diffusion_matrix - n_samples: %d, n_features: %d "%diffusion_matrix.shape
 print
-print "Compute cosine similarities from corpus"
+print " Compute cosine similarities from corpus"
 
 def compute_cosine(matrix):
 
     """Worker function for multiprocessing"""
-    print ' worker : computation process started'
+    print '  worker : computation process started'
     t1=time()
     cos=[cosine_similarity(matrix, pm)[0] for pm in matrix]
     # sleep(2)
-    print " Cosine computed in now",
+    print " Cosine computed in",
     print " in %fs"%(time()-t1)
     return cos
 
@@ -130,24 +134,22 @@ def compute_cosine_using_multiple_processes(l):
     results = pool.map(compute_cosine, l)
     return results
 
-# start_thread(text_matrix)
-# start_thread(diffusion_matrix)
-# start_thread(tweets_matrix)
 
 t0=time()
 
+# multi processing to improve computing
 results=compute_cosine_using_multiple_processes([text_matrix,diffusion_matrix,tweets_matrix])
 
-print " done in %fs" % (time() - t0)
+print "  done in %fs" % (time() - t0)
 
 text_sim=results[0]
 diffusion_sim=results[1]
 tweets_sim=results[2]
 
+# TODO : fallback on single-threaded computing if CPU doesn't support multiprocessing
 # text_sim=[cosine_similarity(pm, text_matrix)[0] for pm in text_matrix]
 # diffusion_sim=[cosine_similarity(pm, diffusion_matrix)[0] for pm in diffusion_matrix]
 # tweets_sim= [cosine_similarity(pm, tweets_matrix) for pm in tweets_matrix]
-
 
 print 
 # linear combination of similarity measures,
@@ -200,6 +202,6 @@ ddata = augmented_dendrogram(linkage_matrix,
 
 plt.title("Dendogram for %s protomemes"%len(protomemes))
 
-# plt.show()
+plt.show()
 
 print " everything done in %fs" % (time() - t00)
