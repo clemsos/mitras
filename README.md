@@ -23,12 +23,15 @@ To create this project we will use the data provided by the project Weiboscope f
 
 	#  Downloaded: 57 files, 18G in 6h 42m 3s (803 KB/s)
 
-	cd [mitras]/data	
+	# move the files to the data folder
+	mv 147.8.142.179/datazip data/datazip
+	rm -R 147.8.142.179
+
+	# remove zip files
+	ls data/datazip/*zip | xargs -i rm {} 
 	
-	# Parse data and store 
-	
-	# in MongoDB
-	python 
+	# Parse data and store tweets in MongoDB
+	bash bin/prepare.py
 
 	# in mySQL (some bugs)
 	# bash data/data_csv_to_mysql.sh
