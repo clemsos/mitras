@@ -17,13 +17,13 @@ popd  > /dev/null
 
 
 # define directory containing CSV files
-_csv_directory="`dirname ${CUR}`/data"
+_csv_directory="`dirname ${CUR}`/data/datazip"
 
 # go into directory
 cd $_csv_directory
 
 # get a list of CSV files in directory
-_csv_files=`ls -1 *.csv`
+_csv_files=`ls -1 week*.csv`
 
 
 # loop through csv files

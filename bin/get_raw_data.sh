@@ -10,7 +10,7 @@ case "$choice" in
     #  Downloaded: 57 files, 18G in 6h 42m 3s (803 KB/s)
     cd 147.8.142.179/datazip/
     echo "now unziping files"
-    unzip *.zip ;;
+    ls *zip | xargs -i unzip {} ;;
 
   n|N ) echo "Ok, bye.";;
   * ) echo "invalid input";;

@@ -21,3 +21,8 @@ def slugify(value):
     value = unicode(re.sub('[-\s]+', '_', value))
 
     return value
+
+def write_json_file(data,_file,):
+    import io, json
+    with io.open(_file, 'w', encoding='utf-8') as f:
+      f.write(unicode(json.dumps(data, ensure_ascii=False)))
