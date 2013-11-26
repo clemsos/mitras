@@ -7,34 +7,26 @@ helpers=TestHelpers()
 helpers.add_relative_path()
 
 from lib.protomemes import get_protomemes, build_corpus
+import lib.vectorizer as vectorizer
 
 import unittest
-
+import numpy as np
 # t00=time()
 # print helpers.load_tweets("week1",1)
-class TestSequenceFunctions(unittest.TestCase):
+# class TestSequenceFunctions(unittest.TestCase):
 
-count=20000
-proto=get_protomemes("hashtags",count)
+count=2000
+path="/tmp/tests"
+pms=get_protomemes(None,count)
+protomemes=np.array(pms) # convert to numpy array 
 
-# print "%d protomemes obtained." % len(protomemes)
-# print 
+print "%d protomemes obtained." % len(protomemes)
+print 
 
-# db=MongoDB('weibodata').db
-# from lib.mongo import MongoDB
+# for p in protomemes:
+#     print p["value"]["users"]
 
-coll="week1"
+vectorizer.compute_and_save_similarity_corpus(protomemes,path)
 
-# proto = build_corpus("hashtags",coll,2000, None)
-
-print len(proto)
-for p in proto:
-    print "*"*12
-    try :
-        print p["_id"]
-        print p["value"]["type"]
-    except KeyError:
-        print "                  error"
-        # print p["_id"]
-
-
+vectorizer.compute_cosine_similarities_from_corpus(path)
+vectorizer.create_combined_similarities_index(path)
