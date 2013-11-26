@@ -3,7 +3,7 @@
 Test write / read on mongoDB
 '''
 
-from lib.mongo import mongoDB
+from lib.mongo import MongoDB
 import datetime
 import json
 from minimongo import Model, Index

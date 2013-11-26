@@ -47,10 +47,11 @@ def build_corpus(_type, _collection, _count, _destination):
 
     if _destination == None :
         result = db[_collection].inline_map_reduce( mapper, reducer, limit=_count)
+        print "haha"
+        # print dict(result)
         return result
     else :
         result = db[_collection].map_reduce( mapper, reducer, _destination, limit=_count)
-
 
     print " %d new protomemes extracted" % result.count()
     print " stored in collection : %s " % db[_destination]
@@ -58,6 +59,13 @@ def build_corpus(_type, _collection, _count, _destination):
     print "-"*12
     print
 
+
+class ProtomemeCorpus(object):
+    def __iter__(self):
+        for line in open(corpus_path):
+            # assume there's one document per line, tokens separated by whitespace
+            yield dictionary.doc2bow(line.lower().split())
+    
 
 def get_protomemes(_type, _count):
     """
@@ -87,12 +95,12 @@ def get_protomemes(_type, _count):
 
         print "%d protomemes in this set"% (len(data))
 
-        try:
-            print data[0]["value"]["type"]
-        except KeyError:
-            print 'WARNING : --- type not defined'
-            for value in data: 
-                value["value"]["type"]=_type
+        # try:
+        #     print data[0]["value"]["type"]
+        # except KeyError:
+        #     print 'WARNING : --- type not defined'
+        #     for value in data: 
+        #         value["value"]["type"]=_type
 
     else :
         
@@ -121,16 +129,16 @@ def get_protomemes(_type, _count):
 
         
         # TODO : remove dirty hack (already added to map reduce)7
-        try:
-            print m[0]["value"]["type"]
-        except KeyError:
-            print 'WARNING : --- type not defined'
-            for user in u: 
-                user["value"]["type"]="user"
-            for hashtag in h:
-                 hashtag["value"]["type"]="hashtag"
-            for mention in u:
-                 mention["value"]["type"]="mention" 
+        # try:
+        #     print m[0]["value"]["type"]
+        # except KeyError:
+        #     print 'WARNING : --- type not defined'
+        #     for user in u: 
+        #         user["value"]["type"]="user"
+        #     for hashtag in h:
+        #          hashtag["value"]["type"]="hashtag"
+        #     for mention in u:
+        #          mention["value"]["type"]="mention" 
 
         # concanate lists
         data=u+h+m
@@ -144,3 +152,11 @@ def get_protomemes(_type, _count):
 
     return data
 
+def get_protomeme_by_id(_type, _id):
+    # set the right db
+    my_db=db[_type]
+
+    query={ "_id": _id}
+    data=list(my_db.find(query))
+
+    return data

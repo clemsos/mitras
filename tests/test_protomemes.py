@@ -29,6 +29,11 @@ class TestProtomemes(unittest.TestCase):
         proto=build_corpus("urls", "week1", 1 , None)
         self.assertTrue(proto != None)
 
+    def test_corpus_should_have_tweets(self):
+        proto=build_corpus("urls", "week1", 100, None)
+        self.assertTrue(proto[0]["value"]["tweets"])
+        print proto
+
     def test_protomemes_should_have_type(self):
         proto=get_protomemes("hashtags",1)
         self.assertTrue(proto[0]["value"]["type"] == "hashtag")

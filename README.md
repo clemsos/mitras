@@ -15,6 +15,22 @@ This tool analyse data from Sina Weibo with following goals:
 
 ## Data
 
+	sudo apt-get install python-pip
+	pip install bson jieba pymongo
+
+	
+	
+	# Install stuff
+	mkdir toolbox && cd toolbox
+
+	# mongo models
+	git clone https://github.com/slacy/minimongo.git && cd minimongo 
+	python setup.py install
+
+	# Stanford NER
+	git clone https://github.com/dat/pyner
+    python setup.py install
+
 ### Tweet corpus 
 To create this project we will use the data provided by the project Weiboscope from HKU University - [link](http://147.8.142.179/datazip/). Note : this data has been anonymized
 

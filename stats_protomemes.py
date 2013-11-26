@@ -10,6 +10,8 @@ from collections import Counter
 
 
 # Connect to Mongo
+collection="hashtags"
+
 db=MongoDB("weibodata").db
 data=db[collection]
 tweets_count=data.count()

@@ -1,16 +1,26 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+
+from scipy.cluster.hierarchy import linkage, dendrogram, leaves_list
+
+def get_linkage_matrix(matrix_data):
+    print " calculate matrix w average linkage algorithm"
+    linkage_matrix=linkage(matrix_data, method='average')
+    print " clusters: n_samples: %d, n_features: %d" % linkage_matrix.shape
+
+    return linkage_matrix
+
 def explain_linkage_clusters(clusters, labels):
     for row in clusters:
         i=int(row[0])
         value1="cluster"
-        if i in range(0,len(protomemes)):
+        if i in range(0,len(clusters)):
             value1=labels[i]    
 
         j=int(row[0])
         value2="cluster"
-        if j in range(0,len(protomemes)):
+        if j in range(0,len(clusters)):
             value2=labels[j]
 
         print row
