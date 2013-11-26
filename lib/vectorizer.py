@@ -14,7 +14,7 @@ import pickle
 import os.path
 
 # create index dictionary for all users
-def create_dictionary(_corpus,_dic_path):
+def create_dictionary(_raw_corpus_path,_dic_path):
     print " Creating dictionary for diffusion."
     print ' Indexing...'
     t0 = time()
@@ -22,8 +22,7 @@ def create_dictionary(_corpus,_dic_path):
     dic_path=_dic_path
 
     # load if the file already exists
-
-    dictionary = corpora.Dictionary(_corpus)
+    dictionary = corpora.Dictionary(c.split() for c in open(_raw_corpus_path, 'rb'))
     dictionary.save(dic_path) # store the dictionary, for future reference
     print " dico saved at %s " % dic_path
 
@@ -38,7 +37,7 @@ def create_frequency_vectors_corpus(_corpus,_dictionary,_corpus_path):
     t0 = time()
 
     corpus_path=_corpus_path
-    corpus = [_dictionary.doc2bow(t) for t in _corpus]
+    corpus = [_dictionary.doc2bow(t.split()) for t in _corpus]
     corpora.MmCorpus.serialize(corpus_path, corpus) # store to disk, for later use
     print " dico saved at %s " % corpus_path
 
@@ -48,61 +47,17 @@ def create_frequency_vectors_corpus(_corpus,_dictionary,_corpus_path):
     # pprint(corpus)
     # print corpus
 
-
-# Utils
-def create_and_store_labels_for_reference(_protomemes,_path):
-    print "Storing protomemes labels and ids for future reference"
-    labels=[]
-    print ' WARNING : protomeme type should be defined during map-reduce'
-    for p in _protomemes:
-        
-        # TODO : add type to map/reduce _id  during protomemes creation
-        # mytype= p["_id"]["type"] 
-        # name=p["_id"]["name"]
-        
-        name=p["_id"]
-
-        try:
-            mytype= p["value"]["type"]
-        except KeyError:
-            # TODO : remove dirty hack (add to map reduce)
-            # print 'WARNING : --- type not defined'
-            if p["_id"][0] == "h":
-                mytype="urls"
-            elif p["_id"][0] == "u":
-                mytype="mentions"
-            else :
-                mytype="hashtags"
-
-
-        labels.append((name, mytype))
-    
-    labels_path=_path+"/labels.txt"
-    print " storing labels as file : %s"%labels_path
-    outfile=open(labels_path,"wb")
-    pickle.dump(labels, outfile)
-    print
-
-
-# TODO :
-def compute_similarities_using_multiple_processes(l):
-    '''process the test list elements in parallel'''
-    
-    print '  using multi-process pool'
-    pool = Pool()
-    results = pool.map(create_similarity_matrix, l)
-    return results
-
-
 # Gensim functions to create corpus
 def has_corpus(_path,_type):
     corpus_path=_path+'/'+_type+'.mm'
     return os.path.exists(corpus_path)
 
+# 
 def has_indexed_file(_path,_type):
     index_path=_path+'/'+_type+'.index'
     return os.path.exists(index_path)
 
+#
 def create_similarity_corpus(_corpus,_path, _type):
 
     print '-'*40
@@ -123,9 +78,13 @@ def create_similarity_corpus(_corpus,_path, _type):
         print ' loading existing dictionary from %s'% dic_path
         dictionary=corpora.Dictionary.load(dic_path)
 
+        # compute number of times in each corpus
+        create_frequency_vectors_corpus(_corpus,dictionary,corpus_path)
+
     # if no dictionary exists, we have to compute dict and corpus
     else:
-
+        # print type(_corpus)
+        print " create %s corpus and dictionary"% _type
         # create index of values
         dictionary=create_dictionary(_corpus,dic_path)  
 
@@ -169,58 +128,36 @@ def text_corpus_to_tfidf(_path):
     corpora.MmCorpus.serialize(tfidf_path, tfidf_corpus)
     print
 
-# Public functions
-def compute_and_save_similarity_corpus(_protomemes,_path): 
-    
-    if os.path.exists(_path+"/labels.txt"):
-        print " labels already exist at %s/labels.txt"%_path
-        pass
+def get_raw_corpus_file(_type,_path):
+    filename=_path+"/protomemes."+_type
+    if os.path.exists(filename):
+        print " loading raw corpus from %s "%filename
+        return filename
     else:
-        # Store labels for future use
-        create_and_store_labels_for_reference(_protomemes,_path)
+        raise ValueError("File is not here. Try to create protomemes corpus files via lib.protomemes.create_corpus_file()")
 
-    tstart=time()
-    print 
+# Public functions
+def compute_and_save_similarity_corpus(_path): 
+
     # STEP 1 
-    print "Step 1 : Compute all vectors from %d protomemes"%len(_protomemes)
+    print 
+    print "Step 1 : Compute all vectors from protomemes raw corpus"
     print '#'*40
     print
     
+    tstart=time()
+
     # TODO : use multi processing to improve computing
     # create corpus and dictionaries
-    if not has_corpus(_path,"diffusion"):
-        corpus=[]
-        for p in _protomemes:
-            corpus.append(p["value"]["diffusion"])
+    types=["diffusion","tweets","txt","users"]
 
-        create_similarity_corpus(corpus,_path,"diffusion")
-    else:
-        print " Diffusion vector corpus already exists %s"%(_path+"/diffusion.mm")
-        print 
-    if not has_corpus(_path,"tweets"):
-        tweets_corpus=[]
-        for p in _protomemes:
-            tweets_corpus.append(p["value"]["tweets"])
-        create_similarity_corpus(tweets_corpus,_path,"tweets")
-    else:
-        print " Tweets vector corpus already exists %s"%(_path+"/tweets.mm")
-        print 
-    if not has_corpus(_path,"text"):
-        txt_corpus=[]
-        for p in _protomemes:
-            txt_corpus.append(p["value"]["txt"].encode("utf-8").split())
-        create_similarity_corpus(txt_corpus,_path,"text")
-    else:
-        print " Text vector corpus already exists %s"%(_path+"/text.mm")
-        print 
-    if not has_corpus(_path,"users"):
-        users_corpus=[]
-        for p in _protomemes:
-            users_corpus.append(p["value"]["users"])
-        create_similarity_corpus(users_corpus,_path,"users")
-    else:
-        print " Users vector corpus already exists %s"%(_path+"/users.mm")
-        print 
+    for t in types:
+        if not has_corpus(_path,t):
+            corpus=get_raw_corpus_file(t,_path)
+            create_similarity_corpus(corpus,_path,t)
+        else:
+            print " Diffusion vector corpus already exists %s/%s.mm"%(_path,t)
+            print
         
 def compute_cosine_similarities_from_corpus(_path):
 
@@ -331,7 +268,6 @@ def create_combined_similarities_index(_path):
     print 
     return combi
 
-
 # api 
 def get_protomemes_labels(_path):
     labels_path=_path+"/labels.txt"
@@ -347,3 +283,11 @@ def get_global_similarities(_path):
     sims=np.load(matrix_binary_path)
     return sims
 
+# TODO :
+def compute_similarities_using_multiple_processes(l):
+    '''process the test list elements in parallel'''
+    
+    print '  using multi-process pool'
+    pool = Pool()
+    results = pool.map(create_similarity_matrix, l)
+    return results

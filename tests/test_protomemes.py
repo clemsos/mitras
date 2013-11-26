@@ -7,7 +7,7 @@ from test_helpers import TestHelpers
 helpers=TestHelpers()
 helpers.add_relative_path()
 
-from lib.protomemes import get_protomemes, build_corpus
+from lib.protomemes import get_protomemes, build_corpus, get_protomemes_values_by_type, get_protomemes_values_by_type_as_array
 
 coll="week1"
 
@@ -34,7 +34,19 @@ class TestProtomemes(unittest.TestCase):
         self.assertTrue(proto[0]["value"]["tweets"])
         print proto
 
-    def test_protomemes_should_have_type(self):
+    def test_get_protomemes_values_by_type(self):
+        data=get_protomemes_values_by_type("users",1)    
+        self.assertTrue(data[0]["value"]["users"])
+        # there should be no text, just users
+        with self.assertRaises(KeyError):
+            data[0]["value"]["txt"]
+
+    def test_get_protomemes_values_by_type_as_array(self):
+        data=get_protomemes_values_by_type_as_array("txt",1)
+        self.assertTrue(len(data) == 1)
+
+
+    def protomemes_should_have_type(self):
         proto=get_protomemes("hashtags",1)
         self.assertTrue(proto[0]["value"]["type"] == "hashtag")
 

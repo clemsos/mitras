@@ -3,6 +3,8 @@
 from time import time
 from bson.code import Code
 from lib.mongo import MongoDB
+import numpy as np
+import os.path
 
 # Connect to Mongo
 db=MongoDB("weibodata").db
@@ -58,14 +60,6 @@ def build_corpus(_type, _collection, _count, _destination):
     print " done in %fs" % (time() - t0)
     print "-"*12
     print
-
-
-class ProtomemeCorpus(object):
-    def __iter__(self):
-        for line in open(corpus_path):
-            # assume there's one document per line, tokens separated by whitespace
-            yield dictionary.doc2bow(line.lower().split())
-    
 
 def get_protomemes(_type, _count):
     """
@@ -160,3 +154,136 @@ def get_protomeme_by_id(_type, _id):
     data=list(my_db.find(query))
 
     return data
+
+def get_protomemes_values_by_type(_collection,_type,_count):
+    query = "value."+_type
+    data=db[_collection].find( {},{ query: 1 } ).limit(_count)
+    return list(data)
+
+def create_txt_corpus_file(_count, _path):
+
+    filename=_path+"/protomemes.txt"
+
+    if not os.path.exists(filename):
+        t0=time()
+        
+        # open file
+        outfile = open(filename, "w")
+        
+        # get corpus from mongo
+        # order = u+h+m
+        collections =["urls","hashtags","mentions"]
+
+        print " creating text corpus as file : %s"%filename
+        for c in collections:
+            print ' getting records from %s...'%c
+            data=get_protomemes_values_by_type(c,"txt",_count)
+            print ' got %d records'%len(data)
+            for item in data:
+                print>>outfile, item["value"]["txt"].encode('utf-8').split()
+            print ' %s done '%c
+
+        print " done in %.3fs"%(time()-t0)
+
+    else:
+        print " raw corpus already exists %s "%filename
+        print 
+
+def create_corpus_file(_type,_count,_path):
+
+    # switch to a specific function for text
+    if _type == "txt":
+        create_txt_corpus_file(_count,_path)
+        return
+
+    filename=_path+"/protomemes."+_type
+    
+    if not os.path.exists(filename):
+        t0=time()
+
+        # open file
+        outfile = open(filename, "w")
+        
+        # get corpus from mongo
+        # order = u+h+m
+        collections =["urls","hashtags","mentions"]
+
+        print " creating %s corpus as file : %s"%(_type, filename)
+        for c in collections:
+            print ' getting records from %s...'%c
+            data=get_protomemes_values_by_type(c,_type,_count)
+            print ' got %d records'%len(data)
+            for item in data:
+                print>>outfile, item["value"][_type]
+            print ' %s done '%c
+        
+        print " done in %.3fs"%(time()-t0)
+        print
+    else:
+        print " raw corpus already exists %s "%filename
+        print 
+        
+def create_labels_file(_path):
+    if os.path.exists(_path+"/labels.txt"):
+        print " labels already exist at %s/labels.txt"%_path
+        pass
+    else:
+        # Store labels for future use
+        print "Storing protomemes labels and ids for future reference"
+        
+        labels=[]
+        print ' WARNING : protomeme type should be defined during map-reduce'
+        for p in _protomemes:
+            
+            # TODO : add type to map/reduce _id  during protomemes creation
+            # mytype= p["_id"]["type"] 
+            # name=p["_id"]["name"]
+            
+            name=p["_id"]
+
+            try:
+                mytype= p["value"]["type"]
+            except KeyError:
+                # TODO : remove dirty hack (add to map reduce)
+                # print 'WARNING : --- type not defined'
+                if p["_id"][0] == "h":
+                    mytype="urls"
+                elif p["_id"][0] == "u":
+                    mytype="mentions"
+                else :
+                    mytype="hashtags"
+
+            labels.append((name, mytype))
+        
+        labels_path=_path+"/labels.txt"
+        print " storing labels as file : %s"%labels_path
+        outfile=open(labels_path,"wb")
+        pickle.dump(labels, outfile)
+        print
+        
+# DISCARDED : bcz mongo limit is 14MB per document...
+def get_protomemes_values_by_type_as_array(_type,_count):
+    # query = "value."+_type
+    collections =["hashtags","mentions","urls"]
+
+    t0=time()
+
+    # TODO : change to map reduce to avoid max document size
+    pipeline=[
+        {"$group":{ "_id":"$value."+_type} }, 
+        { "$limit":_count }]
+
+    # print pipeline
+    data=[]
+    for c in collections:
+        q = db.command('aggregate', c, pipeline=pipeline )
+        data.append([ d["_id"] for d in q["result"] ])
+
+    # print data
+    final= data[0]+data[1]+data[2]
+
+    print " Data was extracted succesfully in %fs" % (time() - t0)
+    print " "+_type +" count :  %d results" % len(final)
+    # data=db["hashtags"].find( {},{ query: 1 } ).limit(_count)
+    return list(final)
+
