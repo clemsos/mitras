@@ -5,6 +5,7 @@ from bson.code import Code
 from lib.mongo import MongoDB
 import numpy as np
 import os.path
+import codecs
 
 # Connect to Mongo
 db=MongoDB("weibodata").db
@@ -168,23 +169,24 @@ def create_txt_corpus_file(_count, _path):
         t0=time()
         
         # open file
-        outfile = open(filename, "w")
+        with codecs.open(filename, "w", "utf-8") as outfile:
         
-        # get corpus from mongo
-        # order = u+h+m
-        collections =["urls","hashtags","mentions"]
+            # get corpus from mongo
+            # order = u+h+m
+            collections =["urls","hashtags","mentions"]
 
-        print " creating text corpus as file : %s"%filename
-        for c in collections:
-            print ' getting records from %s...'%c
-            data=get_protomemes_values_by_type(c,"txt",_count)
-            print ' got %d records'%len(data)
-            for item in data:
-                print>>outfile, item["value"]["txt"].encode('utf-8').split()
-            print ' %s done '%c
+            print " creating text corpus as file : %s"%filename
+            for c in collections:
+                print ' getting records from %s...'%c
+                data=get_protomemes_values_by_type(c,"txt",_count)
+                print ' got %d records'%len(data)
+                for item in data:
+                    outfile.write(str(item["value"]["txt"].split())[1:-1]+"\n")
+                print ' %s done '%c
 
+            outfile.close()
         print " done in %.3fs"%(time()-t0)
-
+        print
     else:
         print " raw corpus already exists %s "%filename
         print 
@@ -202,7 +204,7 @@ def create_corpus_file(_type,_count,_path):
         t0=time()
 
         # open file
-        outfile = open(filename, "w")
+        outfile = codecs.open(filename, "w", "utf-8")
         
         # get corpus from mongo
         # order = u+h+m
@@ -214,9 +216,10 @@ def create_corpus_file(_type,_count,_path):
             data=get_protomemes_values_by_type(c,_type,_count)
             print ' got %d records'%len(data)
             for item in data:
-                print>>outfile, item["value"][_type]
+                outfile.write(str(item["value"][_type])[1:-1]+"\n")
             print ' %s done '%c
         
+        outfile.close()
         print " done in %.3fs"%(time()-t0)
         print
     else:
