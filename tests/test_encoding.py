@@ -17,7 +17,7 @@ class EncodingTest(unittest.TestCase):
         self.w=u"什么"
         self.title="blaldqsdjq d54 #{~[|ç±Êø~#{ù*ùds$'€€ haha   ajskq    "
 
-    def test_slugfy(self):
+    def test_slugify(self):
         s=slugify(self.title)
         self.assertTrue(s == "blaldqsdjq_d54_ceuuds_haha_ajskq")
 

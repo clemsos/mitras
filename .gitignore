@@ -21,6 +21,8 @@ out
 
 data/datazip
 data/*.csv
+data/tmp
 
 *.png
 *.pdf
+*.sublime*
