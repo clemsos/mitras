@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 
-from gensim import corpora, models, similarities, matutils
+from gensim import corpora, models, similarities, matutils, interfaces
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.feature_extraction import DictVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
@@ -14,51 +14,30 @@ import codecs
 import pickle
 import os.path
 
-# create index dictionary for all users
-def create_dictionary(_raw_corpus_path,_dic_path):
-    print " Creating dictionary for diffusion."
-    print ' Indexing...'
-    t0 = time()
+# MAIN : Step 1
+def compute_and_save_similarity_corpus(_path): 
 
-    _dic_path
-
-    # load if the file already exists
-    dictionary = corpora.Dictionary(c.split(", ") for c in open(_raw_corpus_path, 'rb'))
-    dictionary.save(_dic_path) # store the dictionary, for future reference
-    print " dico saved at %s " % _dic_path
-
-    print " %d unique ids." % len(dictionary.token2id)
-    print " done in %fs" % (time() - t0)
+    # STEP 1 
     print 
-    return dictionary
-
-# compute number of times each elements appears in the corpus
-def create_frequency_vectors_corpus(_corpus,_dictionary,_corpus_path):
-    print ' Computing frequency vectors'
-    t0 = time()
-
-    corpus_path=_corpus_path
-    corpus = [_dictionary.doc2bow(t.split(", ")) for t in open(_corpus, 'rb')]
-    corpora.MmCorpus.serialize(corpus_path, corpus) # store to disk, for later use
-    print " dico saved at %s " % corpus_path
-
-    print " %d records processed." % len(_corpus)
-    print " done in %fs" % (time() - t0)
+    print "Step 1 : Compute all vectors from protomemes raw corpus"
+    print '#'*40
     print
-    # pprint(corpus)
-    # print corpus
+    
+    tstart=time()
 
-# Gensim functions to create corpus
-def has_corpus(_path,_type):
-    corpus_path=_path+'/'+_type+'.mm'
-    return os.path.exists(corpus_path)
+    # TODO : use multi processing to improve computing
+    # create corpus and dictionaries
+    types=["diffusion","tweets","txt","users"]
 
-# 
-def has_indexed_file(_path,_type):
-    index_path=_path+'/'+_type+'.index'
-    return os.path.exists(index_path)
+    for t in types:
+        if not has_corpus(_path,t):
+            corpus=get_raw_corpus_file(t,_path)
+            create_similarity_corpus(corpus,_path,t)
+        else:
+            print " Diffusion vector corpus already exists %s/%s.mm"%(_path,t)
+            print
 
-#
+# Compile corpus and dictionary
 def create_similarity_corpus(_corpus,_path, _type):
 
     print '-'*40
@@ -92,77 +71,42 @@ def create_similarity_corpus(_corpus,_path, _type):
         # compute number of times in each corpus
         create_frequency_vectors_corpus(_corpus,dictionary,corpus_path)
 
-def create_similarity_index(_type,_path):
-    
-    print " creating similarity index %s"%_type
-    print " loading corpus from %s"%_path
-    corpus=corpora.MmCorpus(_path+"/"+_type+".mm")
-    print "",corpus
+# create dictionary (index of each element)
+def create_dictionary(_raw_corpus_path,_dic_path):
+    print " Creating dictionary for diffusion."
+    print ' Indexing...'
+    t0 = time()
 
-    # get number of features from dictionnary length
-    dic_path=_path+"/"+_type+".dict"
-    _num_features=len(corpora.Dictionary.load(dic_path))
-    print " getting similarity computed for %d"%_num_features
-    file_path=_path+"/"+_type+".index"
+    _dic_path
 
-    # build the index
-    index = similarities.Similarity(file_path, corpus, num_features=_num_features) 
-    index.save(file_path)
+    # load if the file already exists
+    dictionary = corpora.Dictionary(c.split(", ") for c in open(_raw_corpus_path, 'rb'))
+    dictionary.save(_dic_path) # store the dictionary, for future reference
+    print " dico saved at %s " % _dic_path
 
-    print " similarities saved as %s"%file_path
+    print " %d unique ids." % len(dictionary.token2id)
+    print " done in %fs" % (time() - t0)
     print 
+    return dictionary
 
-    # get similarities between the query and all index 
-    # sims = index[corpus]
-    # corpus_txt=matutils.MmReader(_path+"/text.mm")
-    # corpus_twe=matutils.MmReader(_path+"/tweets.mm")
+# compile corpus (vectors number of times each elements appears)
+def create_frequency_vectors_corpus(_corpus,_dictionary,_corpus_path):
+    print ' Computing frequency vectors'
+    t0 = time()
 
-def text_corpus_to_tfidf(_path):
-    print " computing TF-IDF"
-    corpus=corpora.MmCorpus(_path+"/txt.mm")
-    tfidf = models.TfidfModel(corpus) 
-    
-    tfidf_corpus= tfidf[corpus]
-    # print type(tfidf_corpus)
-    # for doc in corpus_tfidf:
-    #     print doc
-    
-    tfidf_path=_path+"/tfidf.mm"
-    print " saving tfidf results at %s"%tfidf_path
-    corpora.MmCorpus.serialize(tfidf_path, tfidf_corpus)
+    corpus_path=_corpus_path
+    corpus = [_dictionary.doc2bow(t.split(", ")) for t in open(_corpus, 'rb')]
+    corpora.MmCorpus.serialize(corpus_path, corpus) # store to disk, for later use
+    print " dico saved at %s " % corpus_path
+
+    print " %d records processed." % len(_corpus)
+    print " done in %fs" % (time() - t0)
     print
+    # pprint(corpus)
+    # print corpus
 
-def get_raw_corpus_file(_type,_path):
-    filename=_path+"/protomemes."+_type
-    if os.path.exists(filename):
-        print " loading raw corpus from %s "%filename
-        return filename
-    else:
-        raise ValueError("File is not here. Try to create protomemes corpus files via lib.protomemes.create_corpus_file()")
-
-# Public functions
-def compute_and_save_similarity_corpus(_path): 
-
-    # STEP 1 
-    print 
-    print "Step 1 : Compute all vectors from protomemes raw corpus"
-    print '#'*40
-    print
-    
-    tstart=time()
-
-    # TODO : use multi processing to improve computing
-    # create corpus and dictionaries
-    types=["diffusion","tweets","txt","users"]
-
-    for t in types:
-        if not has_corpus(_path,t):
-            corpus=get_raw_corpus_file(t,_path)
-            create_similarity_corpus(corpus,_path,t)
-        else:
-            print " Diffusion vector corpus already exists %s/%s.mm"%(_path,t)
-            print
-        
+##
+# STEP 2 : similarity between corpuses
 def compute_cosine_similarities_from_corpus(_path):
 
     print "Step 2 : Compute cosine similarities from corpus"
@@ -170,11 +114,11 @@ def compute_cosine_similarities_from_corpus(_path):
     print
     
     # modeling and transformation
-    if not os.path.exists(_path+"/tfidf.mm"):
-        text_corpus_to_tfidf(_path)
-    else:
-        print " TF-IDF corpus already processed : %s"%(_path+"/tfidf.index")
-        print
+    # if not os.path.exists(_path+"/tfidf.mm"):
+    #     text_corpus_to_tfidf(_path)
+    # else:
+    #     print " TF-IDF corpus already processed : %s"%(_path+"/tfidf.index")
+    #     print
 
     # user_to_frequency_vectors # user count    
     # tweets_to_binary_vectors # np.array are binary vectors already
@@ -200,82 +144,190 @@ def compute_cosine_similarities_from_corpus(_path):
         print
 
     # This is done with TF-IDF
-    # if not has_indexed_file(_path,"tfidf"):
-    #     create_similarity_index("tfidf",_path)
+    if not has_indexed_file(_path,"tfidf"):
+        print " computing TF-IDF"
+        corpus=corpora.MmCorpus(_path+"/txt.mm")
+
+        # train model from corpus
+        if not os.path.exists(_path+"/model.tfidf"):
+            print ' creating TF-IDF training model'
+            tfidf = models.TfidfModel(corpus) 
+            tfidf.save(_path+"/model.tfidf")
+            print ' TF-IDF training model saved %s'%(_path+"/model.tfidf")
+        else :
+            print ' loading trained model'
+            tfidf = models.TfidfModel.load(_path+"/model.tfidf")
+
+        tfidf_corpus= tfidf[corpus]
+        create_tfidf_similarity_index(tfidf_corpus,_path)
+    else:
+        print " TF-IDF already indexed : %s"%(_path+"/tfidf.index")
+        print
+
+# Load corpus and create
+def create_similarity_index(_type,_path):
+    
+    print " creating similarity index %s"%_type
+    print " loading corpus from %s"%_path
+    corpus=corpora.MmCorpus(_path+"/"+_type+".mm")
+    print "",corpus
+
+    # get number of features from dictionnary length
+    # if (_type == "txt"):
+    #     dic_path=_path+"/txt.dict"
     # else:
-    #     print " TF-IDF already indexed : %s"%(_path+"/tfidf.index")
-    #     print
+    dic_path=_path+"/"+_type+".dict"
 
-def create_combined_similarities_index(_path):
+    _num_features=len(corpora.Dictionary.load(dic_path))
+    print " getting similarity computed for %d"%_num_features
+    file_path=_path+"/"+_type+".index"
 
-    # STEP 2
-    print "Step 3 : Combine similarities index"
-    print '#'*40
+    # build the index
+    index = similarities.Similarity(file_path, corpus, num_features=_num_features) 
+    index.save(file_path)
+
+    print " similarities saved as %s"%file_path
     print 
 
-    t0=time()
+    return index
+    # get similarities between the query and all index 
+    # sims = index[corpus]
+    # corpus_txt=matutils.MmReader(_path+"/text.mm")
+    # corpus_twe=matutils.MmReader(_path+"/tweets.mm")
 
-    print " loading corpora"
-    diff_corpus=corpora.MmCorpus(_path+"/diffusion.mm")
-    txt_corpus=corpora.MmCorpus(_path+"/txt.mm")
-    twe_corpus=corpora.MmCorpus(_path+"/tweets.mm")
-    users_corpus=corpora.MmCorpus(_path+"/users.mm")
+def create_tfidf_similarity_index(_tfidf_corpus,_path):
 
-    print ' loading similarity indexes'
-    diff_index=similarities.Similarity.load(_path+'/diffusion.index')
-    twe_index=similarities.Similarity.load(_path+'/tweets.index')
-    txt_index=similarities.Similarity.load(_path+'/tfidf.mm')
-    users_index=similarities.Similarity.load(_path+'/users.index')
+    print " creating similarity index for txt transfromed with tf-idf"
+    # print " loading corpus from %s"%_path
+    # corpus=corpora.MmCorpus(_path+"/"+_type+".mm")
+    # print "",corpus
 
+    # get number of features from dictionnary length
+    # if (_type == "txt"):
+    #     dic_path=_path+"/txt.dict"
+    # else:
+
+    dic_path=_path+"/txt.dict"
+
+    _num_features=len(corpora.Dictionary.load(dic_path))
+    print " getting similarity computed for %d"%_num_features
+    file_path=_path+"/tfidf.index"
+
+    # build the index
+    index = similarities.Similarity(file_path, _tfidf_corpus, num_features=_num_features) 
+    index.save(file_path)
     
+# Transform Text with TF-IDF
+    # def text_corpus_to_tfidf(_path):
+    #     print " computing TF-IDF"
+    #     corpus=corpora.MmCorpus(_path+"/txt.mm")
+    #     tfidf = models.TfidfModel(corpus) 
+        
+    #     tfidf_corpus= tfidf[corpus]
+        # print type(tfidf_corpus)
+        # for doc in corpus_tfidf:
+        #     print doc
+        
+        # tfidf_path=_path+"/tfidf.mm"
+        # print " saving tfidf results at %s"%tfidf_path
+        # corpora.MmCorpus.serialize(tfidf_path, tfidf_corpus)
+        # print
 
-    diff=diff_index[diff_corpus]
-    txt=txt_index[txt_corpus]
-    tweets=twe_index[twe_corpus]
-    users=users_index[users_corpus]
+
+# DEPRECIATED : see Similarity_API for updated model
+# STEP 3 : Create similarity matrix of all files
+# def create_combined_similarities_index(_path):
+#     print "Step 3 : Combine similarities index"
+#     print '#'*40
+#     print 
+
+#     t0=time()
+
+#     print " loading corpora"
+#     # diff_corpus=corpora.MmCorpus(_path+"/diffusion.mm")
+#     # txt_corpus=corpora.MmCorpus(_path+"/txt.mm")
+#     # twe_corpus=corpora.MmCorpus(_path+"/tweets.mm")
+#     # users_corpus=corpora.MmCorpus(_path+"/users.mm")
+#     print ' corpus loaded'
+
+#     print ' loading similarity indexes'   
+#     # diff_index=similarities.Similarity.load(_path+'/diffusion.index')
+#     # twe_index=similarities.Similarity.load(_path+'/tweets.index')
+#     tfidf_index=similarities.Similarity.load(_path+'/tfidf.index')
+#     # users_index=similarities.Similarity.load(_path+'/users.index')
+#     print " similarities indexes loaded."
 
 
-    print
-    print " text similarity - n_samples: %d, n_features: %d "%diff.shape
-    print " tweets similarity - n_samples: %d, n_features: %d "%tweets.shape
-    print " diffusion similarity - n_samples: %d, n_features: %d "%txt.shape
-    print " users similarity - n_samples: %d, n_features: %d "%users.shape
+#     # diff=diff_index[diff_corpus]
 
-    print
+
+#     # print " loading tfidf dict and corpus"
+#     if not os.path.exists(_path+"/tfidf.corpus"):
+#         print "creating tf-idf corpus"
+#         tfidf = models.TfidfModel.load(_path+"/model.tfidf")
+#         tfidf_corpus= tfidf[txt_corpus]
+#         tfidf_corpus.save(_path+"/tfidf.corpus")
+#         print "tf-idf corpus saved to %s"%(_path+"/tfidf.corpus")
+
+#     else :
+#         print " loading tfidf corpus..."
+#         tfidf_corpus=interfaces.TransformedCorpus.load(_path+"/tfidf.corpus")
+
+#     print type(tfidf_index)
+#     print tfidf_index
+#     print type(tfidf_corpus)
+#     print len(tfidf_corpus)
+
+#     print " loading similarity matrix"
+#     txt=tfidf_index[tfidf_corpus]
+
+#     # print " load"
+#     # tweets=twe_index[twe_corpus]
+#     # print " load"
+#     # users=users_index[users_corpus]
+
+#     print
+#     # print " text similarity - n_samples: %d, n_features: %d "%diff.shape
+#     # print " tweets similarity - n_samples: %d, n_features: %d "%tweets.shape
+#     print " diffusion similarity - n_samples: %d, n_features: %d "%txt.shape
+#     # print " users similarity - n_samples: %d, n_features: %d "%users.shape
+
+#     print
     
-    print " done in %fs"%(time()-t0)
-    print
+#     print " done in %fs"%(time()-t0)
+#     print
 
+#     print "Starting linear combination of similarity measures"
 
-    print "Starting linear combination of similarity measures"
-
-    # indices for linear combination optimization
-    wt = 0.0
-    wc = 0.7 
-    wu = 0.1
-    wd = 0.2
+#     # indices for linear combination optimization
+#     wt = 0.0
+#     wc = 0.7 
+#     wu = 0.1
+#     wd = 0.2
     
-    if wt+wc+wu+wd != 1:
-        raise ValueError("scale factors sum should equals 1")
+#     if wt+wc+wu+wd != 1:
+#         raise ValueError("scale factors sum should equals 1")
 
-    # TODO : add missing parameters
-    print " weighting and scaling up matrix "
-    combi=wc*txt +wd*diff +wt*tweets+wu*users
-    print " values combination length :%d " % len(combi)
+#     # # TODO : add missing parameters
+#     print " weighting and scaling up matrix "
+#     combi=wc*txt
 
-    # print(combi.shape)
+#     # combi=wc*txt +wd*diff +wt*tweets+wu*users
+#     print " values combination length :%d " % len(combi)
+#     print(combi.shape)
 
-    combi_path=_path+"/similarities_matrix.npy"
-    combi_file=file(combi_path,"wb")
-    print " storing similarity matrix as file : %s"%combi_path
-    np.save(combi_file,combi)
-    print 
-    print "Similarities computation done ",
-    print " in %fs"%(time()-t0)
-    print 
-    return combi
+#     combi_path=_path+"/similarities_matrix.npy"
+#     combi_file=file(combi_path,"wb")
+#     print " storing similarity matrix as file : %s"%combi_path
+#     np.save(combi_file,combi)
+#     print 
+#     print "Similarities computation done ",
+#     print " in %fs"%(time()-t0)
+#     print 
+#     return combi
 
-# api 
+
+# API
 def get_protomemes_labels(_path):
     labels_path=_path+"/labels.txt"
     print " extracting labels from file : %s"%labels_path
@@ -290,6 +342,24 @@ def get_global_similarities(_path):
     sims=np.load(matrix_binary_path)
     return sims
 
+# Utils
+def has_corpus(_path,_type):
+    corpus_path=_path+'/'+_type+'.mm'
+    return os.path.exists(corpus_path)
+
+def has_indexed_file(_path,_type):
+    index_path=_path+'/'+_type+'.index'
+    return os.path.exists(index_path)
+
+def get_raw_corpus_file(_type,_path):
+    filename=_path+"/protomemes."+_type
+    if os.path.exists(filename):
+        print " loading raw corpus from %s "%filename
+        return filename
+    else:
+        raise ValueError("File is not here. Try to create protomemes corpus files via lib.protomemes.create_corpus_file()")
+
+
 # TODO :
 def compute_similarities_using_multiple_processes(l):
     '''process the test list elements in parallel'''
@@ -298,3 +368,5 @@ def compute_similarities_using_multiple_processes(l):
     pool = Pool()
     results = pool.map(create_similarity_matrix, l)
     return results
+
+
