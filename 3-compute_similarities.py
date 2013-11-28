@@ -6,7 +6,8 @@ import lib.vectorizer as vectorizer
 import numpy as np
 
 
-path="/tmp/pms"
+# path="/tmp/pms"
+path="/home/clemsos/Dev/mitras/data/tmp"
 types=["txt","diffusion","tweets","users"]
 
 # compute corpus
@@ -23,4 +24,4 @@ vectorizer.compute_and_save_similarity_corpus(path)
 vectorizer.compute_cosine_similarities_from_corpus(path)
 
 # # combine similarities
-vectorizer.create_combined_similarities_index(path)
+# vectorizer.create_combined_similarities_index(path)
