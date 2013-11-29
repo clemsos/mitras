@@ -3,6 +3,7 @@
 
 from lib.protomemes import get_protomemes, create_txt_corpus_file,create_corpus_file
 import lib.vectorizer as vectorizer
+from lib.api import Similarity_API
 import numpy as np
 
 
@@ -24,4 +25,17 @@ vectorizer.compute_and_save_similarity_corpus(path)
 vectorizer.compute_cosine_similarities_from_corpus(path)
 
 # # combine similarities
-# vectorizer.create_combined_similarities_index(path)
+api=Similarity_API(path)
+
+# diff_corpus=corpora.MmCorpus(_path+"/diffusion.mm")
+# count=len(diff_corpus)
+# print " Starting linear combination for %d similarity measures"%count
+
+count =707425
+values= [(count,x) for x in range(0, len(api.types))]
+
+# print values
+# api.compute_similarities_using_multiple_processes(values)
+api.create_combined_similarities_index(path)
+
+# 

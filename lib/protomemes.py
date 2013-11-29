@@ -235,8 +235,9 @@ def create_labels_file(_path):
         print "Storing protomemes labels and ids for future reference"
         
         labels=[]
+        
         print ' WARNING : protomeme type should be defined during map-reduce'
-        for p in _protomemes:
+        for p in protomemes:
             
             # TODO : add type to map/reduce _id  during protomemes creation
             # mytype= p["_id"]["type"] 

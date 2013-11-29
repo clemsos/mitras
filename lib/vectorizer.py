@@ -8,6 +8,8 @@ from sklearn.feature_extraction import DictVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from multiprocessing import Pool
 
+from lib.api import Similarity_API
+
 import numpy as np
 from time import time
 import codecs
@@ -216,7 +218,40 @@ def create_tfidf_similarity_index(_tfidf_corpus,_path):
     # build the index
     index = similarities.Similarity(file_path, _tfidf_corpus, num_features=_num_features) 
     index.save(file_path)
+
+# STEP 3 : Create similarity matrix of all files
+def create_combined_similarities_index(_path):
+    print "Step 3 : Combine similarities index"
+    print '#'*40
+    print 
+
+    t0=time()
+    api=Similarity_API(_path)
+
+    # save path
+    combi_path=_path+"/similarities.matrix"
     
+    # get row count
+    diff_corpus=corpora.MmCorpus(_path+"/diffusion.mm")
+    count=len(diff_corpus)
+
+    print " Starting linear combination for %d similarity measures"%count
+    print " computing..."
+    for x in range(0,10):
+        print api.get_row(x)
+        
+    # with open(combi_path, 'w') as f:
+    #     f.write(map(str,[x]) for x in range(0,count))
+        # f.write("\n".join(" ".join(map(str, api.get_row(x))) for x in range(0,count)))
+
+    print " storing similarity matrix as file : %s"%combi_path
+    print 
+    print " Similarities computation done ",
+    print " in %fs"%(time()-t0)
+    print 
+
+
+# DEPRECIATED : see Similarity_API for updated model
 # Transform Text with TF-IDF
     # def text_corpus_to_tfidf(_path):
     #     print " computing TF-IDF"
@@ -233,9 +268,6 @@ def create_tfidf_similarity_index(_tfidf_corpus,_path):
         # corpora.MmCorpus.serialize(tfidf_path, tfidf_corpus)
         # print
 
-
-# DEPRECIATED : see Similarity_API for updated model
-# STEP 3 : Create similarity matrix of all files
 # def create_combined_similarities_index(_path):
 #     print "Step 3 : Combine similarities index"
 #     print '#'*40
@@ -326,21 +358,12 @@ def create_tfidf_similarity_index(_tfidf_corpus,_path):
 #     print 
 #     return combi
 
-
 # API
-def get_protomemes_labels(_path):
-    labels_path=_path+"/labels.txt"
-    print " extracting labels from file : %s"%labels_path
-    outfile=open(labels_path,"rb")
-    labels=pickle.load(outfile)
-    print
-    return labels
-
-def get_global_similarities(_path):
-    matrix_binary_path=_path+"/similarities_matrix.npy"
-    print ' loading similarities matrix from binary file %s'%matrix_binary_path
-    sims=np.load(matrix_binary_path)
-    return sims
+# def get_global_similarities(_path):
+#     matrix_binary_path=_path+"/similarities_matrix.npy"
+#     print ' loading similarities matrix from binary file %s'%matrix_binary_path
+#     sims=np.load(matrix_binary_path)
+#     return sims
 
 # Utils
 def has_corpus(_path,_type):
