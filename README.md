@@ -1,27 +1,87 @@
-# Mitras
+# Mitras : Mining memes
 
-Mitras is a SNA prototype developed for my phD thesis
-	
-	Work in Progress : not ready to use yet
+	**Work in Progress : not ready to use yet**
 
-## Aims
-This tool analyse data from Sina Weibo with following goals:
+Mitras is a prototype for memes analysis in a large tweets corpus that includes detection of memes (clustering), localization in Chinese (NLP), geo-entities (NER, geotag) and visualization for classification.
 
-* identify memes from randomly sampled data (using clustering /unsepervised learning) 
-* extract entities from Chinese text using Stanford NER
-* extract active social graph (conversational graph)
-* visualize relationships between entities and memes
+This SNA toolkit is developed by Clément Renaud for his phD research on memes on Sina Weibo.
 
 
-## Data
+## Workflow : Overview 
+
+1. Download dataset (HKU Weiboscope corpus, 16GB)
+2. Parse data properly (csv to MongoDB)
+3. Extract and vectorize knowledgable entities (map-reduce protomemes)
+4. Produce stats to catch a grasp on the dataset (plot, time series...)
+5. Compute similarities within corpus (text,diffusion,users,tweets)
+6. Detect clusters and identify important memes (k-means)
+7. Create meme dataset and extract geo-entities (NER,map-reduce,Neo4J)
+9. Visualize identified memes (gephi, node, d3.js)
+
+## Detailed Workflow 
+
+### Data : tweet corpus 
+To create this project we will use the data provided by the project Weiboscope from HKU University, JMSC - [link](http://147.8.142.179/datazip/). The dataset contains sample data from 52 weeks of 2012 from more than 350,000 Chinese microbloggers who have more than 1,000 followers (Fu, Chan, Chau, 2013 ; Fu, Chau, 2013).
+
+Note : this data has been anonymized
+
+**Data Set Statistics:**
+
+	* Number of weibo messages: 226841122
+	* Number of deleted messages: 10865955
+	* Number of censored ('Permission Denied') messages: 86083
+	* Number of unique weibo users: 14387628
+	* 57 files, 18G
+
+### Extract Protomemes 
+To detect memes in this large corpus, we design a clustering algorithm using the concept of protomeme as described in [Ferrara, 2013](http://www.emilio.ferrara.name/2013/08/01/clustering-memes-in-social-media/). Protomemes are minimum units contained in tweets :
+
+* hashtags
+* urls
+* mentions/RT
+* text
+
+
+### Compute Similarities
+For each protomemes, we compute the (cosine) similiarity on different vector spaces as follow :
+
+* txt_similarity : tweet text using TF-IDF 
+* tweets_similarity : hashtags/urls only
+* user_similarity : users (binary) vectors 
+* diffusion_similarity : graph of the conversation as (binary) vector
+
+Those different similarities values are combined into a single using weighted index :
+
+	wt = 0.0 , wc = 0.7 , wu = 0.1 , wd = 0.2
+	combined_index = wc*txt_sim + wd*diff_sim + wt*tweets_sim + wu*users_sim
+
+
+### Clustering
+Using the combined index, we use k-means and MAX algorithm to identify clusters within the protomemes set and define memes.
+
+
+### Memes Semantic Parsing
+For each memes, we collect all tweets and we extract named entities using Stanford NER
+
+* Segmentation using Guokr's [segmentation tool](https://github.com/guokr/gkseg) and training [corpus](https://github.com/guokr/corpus)
+* NER using Stanford Parser
+
+
+### Visualization
+The visualization engine will show multi-layered navigation with different dimension for different similarity. We need to have pre-computed set of data to create powerful visualization.
+
+Viz engine will be developed in NodeJS, HTML5, ProcessingJS, d3.js, MapBox - using WebGL.
+
+## Usage
+
+### Install
 
 	sudo apt-get install python-pip
 	pip install bson jieba pymongo
 
-	
-	
-	# Install stuff
-	mkdir toolbox && cd toolbox
+	# Install optimized calculus tools : numpy / scipy 
+	cd setup 
+	bash install_blas.sh 
 
 	# mongo models
 	git clone https://github.com/slacy/minimongo.git && cd minimongo 
@@ -31,8 +91,8 @@ This tool analyse data from Sina Weibo with following goals:
 	git clone https://github.com/dat/pyner
     python setup.py install
 
-### Tweet corpus 
-To create this project we will use the data provided by the project Weiboscope from HKU University - [link](http://147.8.142.179/datazip/). Note : this data has been anonymized
+
+### Prepare Data
 
 	# to download the data
 	bash bin/get_raw_data.sh
@@ -47,44 +107,11 @@ To create this project we will use the data provided by the project Weiboscope f
 	ls data/datazip/*zip | xargs -i rm {} 
 	
 	# Parse data and store tweets in MongoDB
-	bash bin/prepare.py
+	bash bin/prepare_data.sh
 
-	# in mySQL (some bugs)
+	# in mySQL (DEPRECIATED)
 	# bash data/data_csv_to_mysql.sh
 
+	# run the big thing 
+	python main.py # TODO ! now still
 
-## Mining memes
-
-### Extract Protomemes 
-To detect memes in this large corpus, we design a clustering algorithm using the concept of protomeme as described in [Ferrara, 2013](http://www.emilio.ferrara.name/2013/08/01/clustering-memes-in-social-media/). Protomemes are minimum units contained in tweets :
-
-* hastag
-* urls
-* mentions/RT
-* text
-
-### Semantic Entities
-For each tweet, we can also extract entities using Stanford NER
-
-* Segmentation using Guokr's [segmentation tool](https://github.com/guokr/gkseg) and [corpus](https://github.com/guokr/corpus)
-* NER using Stanford Parser
-
-### Clustering 
-After building the general set of protomemes vectors, we can compute their cosine similiarity to build clusters. We can compute different aspects :
-
-* txt_similarity : TF-IDF vectors 
-* tweets_similarity : hashtags/urls vectors 
-* user_similarity : users vectors 
-* conversation_similarity : directed graph of the conversation
-* coord_similarity : coordinates (from Weibo geo lat,lon)
-* geo_similarity : geo (from NER entities)
-* topic_similarity : keywords (from NER entities)
-* people_similarity : people (from NER entities)
-
-## Computing clusters
-Once we have computed those different clusters, we can observe different ways for messages to create clusters i.e. memes. By using different combinations and parameters, we can therefore study how different aspects of similarity between messages and users can influence the constitution of different memes.
-
-## Visualization
-The visualization engine will show multi-layered navigation with different dimension for different similarity. We need to have pre-computed set of data to create powerful visualization.
-
-Viz engine will be developed in NodeJS, HTML5, ProcessingJS, d3.js, MapBox - using WebGL.
