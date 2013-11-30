@@ -150,5 +150,5 @@ def get_row_by_protomemes(_path,_type,_id):
 # print row
 
 row=get_row_by_protomemes("/tmp","hashtags", '吴奇隆')
-print row
+print row # 278393
 protomemes=get_protomemes_by_row("/tmp",row)

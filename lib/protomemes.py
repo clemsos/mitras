@@ -222,7 +222,7 @@ def get_protomemes_by_row(_path,x):
 
 def get_row_by_protomemes(_path,_type,_id):
     labels=load_index_file(_path)
-    return [l for i,l in enumerate(labels) if labels[l]==(_id,_type)][0]
+    return [int(l) for i,l in enumerate(labels) if labels[l]==(_id,_type)][0]
 
 # data straight from db
 def get_protomemes(_type, _count):

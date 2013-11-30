@@ -46,29 +46,26 @@ class Similarity_API:
                 ))
         print ' all corpus loaded for', self.types
 
-    def get_row(self,x,_length):
+    def get_row(self,x):
         
-        row=[]
-        print ", get row %d"%x
+        row=np.zeros([self.length])
+        print "get row %d"%x
+
         # for each type of protomemes
-        # print self.data
         for i,d in enumerate(self.data):
-            # print i,d
-            vec=d[0] # get vectors
-            sim=d[1] # get similarity
-            [sim[(k, 1.0)] for k in range(0, 100)]
-            # print vec,sim
+            corpus=d[0] # get vectors
+            similarity_index=d[1] # get similarity
+            # [sim[(k, 1.0)] for k in range(0, 100)]
+
             # add weighted similarity
-            corpus_row=vec[x]
-            #print repr(corpus_row)
-            print type(sim)
-            # weighted_row_similarity = sim[]*self.weights[i]
-            #row.append()
-            # print self.weights[i]
-            # print sim[vec[x]]*0.5
-        #print [len(row[k]) for k in range(0, 3)]
+            # corpus_row=vec[x]
+            # print repr(corpus_row)
+            # print type(sim)
+            row+= similarity_index[corpus[x]]*self.weights[i]
+
+        # print [len(row[k]) for k in range(0, 3)]
         # proceed to linear combination
-        return sum(row)
+        return row
 
     def get_row_by_type(self,x,i):
         t0=time()
