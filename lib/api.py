@@ -8,8 +8,15 @@ from time import time
 
 class Similarity_API:
 
-    def __init__(self,_path,_treshold):
+    def __init__(self,_path,_count,_chunk_length):
+
         self.path=_path
+
+        # TODO :should be initialize in the constructor
+        self.chunk_length=_chunk_length 
+        self.length= _count # this value also named _count somewhere else
+        self.count= _count
+
         print 'Loading Similarity API'
         # scalars for linear combination optimization
         w_diffusion = 0.2
@@ -39,25 +46,27 @@ class Similarity_API:
                 ))
         print ' all corpus loaded for', self.types
 
-        for d in self.data:
-            d[1].num_best = _treshold
-
     def get_row(self,x,_length):
         
         row=[]
-        print " get row %d"%x
+        print ", get row %d"%x
         # for each type of protomemes
         # print self.data
         for i,d in enumerate(self.data):
             # print i,d
             vec=d[0] # get vectors
             sim=d[1] # get similarity
+            [sim[(k, 1.0)] for k in range(0, 100)]
             # print vec,sim
             # add weighted similarity
-            row.append(sim[vec[x]]*self.weights[i])
+            corpus_row=vec[x]
+            #print repr(corpus_row)
+            print type(sim)
+            # weighted_row_similarity = sim[]*self.weights[i]
+            #row.append()
             # print self.weights[i]
             # print sim[vec[x]]*0.5
-
+        #print [len(row[k]) for k in range(0, 3)]
         # proceed to linear combination
         return sum(row)
 
@@ -87,26 +96,101 @@ class Similarity_API:
         # print " in %fs"%(time()-t0)
         # print 
 
-    def compute_similarities_using_multiple_processes(self,l):
-        '''process the test list elements in parallel'''
-        
-        print '  using multi-process pool'
-        pool = Pool()
-        results = pool.map(self.create_weighted_matrix, l)
-        return results
+    def get_row_from_file(self,x):
 
-    def create_combined_similarities_index(self,_path):
+        # get path
+        r=self.get_file_range(x)
+        fn="/similarities-%d-%d.npy"%r
+        combi_path=self.path+fn
+        print combi_path
+        row=x-r[0]#chunk_start
+        
+        # load
+        n=np.load(open(combi_path, "r"))
+        print n[row]
+
+    def get_file_range(self,x):
+        chunk_start=0
+        for c in xrange(0,self.length,self.chunk_length):
+            chunk_start=c
+            if x in range(chunk_start,chunk_start+self.chunk_length) :
+                return (chunk_start,chunk_start+self.chunk_length) 
+
+    def get_chunk(self,x):
+        # get path
+        r=self.get_file_range(x)
+        fn="/similarities-%d-%d.npy"%r
+        combi_path=self.path+fn
+        print combi_path
+
+        # load
+        n=np.load(open(combi_path, "r"))
+        return n
+
+    # def compute_similarities_using_multiple_processes(self,l):
+    #     '''process the test list elements in parallel'''
+        
+    #     print '  using multi-process pool'
+    #     pool = Pool()
+    #     results = pool.map(self.create_weighted_matrix, l)
+    #     return results
+
+    def compute_similarity_chunk(self,_count,_chunk_start,_chunk_end):
+
+        t0=time()
+        combi_path=self.path+"/similarities-"+str(_chunk_start)+"-"+str(_chunk_end)+".npy"
+        
+        # init array for faster processing
+        # result=np.zeros([_chunk_end-_chunk_start,_count]) 
+        result=np.memmap(combi_path, dtype='float16', mode='w+', shape=(_chunk_end-_chunk_start,_count))
+
+        # each type of similarity
+        for i,d in enumerate(self.data): 
+
+            # print " computing for %s"%api.types[i]
+            corpus=d[0] # get vectors
+            similarity_index=d[1] # get similarity
+            
+            chunk=[]
+            for j in range(_chunk_start , _chunk_end):
+                chunk.append(corpus[j])
+
+            # add weighted similarity
+            result+=similarity_index[chunk]*self.weights[i]
+
+        # save chunk as a npy array
+        # np.save(open(combi_path, "w"),result)
+        # result
+
+        print " chunk done in %.3fs"%(time()-t0)
+        print " storing similarity matrix as file : %s"%combi_path
+        return 
+
+    def create_combined_similarities_index(self):
         
         t0=time()
+        print "starting complete computation of all the stuff"
+        t0=time()
+
+        for chunk_start in xrange(0, self.count, self.chunk_length):
+            
+            chunk_end=min(self.count, chunk_start + self.chunk_length)
+            print ' Computing chunk from  %d to %d...'%(chunk_start,chunk_end)
+
+            self.compute_similarity_chunk(self.count,chunk_start,chunk_end)
+
+        return
+        print " computing done in %.3fs"%(time()-t0)
+        print
 
         # get row count
-        diff_corpus=corpora.MmCorpus(_path+"/diffusion.mm")
-        count=len(diff_corpus)
+        # diff_corpus=corpora.MmCorpus(_path+"/diffusion.mm")
+        # count=len(diff_corpus)
 
-        print " Starting linear combination for %d similarity measures"%count
-        print " computing..."
-        for x in range(0,10):
-            print self.get_row(x)
+        # print " Starting linear combination for %d similarity measures"%count
+        # print " computing..."
+        # for x in range(0,10):
+        #     print self.get_row(x)
             
         # with open(combi_path, 'w') as f:
         #     f.write(map(str,[x]) for x in range(0,count))
@@ -117,6 +201,9 @@ class Similarity_API:
         # print " Similarities computation done ",
         # print " in %fs"%(time()-t0)
         # print 
+
+    
+
 
 class Protomemes_API:
     def __init__(self):

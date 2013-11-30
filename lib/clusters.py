@@ -8,7 +8,6 @@ def get_linkage_matrix(matrix_data):
     print " calculate matrix w average linkage algorithm"
     linkage_matrix=linkage(matrix_data, method='average')
     print " clusters: n_samples: %d, n_features: %d" % linkage_matrix.shape
-
     return linkage_matrix
 
 def explain_linkage_clusters(clusters, labels):
@@ -25,7 +24,6 @@ def explain_linkage_clusters(clusters, labels):
 
         print row
         print "---> [",value1,value2, row[2],"]"
-
 
 def create_d3js_heatmap_data_file(ordered_data_matrix, labels):
 

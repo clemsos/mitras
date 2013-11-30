@@ -1,32 +1,28 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import unittest
+import numpy as np
+
 from test_helpers import TestHelpers
 
 helpers=TestHelpers()
 helpers.add_relative_path()
 
-from lib.protomemes import get_protomemes, build_corpus
-import lib.vectorizer as vectorizer
+from lib.api import Similarity_API
+from lib.clusters import get_linkage_matrix
+from time import time
 
-import unittest
-import numpy as np
-# t00=time()
-# print helpers.load_tweets("week1",1)
-# class TestSequenceFunctions(unittest.TestCase):
+t0=time()
+path="/home/clemsos/Dev/mitras/data/tmp"
+api=Similarity_API(path)
 
-count=2000
-path="/tmp/tests"
-pms=get_protomemes(None,count)
-protomemes=np.array(pms) # convert to numpy array 
+data=api.get_chunk(1)
 
-print "%d protomemes obtained." % len(protomemes)
+print " loaded in %.3fs"%(time()-t0)
+print
+t1=time()
+get_linkage_matrix(data)
+print " computed in %.3fs"%(time()-t1)
 print 
-
-# for p in protomemes:
-#     print p["value"]["users"]
-
-vectorizer.compute_and_save_similarity_corpus(protomemes,path)
-
-vectorizer.compute_cosine_similarities_from_corpus(path)
-vectorizer.create_combined_similarities_index(path)
+print " done in %.3fs"%(time()-t0)
