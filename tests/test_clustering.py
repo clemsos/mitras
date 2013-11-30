@@ -15,9 +15,12 @@ from time import time
 
 t0=time()
 path="/home/clemsos/Dev/mitras/data/tmp"
-api=Similarity_API(path)
+count =707425
+chunk_length=250
 
-data=api.get_chunk(1)
+api=Similarity_API(path,count,chunk_length)
+
+data=api.get_chunk(260)
 
 print " loaded in %.3fs"%(time()-t0)
 print

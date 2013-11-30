@@ -16,7 +16,7 @@ db=MongoDB("weibodata").db
 data=db[collection]
 tweets_count=data.count()
 print 10*"-"
-print "%s tweets in the db"%tweets_count
+print "%s protomemes in the db"%tweets_count
 print
 print "number of items per hastags" 
 

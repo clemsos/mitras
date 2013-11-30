@@ -16,6 +16,8 @@ import codecs
 import pickle
 import os.path
 
+types=["diffusion","tweets","txt","users"]
+
 # MAIN : Step 1
 def compute_and_save_similarity_corpus(_path): 
 
@@ -107,7 +109,6 @@ def create_frequency_vectors_corpus(_corpus,_dictionary,_corpus_path):
     # pprint(corpus)
     # print corpus
 
-##
 # STEP 2 : similarity between corpuses
 def compute_cosine_similarities_from_corpus(_path):
 

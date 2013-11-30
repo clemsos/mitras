@@ -55,3 +55,6 @@ def create_d3js_heatmap_data_file(ordered_data_matrix, labels):
     with open('../ui/data/data.js', 'w') as myFile:
         myFile.write(jsfile)
 
+# compute using fastcluster from Stanford 
+# http://math.stanford.edu/~muellner/fastcluster.html
+

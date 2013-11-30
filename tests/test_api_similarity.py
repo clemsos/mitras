@@ -180,8 +180,8 @@ def test_api_create_combined_similarities_index():
 
     api.create_combined_similarities_index(count,chunk_length)
 
-# count =707425
-# chunk_length=20
+count =707425
+chunk_length=20
 # test_compute_by_chunk(count,chunk_length)
 
 def test_read_similarity_api():
@@ -189,7 +189,7 @@ def test_read_similarity_api():
 
 t0=time()
 path="/home/clemsos/Dev/mitras/data/tmp"
-api=Similarity_API(path)
+api=Similarity_API(path,count,chunk_length)
 
 test_path="/tmp/row.npy"
 # api.get_row_from_file(502)

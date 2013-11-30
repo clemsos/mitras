@@ -124,7 +124,7 @@ class Similarity_API:
         print combi_path
 
         # load
-        n=np.load(open(combi_path, "r"))
+        n=np.load(combi_path, mmap_mode='r')
         return n
 
     # def compute_similarities_using_multiple_processes(self,l):

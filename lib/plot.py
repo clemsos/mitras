@@ -79,3 +79,7 @@ def augmented_dendrogram(*args, **kwargs):
             plt.annotate("%.3g" % y, (x, y), xytext=(0, -8),
                          textcoords='offset points',
                          va='top', ha='center')
+
+
+# VIZ lib
+# http://bokeh.pydata.org/
