@@ -205,7 +205,6 @@ def create_protomemes_index_file(_path):
 
     print " done in %.3fs"%(time()-t0)
     print
-       
 
 # API 
 # using the protomemes index 
@@ -219,6 +218,29 @@ def get_protomemes_by_row(_path,x):
     return list(db[row[1]].find(query))
     # record=db[row[1]].findById(row[0])
     # print record
+
+def get_protomemes_ids_by_rows(_path,rows_id):
+    # print type(rows_id)
+    if type(rows_id) is not list:
+        raise TypeError("x should be an array")
+
+    labels=load_index_file(_path)
+    
+    # print type(labels)
+    # rows=[]
+    
+    protomemes_ids={}
+    for id in rows_id:
+        row=labels[str(id)]
+        # rows.append(row)
+        try :
+            protomemes_ids[row[1]].append(row[0])
+        except KeyError:
+            protomemes_ids[row[1]]=[]
+            protomemes_ids[row[1]].append(row[0])
+
+    return protomemes_ids
+
 
 def get_row_by_protomemes(_path,_type,_id):
     labels=load_index_file(_path)

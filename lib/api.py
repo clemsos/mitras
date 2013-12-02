@@ -124,14 +124,6 @@ class Similarity_API:
         n=np.load(combi_path, mmap_mode='r')
         return n
 
-    # def compute_similarities_using_multiple_processes(self,l):
-    #     '''process the test list elements in parallel'''
-        
-    #     print '  using multi-process pool'
-    #     pool = Pool()
-    #     results = pool.map(self.create_weighted_matrix, l)
-    #     return results
-
     def compute_similarity_chunk(self,_count,_chunk_start,_chunk_end):
 
         t0=time()
@@ -198,9 +190,6 @@ class Similarity_API:
         # print " Similarities computation done ",
         # print " in %fs"%(time()-t0)
         # print 
-
-    
-
 
 class Protomemes_API:
     def __init__(self):
