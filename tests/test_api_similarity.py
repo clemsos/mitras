@@ -184,8 +184,6 @@ count =707425
 chunk_length=20
 # test_compute_by_chunk(count,chunk_length)
 
-def test_read_similarity_api():
-    pass
 
 t0=time()
 path="/home/clemsos/Dev/mitras/data/tmp"
@@ -219,3 +217,21 @@ print
 print "done in %.3fs"%(time()-t0)
 
 
+
+
+# combine similarities
+# count=707425 # should be the y dimension of the matrix
+# chunk_length=250 
+# api=Similarity_API(path,count,chunk_length)
+
+# diff_corpus=corpora.MmCorpus(_path+"/diffusion.mm")
+# count=len(diff_corpus)
+# print " Starting linear combination for %d similarity measures"%count
+
+# chunk size can be changed according to RAM 
+# api.create_combined_similarities_index()
+
+# values= [(count,x) for x in range(0, len(api.types))]
+# print values
+# api.compute_similarities_using_multiple_processes(values)
+# api.create_combined_similarities_index(path)

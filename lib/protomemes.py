@@ -241,7 +241,6 @@ def get_protomemes_ids_by_rows(_path,rows_id):
 
     return protomemes_ids
 
-
 def get_row_by_protomemes(_path,_type,_id):
     labels=load_index_file(_path)
     return [int(l) for i,l in enumerate(labels) if labels[l]==(_id,_type)][0]
