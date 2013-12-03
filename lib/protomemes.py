@@ -6,6 +6,7 @@ from lib.mongo import MongoDB
 import numpy as np
 import os.path
 import codecs
+from multiprocessing import Pool
 
 # Connect to Mongo
 db=MongoDB("weibodata").db
@@ -13,8 +14,40 @@ db=MongoDB("weibodata").db
 # valid protomemes
 valid_types =["hashtags","mentions","urls","phrase"]
 
+
+# EXTRACT PROTOMEMES
+# ------------------------------------
+# multi-process to speed up map-reduce based on build_corpus function
+def extract_protomemes_using_multiple_processes(l):
+    '''
+    Process each protomemes types in parallel using multiple processes
+
+    Args should be defined as a set of tuples
+        arg=(type, collection, count, destination)
+
+    See build_corpus function for more info
+
+    ex:
+        collection_args= [
+            ("hashtags", "week1", count,"hashtags"),
+            ("mentions", "week1", count,"mentions"),
+            ("urls", "week1", count,"urls")
+            ]
+    '''    
+
+    print ' creating multi-process pool'
+    pool = Pool()
+    results = pool.map(worker_map_reduce_protomemes, l)
+    # return results
+
+# Worker for multiprocess
+def worker_map_reduce_protomemes(args):
+    print ' worker : protomemes extraction started for %s'%args[0]
+    # print 
+    build_protomemes_corpus(args[0],args[1],args[2],args[3])
+
 # Map-Reduce parser using MongoDB
-def build_corpus(_type, _collection, _count, _destination):
+def build_protomemes_corpus(_type, _collection, _count, _destination):
     """
     Compute protomemes from tweets using MongoDB map reduce function
     see js files for details
@@ -52,8 +85,7 @@ def build_corpus(_type, _collection, _count, _destination):
 
     if _destination == None :
         result = db[_collection].inline_map_reduce( mapper, reducer, limit=_count)
-        print "haha"
-        # print dict(result)
+        print " results of the map-reduce process won't be stored"
         return result
     else :
         result = db[_collection].map_reduce( mapper, reducer, _destination, limit=_count)
@@ -64,14 +96,44 @@ def build_corpus(_type, _collection, _count, _destination):
     print "-"*12
     print
 
-#  Utils from creating rawcorpus
+
+# CORPUS BY TYPE AS RAM-friendly FILE :)
+# ------------------------------------
+# TODO : "txt corpus" should be merged with the "map-reduce" creation using a common index
+
+# Get data to create raw corpus file by type
+# Apply a treshold of at least 5 tweets and 5 users to be recognized as protomeme
 def get_protomemes_values_by_type(_collection,_type,_count):
-    query = "value."+_type
-    data=db[_collection].find( {},{ query: 1 } ).limit(_count)
+    '''
+    This function loads data from the protomemes to be parsed in a text file for  memory-friendly processing later on.
+    
+    Created files will be used as temporary buffer to compute similarities.
+
+    To avoid very large files and index, we define criterium to sample the protomemes. To be added to the final corpus a protomeme should have :
+        - at least 5 users involved
+        - at least contains 5 tweets
+
+    '''
+    # apply treshold
+    query1={
+        "value.tweets.5": { "$exists":"true"},
+        "value.users.5": { "$exists":"true"}
+    }
+
+    # get only specific type
+    query2 = { "value."+_type : 1 }
+
+    data=db[_collection].find(query1, query2).limit(_count)
     return list(data)
 
+# Helper to be applied to txt file  
 def create_txt_corpus_file(_count, _path):
+    '''
+    Compute a corpus from all text values in protomemes
+    saved as a .txt file
 
+    This intends to be processed line by line later, so it is memory-friendly (no need to load the all corpus in RAM)
+    '''
     filename=_path+"/protomemes.txt"
 
     if not os.path.exists(filename):
@@ -101,7 +163,21 @@ def create_txt_corpus_file(_count, _path):
         print 
 
 # Main function to create raw corpus file
-def create_corpus_file(_type,_count,_path):
+def create_corpus_file_by_type(_type,_count,_path):
+    '''
+    Compute a corpus from all values define by _type in protomemes
+    saved as a file
+
+    This intends to be processed line by line later, so it is memory-friendly (no need to load the all corpus in RAM)
+    
+    ## Usage 
+    _type  : should be one of the valid_types (valid_types)
+    _count : the total number of items to process
+    _path  : folder to store the files
+
+    '''
+    if _type not in valid_types:
+        raise ValueError("Type not valid, should be one of those :%s ")%(valid_types)
 
     # switch to a specific function for text
     if _type == "txt":
@@ -136,6 +212,9 @@ def create_corpus_file(_type,_count,_path):
         print " raw corpus already exists %s "%filename
         print 
 
+
+# INDEXING
+# ------------------------------------
 # get all ids and type to create index
 def get_protomemes_ids(_collection,_count):
 
@@ -159,6 +238,7 @@ def get_protomemes_ids(_collection,_count):
 # create the actual index as a file
 def create_protomemes_index_file(_path):
     t0=time()
+    
     # request protomemes, only object id
     count=44382+398392+264651
 
@@ -206,8 +286,10 @@ def create_protomemes_index_file(_path):
     print " done in %.3fs"%(time()-t0)
     print
 
-# API 
-# using the protomemes index 
+
+# API (index)
+# ------------------------------------
+# Get a single protomemes using the index file
 def get_protomemes_by_row(_path,x):
     labels=load_index_file(_path)
     row=labels[str(x)]
@@ -219,6 +301,7 @@ def get_protomemes_by_row(_path,x):
     # record=db[row[1]].findById(row[0])
     # print record
 
+# Get a set of protomemes using the index file
 def get_protomemes_ids_by_rows(_path,rows_id):
     # print type(rows_id)
     if type(rows_id) is not list:
@@ -241,11 +324,29 @@ def get_protomemes_ids_by_rows(_path,rows_id):
 
     return protomemes_ids
 
+# Get the index from a protomemes ID
 def get_row_by_protomemes(_path,_type,_id):
     labels=load_index_file(_path)
     return [int(l) for i,l in enumerate(labels) if labels[l]==(_id,_type)][0]
 
-# data straight from db
+# utils to parse index file
+def load_index_file(_path):
+    
+    label_file=[i for i in open(_path+"/labels.txt").readlines()]
+    labels={}
+
+    for l in label_file:
+        v=l.split()
+        # print len(v)
+        labels[v[0]]=(v[1],v[2])
+
+    return labels
+
+
+
+# API (DB)
+# ------------------------------------
+# Get a set of protomemes from the db
 def get_protomemes(_type, _count):
     """
     Return formatted protomemes from the db as a list
@@ -331,6 +432,7 @@ def get_protomemes(_type, _count):
 
     return data
 
+# Get a single protomemes from the db
 def get_protomeme_by_id(_type, _id):
     # set the right db
     my_db=db[_type]
@@ -341,15 +443,3 @@ def get_protomeme_by_id(_type, _id):
     return data
 
 
-# utils for API to parse index file
-def load_index_file(_path):
-    
-    label_file=[i for i in open(_path+"/labels.txt").readlines()]
-    labels={}
-
-    for l in label_file:
-        v=l.split()
-        # print len(v)
-        labels[v[0]]=(v[1],v[2])
-
-    return labels

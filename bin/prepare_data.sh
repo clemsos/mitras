@@ -30,7 +30,7 @@ _csv_files=`ls -1 week*.csv`
 for _csv_file in ${_csv_files[@]}
 do
 
-    python `dirname ${CUR}`/prepare.py $_csv_file
+    python `dirname ${CUR}`/lib/csv2mongo.py $_csv_file
 
 done
 exit
