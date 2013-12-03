@@ -15,7 +15,7 @@ from lib.nlp import NLPMiner
 import lib.tweetminer as minetweet
 
 from lib.mongo import MongoDB
-from lib.protomemes import extract_protomemes_using_multiple_processes, create_corpus_file_by_type
+from lib.protomemes import extract_protomemes_using_multiple_processes, create_corpus_file_by_type,create_protomemes_index
 # from lib.protomemes import get_protomemes, create_txt_corpus_file,create_corpus_file
 
 from lib.vectorizer import compute_and_save_similarity_corpus, compute_cosine_similarities_from_corpus
@@ -69,7 +69,7 @@ collection_args= [
     ]
 
 # launch the protomemes extraction
-extract_protomemes_using_multiple_processes(collection_args)
+# extract_protomemes_using_multiple_processes(collection_args)
 
 '''
 4. Compute protomemes similarities
@@ -86,11 +86,18 @@ types=["txt","diffusion","tweets","users"]
 for t in types:
     create_corpus_file_by_type(t,0,path)
 
+# Create index of protomemes
+create_protomemes_index(path)
+
 # Convert each corpus to vectors
 compute_and_save_similarity_corpus(path)
 
 # Create similarities index for each corpus
 compute_cosine_similarities_from_corpus(path)
+
+# Create the combined similarities index matrix (lots of RAM !)
+create_combined_similarities_index(path)
+
 
 '''
 5. Identify important clusters in the dataset

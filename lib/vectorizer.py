@@ -103,7 +103,7 @@ def create_frequency_vectors_corpus(_corpus,_dictionary,_corpus_path):
     corpora.MmCorpus.serialize(corpus_path, corpus) # store to disk, for later use
     print " dico saved at %s " % corpus_path
 
-    print " %d records processed." % len(_corpus)
+    print " %d records processed." % len(corpus)
     print " done in %fs" % (time() - t0)
     print
     # pprint(corpus)
@@ -238,12 +238,12 @@ def create_combined_similarities_index(_path):
 
     print " Starting linear combination for %d similarity measures"%count
     print " computing..."
-    for x in range(0,10):
-        print api.get_row(x)
+    # for x in range(0,10):
+    #     print api.get_row(x)
         
-    # with open(combi_path, 'w') as f:
-    #     f.write(map(str,[x]) for x in range(0,count))
-        # f.write("\n".join(" ".join(map(str, api.get_row(x))) for x in range(0,count)))
+    with open(combi_path, 'w') as f:
+        # f.write(map(str,[x]) for x in range(0,count))
+        f.write("\n".join(" ".join(map(str, api.get_row(x))) for x in range(0,count)))
 
     print " storing similarity matrix as file : %s"%combi_path
     print 

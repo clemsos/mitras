@@ -159,7 +159,7 @@ def create_txt_corpus_file(_count, _path):
         print " done in %.3fs"%(time()-t0)
         print
     else:
-        print " raw corpus already exists %s "%filename
+        print " Raw corpus already exists %s "%filename
         print 
 
 # Main function to create raw corpus file
@@ -171,13 +171,13 @@ def create_corpus_file_by_type(_type,_count,_path):
     This intends to be processed line by line later, so it is memory-friendly (no need to load the all corpus in RAM)
     
     ## Usage 
-    _type  : should be one of the valid_types (valid_types)
+    _type  : aspect that we want to compare in the protomeme (ex : txt","diffusion","tweets","users")
     _count : the total number of items to process
     _path  : folder to store the files
 
     '''
-    if _type not in valid_types:
-        raise ValueError("Type not valid, should be one of those :%s ")%(valid_types)
+    # if _type not in valid_types:
+    #     raise ValueError("Type not valid, should be one of those :%s ")%(valid_types)
 
     # switch to a specific function for text
     if _type == "txt":
@@ -218,36 +218,30 @@ def create_corpus_file_by_type(_type,_count,_path):
 # get all ids and type to create index
 def get_protomemes_ids(_collection,_count):
 
-    pm_count=_count
- 
     coll=db[_collection]
 
-    print "Total %s in the db : %d"%(_collection,coll.count())
+    # apply treshold
+    query1={
+        "value.tweets.5": { "$exists":"true"},
+        "value.users.5": { "$exists":"true"}
+    }
+
+    ids=list(coll.find(query1,{"__id":1, "value.type":1}))
+
     print 10*"-"
+    print " got %d %s from a total of %d records in the db"%( len(ids) ,_collection,coll.count())
+    # print (h)
 
-    h=coll.find({},{"__id":1, "value.type":1}).limit(_count)
-
-    # print "%d protomemes in this set"% (len(h)+len(m)+len(u)),
-    print "(%d required) " % pm_count
-
-    print
-    print 10*"-"
-
-    return list(h)
+    return ids
 
 # create the actual index as a file
 def create_protomemes_index_file(_path):
     t0=time()
     
-    # request protomemes, only object id
-    count=44382+398392+264651
+    # TODO : should not need to specify any count
+    count=0
 
-    # get corpus from mongo
-    # order = u+h+m
-    collections =["urls","hashtags","mentions"]
-
-    # protomemes=get_protomemes_ids(None,count)
-
+    collections =["hashtags","mentions","urls"]
     filename=_path+"/labels.txt"
 
     # open file
@@ -260,11 +254,13 @@ def create_protomemes_index_file(_path):
         # loop through each collection to create db
         c=0
         for coll in collections:
+            # request protomemes, only object id
             print ' getting records from %s...'%c
             protomemes=get_protomemes_ids(coll,count)
-            print ' got %d records'%len(protomemes)
+            print ' writing %d records'%len(protomemes)
 
             for i,p in enumerate(protomemes):
+                mytype=""
                 try :
                     mytype= p["value"]["type"]
                 except KeyError:
@@ -279,12 +275,20 @@ def create_protomemes_index_file(_path):
                         mytype="hashtags"
                 c+=1
                 outfile.write(str(c)+" "+p["_id"]+" "+str( mytype)+"\n")
-                # outfile.write()
-        
+
         outfile.write("")
 
     print " done in %.3fs"%(time()-t0)
     print
+
+# wrapper function to create index
+def create_protomemes_index(_path):
+    filename=_path+"/labels.txt"
+    if os.path.exists(filename):
+        print " Protomemes index file already exists %s"%filename
+    else:
+        create_protomemes_index_file(_path)
+
 
 
 # API (index)

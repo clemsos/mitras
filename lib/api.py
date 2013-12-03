@@ -55,15 +55,10 @@ class Similarity_API:
         for i,d in enumerate(self.data):
             corpus=d[0] # get vectors
             similarity_index=d[1] # get similarity
-            # [sim[(k, 1.0)] for k in range(0, 100)]
 
             # add weighted similarity
-            # corpus_row=vec[x]
-            # print repr(corpus_row)
-            # print type(sim)
             row+= similarity_index[corpus[x]]*self.weights[i]
 
-        # print [len(row[k]) for k in range(0, 3)]
         # proceed to linear combination
         return row
 
