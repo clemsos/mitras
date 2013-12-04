@@ -15,13 +15,15 @@ from lib.nlp import NLPMiner
 import lib.tweetminer as minetweet
 
 from lib.mongo import MongoDB
+
 from lib.protomemes import extract_protomemes_using_multiple_processes, create_corpus_file_by_type,create_protomemes_index
-# from lib.protomemes import get_protomemes, create_txt_corpus_file,create_corpus_file
 
 from lib.vectorizer import compute_and_save_similarity_corpus, compute_cosine_similarities_from_corpus
 
 from lib.api import Similarity_API
 from lib.memes import *
+
+from scipy.cluster.hierarchy import linkage
 
 tstart=time()
 
@@ -56,16 +58,16 @@ collection="tweets"
 db=MongoDB("weibodata").db
 
 # get corpus length
-count=db[collection].count()
-print str(count)+" tweets in the db"
+tweets_count=db[collection].count()
+print str(tweets_count)+" tweets in the db"
 print 10*"-"
 
 # Define elements to extract
 # (source, collection, number of items, destination)
 collection_args= [
-    ("hashtags", collection, count,"hashtags"),
-    ("mentions", collection, count,"mentions"),
-    ("urls", collection, count,"urls")
+    ("hashtags", collection, tweets_count,"hashtags"),
+    ("mentions", collection, tweets_count,"mentions"),
+    ("urls", collection, tweets_count,"urls")
     ]
 
 # launch the protomemes extraction
@@ -95,41 +97,44 @@ compute_and_save_similarity_corpus(path)
 # Create similarities index for each corpus
 compute_cosine_similarities_from_corpus(path)
 
-# Create the combined similarities index matrix (lots of RAM !)
-create_combined_similarities_index(path)
+# Create the combined similarities index matrix
+chunk_size=2500 # cut the whole dataset into chunks so it can be processed
+protomemes_count= 43959#db["hashtags"].count()
+api=Similarity_API(path,protomemes_count,chunk_size)
 
+if not os.path.exists(path+"/similarity_matrix.npy"):
+    print "Create combined matrix"
+    api.create_combined_similarities_index(False)
+else:
+    print "Combined similarity matrix already exists"
 
 '''
 5. Identify important clusters in the dataset
 '''
 
-# chunk_size=250 # cut the whole dataset into chunks so it can be processed
-# api=Similarity_API(path,count,chunk_size)
+sims=api.get_similarity_matrix()
+print sims.shape
 
-# # TODO !!!!
-# # print " calculate matrix w average linkage algorithm"
-# # linkage_matrix=linkage(combi, method='average')
-# # print " clusters: n_samples: %d, n_features: %d" % linkage_matrix.shape
+similarity_treshold = 0.7 # minimum value of similarity between protomemes
+similar_protomemes_treshold=20
+print 'getting rows with %d protomemes that are at least %.3fx similar'%(similar_protomemes_treshold,similarity_treshold)
 
-# # here is a basic example of the process
+# get index of row containing enough similar elements
+index_of_rows_containing_memes=np.where((sims > similarity_treshold).sum(axis=1) >= similar_protomemes_treshold)[0]
 
-# # select a protomeme
-# protomeme=(path,"hashtags", '吴奇隆')
 
-# # get his index position in the corpus
-# i=get_row_by_protomemes(protomeme)
+# print type(remarquable_rows)
+print " found %d row containing enough similar elements"%len(index_of_rows_containing_memes)
+# print index_of_rows_containing_memes
 
-# # get all similar elements
-# row=api.get_row(i)
-# print "*%d results"%len(row)
+# for row in rows_containing_memes:
+#     print get_protomemes_ids_by_row(row)
+matrix_data=sims[index_of_rows_containing_memes]
+print " calculate matrix w average linkage algorithm"
+linkage_matrix=linkage(matrix_data, method='average')
+print " clusters: n_samples: %d, n_features: %d" % linkage_matrix.shape
+print linkage_matrix
 
-# # retrieve all similar elements beyond a treshold
-# treshold=0.5
-# protomemes_rows=[i for i,x in enumerate(row) if x > treshold]
-
-# protomemes_rows.append(i) #add original protomemes to the set
-
-# print " %d similar protomemes (by id)"%len(similar_protomemes_rows)
 
 # '''
 # 6. Extract memes from protomemes cluters

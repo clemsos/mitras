@@ -220,36 +220,42 @@ def create_tfidf_similarity_index(_tfidf_corpus,_path):
     index = similarities.Similarity(file_path, _tfidf_corpus, num_features=_num_features) 
     index.save(file_path)
 
+# THIS HAS BEEN MOVED TO THE Similarity API (lib/api.py)
 # STEP 3 : Create similarity matrix of all files
-def create_combined_similarities_index(_path):
-    print "Step 3 : Combine similarities index"
-    print '#'*40
-    print 
+# def create_combined_similarities_index(_path):
+#     print "Step 3 : Combine similarities index"
+#     print '#'*40
+#     print 
 
-    t0=time()
-    api=Similarity_API(_path)
+#     t0=time()
 
-    # save path
-    combi_path=_path+"/similarities.matrix"
+#     # save path
+#     combi_path=_path+"/similarities_matrix.npy"
     
-    # get row count
-    diff_corpus=corpora.MmCorpus(_path+"/diffusion.mm")
-    count=len(diff_corpus)
+#     # api=Similarity_API(_path)
 
-    print " Starting linear combination for %d similarity measures"%count
-    print " computing..."
-    # for x in range(0,10):
-    #     print api.get_row(x)
+#     # get row count
+#     diff_corpus=corpora.MmCorpus(_path+"/diffusion.mm")
+#     count=len(diff_corpus)
+
+#     print " Starting linear combination for %d similarity measures"%count
+#     print " computing..."
+
+#     # np.memmap(combi_path, dtype='float32', mode='w+', shape=(count,count))
+#     # size of this will be 43959*43959*16=28.794 Go
+
+#     # for x in range(0,10):
+#     #     print api.get_row(x)
         
-    with open(combi_path, 'w') as f:
-        # f.write(map(str,[x]) for x in range(0,count))
-        f.write("\n".join(" ".join(map(str, api.get_row(x))) for x in range(0,count)))
+#     # with open(combi_path, 'w') as f:
+#     #     # f.write(map(str,[x]) for x in range(0,count))
+#     #     f.write("\n".join(" ".join(map(str, api.get_row(x))) for x in range(0,count)))
 
-    print " storing similarity matrix as file : %s"%combi_path
-    print 
-    print " Similarities computation done ",
-    print " in %fs"%(time()-t0)
-    print 
+#     print " similarity matrix stored as file : %s"%combi_path
+#     print 
+#     print " Similarities computation done ",
+#     print " in %fs"%(time()-t0)
+#     print 
 
 # Utils
 def has_corpus(_path,_type):

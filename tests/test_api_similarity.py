@@ -49,7 +49,7 @@ def test_compute_each_type_using_multiprocess(args):
     results = pool.map(create_matrix_row_by_type, args)
     print "done in %.3fs"%(time()-t0)
 
-# cpu_count=4
+# cpu_count=4 
 # # test_get_sparse_chunk_of_data(count,chunk_length)
 # # for chunk_start in xrange(0, _count, _chunk_length)
 # args=[]
@@ -59,6 +59,7 @@ def test_compute_each_type_using_multiprocess(args):
 
 # gives scipy error as described here 
 # http://stackoverflow.com/questions/12113498/valueerror-taking-dot-product-of-two-sparse-matrices-in-scipy
+
 def test_compute_the_whole_corpus():
     results=[]
     count =707425
@@ -180,48 +181,58 @@ def test_api_create_combined_similarities_index():
 
     api.create_combined_similarities_index(count,chunk_length)
 
-count =707425
-chunk_length=20
+count =43959
+chunk_length=2500
 # test_compute_by_chunk(count,chunk_length)
 
 
-t0=time()
 path="/home/clemsos/Dev/mitras/data/tmp"
 api=Similarity_API(path,count,chunk_length)
 
 test_path="/tmp/row.npy"
-# api.get_row_from_file(502)
 
+r1=api.get_row_from_file(502)
+print r1
 
-def create_test_row():
-    data=api.get_chunk(1)
-    np.save(test_path,data[0])
-
-def load_test_raw():
-    return np.load(test_path)
-
-data=load_test_raw()
-print data.shape
-print data
-# print data[0]
-
-d=csr_matrix(data)
-print d.shape
-# print len(find(d)[0])
-d2=csr_matrix(data)
-print d2.todense().shape
-# h=hstack( [d,d2] ).todense()
-# print h.shape
-
-print 
+t0=time()
+r2=api.get_row(502)
+print r2
 print "done in %.3fs"%(time()-t0)
 
+if r1 !=r2:
+    raise ValueError("problem in the computation bro")
 
+
+
+# def create_test_row():
+#     data=api.get_chunk(1)
+#     np.save(test_path,data[0])
+
+# def load_test_raw():
+#     return np.load(test_path)
+
+test_get_sparse_chunk_of_data()
+
+# create_test_row()
+# data=load_test_raw()
+# print data.shape
+# print data
+# # print data[0]
+
+# # d=csr_matrix(data)
+# # print d.shape
+# # print len(find(d)[0])
+# # d2=csr_matrix(data)
+# # print d2.todense().shape
+# # h=hstack( [d,d2] ).todense()
+# # print h.shape
+
+# print 
 
 
 # combine similarities
-# count=707425 # should be the y dimension of the matrix
-# chunk_length=250 
+# count=43959 # should be the y dimension of the matrix
+# chunk_length=2000 
 # api=Similarity_API(path,count,chunk_length)
 
 # diff_corpus=corpora.MmCorpus(_path+"/diffusion.mm")
