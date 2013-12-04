@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>SigmaJS</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <!-- Bootstrap CSS -->
+        <link href="//netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap.min.css" rel="stylesheet" media="screen">
+        <style>
+
+            .node {
+              cursor: pointer;
+              stroke: #3182bd;
+              stroke-width: 1.5px;
+            }
+
+            .link {
+              fill: none;
+              stroke: #9ecae1;
+              stroke-width: 1.5px;
+            }
+
+        </style>
+    </head>
+    <body>
+        <h1 class="text-center">d3.js</h1>
+
+        <!-- jQuery -->
+        <script src="//code.jquery.com/jquery.js"></script>
+        <script src="lib/jquery.csv.min.js"></script>
+        <script src="http://d3js.org/d3.v3.min.js"></script>
+        <!-- Bootstrap JavaScript -->
+        <script>
+
+            var csv_nodes="./data/tmprwjLuC_nodes.csv"
+            var csv_edges="./data/tmprwjLuC_edges.csv"
+
+            // get the data
+            // $(document).ready(function() {
+
+            //     $.get (csv_nodes, function(nodes_data) {
+            //             // console.log(nodes_data);
+            //             var nodes=$.csv.toObjects(nodes_data);
+            //             console.log(nodes);
+            //             add_nodes(nodes);
+            //     });
+
+            //     $.get (csv_nodes, function(edges_data) {
+            //         var edges=$.csv.toObjects(edges_data);
+            //         console.log(edges);
+            //         add_links(edges);
+            //         start();
+            //     });
+            // });
+
+
+
+            // d3 js
+            d3.csv(csv_nodes, function(err,nodes){
+                
+                d3.csv(csv_edges, function(err,edges){
+                    // console.log(nodes);
+                    // console.log(edges);
+                    // console.log(d3.values(nodes))
+                    
+                    var width=1200;
+                    var height=900;  
+
+                     // create the force layout
+                    var force = d3.layout.force()
+                        .nodes(d3.values(nodes))
+                        .links(edges)
+                        .size([width, height])
+                        .linkDistance(60)
+                        .charge(-300)
+                        .on("tick", tick)
+                        .start();
+
+
+                    var svg = d3.select("body").append("svg")
+                        .attr("width", width)
+                        .attr("height", height);
+
+                    // build the arrow.
+                    svg.append("svg:defs").selectAll("marker")
+                        .data(["end"])      // Different link/path types can be defined here
+                      .enter().append("svg:marker")    // This section adds in the arrows
+                        .attr("id", String)
+                        .attr("viewBox", "0 -5 10 10")
+                        .attr("refX", 15)
+                        .attr("refY", -1.5)
+                        .attr("markerWidth", 6)
+                        .attr("markerHeight", 6)
+                        .attr("orient", "auto")
+                      .append("svg:path")
+                        .attr("d", "M0,-5L10,0L0,5");
+
+                    // add the links and the arrows
+                    var path = svg.append("svg:g").selectAll("path")
+                        .data(force.links())
+                      .enter().append("svg:path")
+                    //    .attr("class", function(d) { return "link " + d.type; })
+                        .attr("class", "link")
+                        .attr("marker-end", "url(#end)");
+
+                    // define the nodes
+                    var node = svg.selectAll(".node")
+                        .data(force.nodes())
+                      .enter().append("g")
+                        .attr("class", "node")
+                        .call(force.drag);
+
+                    // add the nodes
+                    node.append("circle")
+                        .attr("r", 5);
+
+                    // add the text 
+                    node.append("text")
+                        .attr("x", 12)
+                        .attr("dy", ".35em")
+                        .text(function(d) { return d.name; });
+
+                    // add the curvy lines
+                    function tick() {
+
+                    function tick() {
+                    
+                      path.attr("x1", function(d) { return d.source.x; })
+                          .attr("y1", function(d) { return d.source.y; })
+                          .attr("x2", function(d) { return d.target.x; })
+                          .attr("y2", function(d) { return d.target.y; });
+
+                      node.attr("cx", function(d) { return d.x; })
+                          .attr("cy", function(d) { return d.y; });
+                    }
+                        // path.attr("d", function(d) {
+                        //     var dx = d.target.x - d.source.x,
+                        //         dy = d.target.y - d.source.y,
+                        //         dr = Math.sqrt(dx * dx + dy * dy);
+                   
+                        //     // return "M" + 
+                    //             d.source.x + "," + 
+                    //             d.source.y + "A" + 
+                    //             dr + "," + dr + " 0 0,1 " + 
+                    //             d.target.x + "," + 
+                    //             d.target.y;
+                    //     });
+
+                    //     node
+                    //         .attr("transform", function(d) { 
+                    //         return "translate(" + d.x + "," + d.y + ")"; });
+                    }
+
+                })
+            })
+            
+            // init();
+
+            function init() {
+                width=1200;
+                height=900;   
+
+                force = d3.layout.force()
+                    .size([width, height])
+                    .start();
+                svg = d3.select("body").append("svg")
+                    .attr("width", width)
+                    .attr("height", height);
+            }
+
+            function add_nodes(_nodes) {    
+                force.nodes(_nodes)
+            }
+
+            function add_links(_links) {    
+                force.nodes(_links)
+            }
+                    
+            function start() {
+                svg.append("rect")
+                    .attr("width", width)
+                    .attr("height", height);
+
+                var nodes = force.nodes(),
+                    links = force.links(),
+                    node = svg.selectAll(".node"),
+                    link = svg.selectAll(".link");
+            }
+
+                
+                
+
+
+        </script>
+        <script src="//netdna.bootstrapcdn.com/bootstrap/3.0.0/js/bootstrap.min.js"></script>
+    </body>
+</html>

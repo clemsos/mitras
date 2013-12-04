@@ -63,8 +63,60 @@ def create_bar_graph(_x,_y,_title,_disp):
     if _disp is True :
         plt.show() 
 
-def plot_sparcity():
-    # should use matplotlib spy : http://matplotlib.org/examples/pylab_examples/spy_demos.html
+def create_dendogram(_matrix,_title,_disp):
+
+    print "Creating dendogram..."
+    
+    # VARIABLES 
+    bar_color='#CCCCCC'
+    bar_width=.35
+
+    images_path="/home/clemsos/Dev/mitras/out/"
+
+    w=12 # width of the canvas
+    h=12 # height of the canvas
+
+    # Create a figure with size 6 _x 6 inches.
+    fig = plt.figure(figsize=(w,h))
+
+    # Create a canvas and add the figure to it.
+    canvas = FigureCanvas(fig)
+
+    # bar plot for volume of
+    tree = fig.add_subplot(111)
+
+    # Display Grid
+    tree.grid(True,linestyle='-',color='0.75')
+
+    # Create a y label
+    tree.set_ylabel('Counts')
+        
+    # Create a title, in italics
+    tree.set_title(_title,fontstyle='italic')
+
+    # Generate the Scatter Plot.
+    # bars.scatter(_x,_y,s=20,color='tomato');
+    augmented_dendrogram(_matrix,
+                   color_threshold=1,
+                   p=6,
+                   truncate_mode='lastp',
+                   show_leaf_counts=True,
+                   )
+
+    # Auto-adjust and beautify the labels
+    # fig.autofmt_xdate()
+
+    # Save the generated Scatter Plot to a PNG file.
+    fn=images_path+slugify(_title)
+    canvas.print_figure(fn,dpi=200)
+    fig.savefig(fn+".pdf")
+    
+    print " graph file has been at %s.png"%fn
+    print " graph file has been at %s.pdf"%fn
+
+    # Show us everything
+    if _disp is True :
+        plt.show() 
     pass
 
 def augmented_dendrogram(*args, **kwargs):
@@ -78,7 +130,11 @@ def augmented_dendrogram(*args, **kwargs):
             plt.annotate("%.3g" % y, (x, y), xytext=(0, -8),
                          textcoords='offset points',
                          va='top', ha='center')
+    return ddata
 
+def plot_sparcity():
+    # should use matplotlib spy : http://matplotlib.org/examples/pylab_examples/spy_demos.html
+    pass
 
 # VIZ lib
 # http://bokeh.pydata.org/

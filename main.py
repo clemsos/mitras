@@ -21,9 +21,12 @@ from lib.protomemes import extract_protomemes_using_multiple_processes, create_c
 from lib.vectorizer import compute_and_save_similarity_corpus, compute_cosine_similarities_from_corpus
 
 from lib.api import Similarity_API
+
+from lib.clusters import get_linkage_matrix
+from lib.visualizer import create_dendogram
 from lib.memes import *
 
-from scipy.cluster.hierarchy import linkage
+import matplotlib.pyplot as plt
 
 tstart=time()
 
@@ -113,6 +116,7 @@ else:
 '''
 
 sims=api.get_similarity_matrix()
+# labels=api.get_labels()
 print sims.shape
 
 similarity_treshold = 0.7 # minimum value of similarity between protomemes
@@ -120,27 +124,53 @@ similar_protomemes_treshold=20
 print 'getting rows with %d protomemes that are at least %.3fx similar'%(similar_protomemes_treshold,similarity_treshold)
 
 # get index of row containing enough similar elements
-index_of_rows_containing_memes=np.where((sims > similarity_treshold).sum(axis=1) >= similar_protomemes_treshold)[0]
+index_of_rows_containing_memes=np.where( (sims > similarity_treshold).sum(axis=1) >= similar_protomemes_treshold)[0]
 
+# np.save(path+"/row_memes_matrix.npy")
 
 # print type(remarquable_rows)
 print " found %d row containing enough similar elements"%len(index_of_rows_containing_memes)
-# print index_of_rows_containing_memes
+print index_of_rows_containing_memes
 
+# get_similar_protomemes()
 # for row in rows_containing_memes:
-#     print get_protomemes_ids_by_row(row)
-matrix_data=sims[index_of_rows_containing_memes]
-print " calculate matrix w average linkage algorithm"
-linkage_matrix=linkage(matrix_data, method='average')
-print " clusters: n_samples: %d, n_features: %d" % linkage_matrix.shape
-print linkage_matrix
+#     protomemes_id=
+    # print get_protomemes_ids_by_row(row)
 
+
+# matrix_data=sims[index_of_rows_containing_memes]
+# print matrix_data
+
+# calculate matrix w average linkage algorithm
+# linkage_matrix=get_linkage_matrix(matrix_data)
+# print linkage_matrix
+
+# plot results
+# create_dendogram(linkage_matrix,"Protomemes clusters in Week 1", True)
+# print " clusters: n_samples: %d, n_features: %d" % linkage_matrix.shape
+
+# ordered_data_matrix
+# reordered=hierarchy.leaves_list(linkage_matrix)
+# print reordered
 
 # '''
 # 6. Extract memes from protomemes cluters
 # '''
 
-# # retrieve all protomemes id 
+# from looking at the dendogram plot, we know that :
+# memes_rows =[(11,425),(99,162(321,7))]
+# dendo_rows=[11,425]
+
+# protomemes=[]
+
+# for d in dendo_rows:
+#     proto_row=index_of_rows_containing_memes[d]
+    # protomemes=get_protomemes_ids_by_rows(path,protomemes_rows)
+
+
+# print protomemes
+
+# retrieve all protomemes id 
 # protomemes=get_protomemes_ids_by_rows(path,protomemes_rows)
 # print " %d protomemes"%len(protomemes)
 

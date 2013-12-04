@@ -50,8 +50,8 @@ def test_list_to_csv(_keys,_rows,_csv_filepath):
 
     print " csv has been stored as %s"%_csv_filepath
 
-def test_meme_to_gephi_csv(_name,_dir_path):
-    t0=time()
+# def test_meme_to_gephi_csv(_name,_dir_path):
+    # t0=time()
 
     # get meme data
     query={ "name" : _name}
@@ -67,7 +67,7 @@ def test_meme_to_gephi_csv(_name,_dir_path):
 
         # add mentions
         for m in t["mentions"]:
-            edges.append((t["userId"],t["userId"]))
+            edges.append((t["userId"],m))
         
         # add RTs
         if t["retweetFromUserId"] != "": 
@@ -76,6 +76,14 @@ def test_meme_to_gephi_csv(_name,_dir_path):
     list_to_csv(["Id", "Label"],nodes,_dir_path + '/'+_name+'_nodes.csv')
     list_to_csv(["Source","Target"],edges,_dir_path +'/'+_name+'_edges.csv')
 
-    print " done in %fs" % (time() - t0)
+    # print " done in %fs" % (time() - t0)
 
-meme_to_gephi_csv("吴奇隆",path)
+
+# meme_to_gephi_csv("吴奇隆",path)
+t0=time()
+meme_list =get_meme_list()
+
+for meme_name in get_meme_list():
+    meme_to_gephi_csv(meme_name,path)    
+
+print " done in %fs" % (time() - t0)

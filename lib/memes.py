@@ -10,6 +10,13 @@ import csv
 db=MongoDB("weibodata").db
 
 
+def get_meme_list():
+    query1 ={}
+    query2 = { "name" : 1}
+    db_list=db["memes"].find(query1,query2)
+    meme_list=[m["name"] for m in db_list]
+    return meme_list
+    
 def create_meme_from_protomemes(_name,_protomemes_ids):
 
     t0 = time()
@@ -38,14 +45,15 @@ def create_meme_from_protomemes(_name,_protomemes_ids):
 
     print " %d tweets ids retrieved"%len(tweets)
     print
-    print "Getting tweets..."
+    print "Getting tweets..."  
 
-    print type(tweets)
+    # print type(tweets)
+    # print tweets
 
     query={ "mid":  { "$in": tweets } }
     
     # TODO : change to a normal collection name !
-    results=list(db["week1"].find(query))
+    results=list(db["tweets"].find(query))
 
     print "Got %d tweets !"%len(results)
     print 
@@ -75,7 +83,7 @@ def list_to_csv(_keys,_rows,_csv_filepath):
     print " csv has been stored as %s"%_csv_filepath
 
 def meme_to_gephi_csv(_name,_dir_path):
-    t0=time()
+    # t0=time()
 
     # get meme data
     query={ "name" : _name}
@@ -91,7 +99,7 @@ def meme_to_gephi_csv(_name,_dir_path):
 
         # add mentions
         for m in t["mentions"]:
-            edges.append((t["userId"],t["userId"]))
+            edges.append((t["userId"],m))
         
         # add RTs
         if t["retweetFromUserId"] != "": 
@@ -99,5 +107,9 @@ def meme_to_gephi_csv(_name,_dir_path):
 
     list_to_csv(["Id", "Label"],nodes,_dir_path + '/'+_name+'_nodes.csv')
     list_to_csv(["Source","Target"],edges,_dir_path +'/'+_name+'_edges.csv')
+    print 
+    # print " done in %fs" % (time() - t0)
 
-    print " done in %fs" % (time() - t0)
+def meme_to_d3_csv(_name,_dir_path):
+
+    pass

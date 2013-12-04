@@ -308,8 +308,8 @@ def get_protomemes_by_row(_path,x):
 # Get a set of protomemes using the index file
 def get_protomemes_ids_by_rows(_path,rows_id):
     # print type(rows_id)
-    if type(rows_id) is not list:
-        raise TypeError("x should be an array")
+    # if type(rows_id) is not list or numpy.ndarray:
+    #     raise TypeError("x should be an array")
 
     labels=load_index_file(_path)
     
