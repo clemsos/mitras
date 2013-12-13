@@ -48,7 +48,7 @@ You may need a specific user :
 
 Add nvm to bash profile
 
-    echo "source ~/nvm/nvm.sh" >> ~/.bashrc
+    echo "source ~/.nvm/nvm.sh" >> ~/.bashrc
     source ~/.bashrc
     ~/.bashrc
 

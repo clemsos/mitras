@@ -16,7 +16,7 @@ import lib.tweetminer as minetweet
 
 from lib.mongo import MongoDB
 
-from lib.protomemes import extract_protomemes_using_multiple_processes, create_corpus_file_by_type,create_protomemes_index
+from lib.protomemes import extract_protomemes_using_multiple_processes, create_corpus_file_by_type,create_protomemes_index, get_protomemes_ids_by_rows
 
 from lib.vectorizer import compute_and_save_similarity_corpus, compute_cosine_similarities_from_corpus
 
@@ -27,6 +27,9 @@ from lib.visualizer import create_dendogram
 from lib.memes import *
 
 import matplotlib.pyplot as plt
+
+import tempfile
+
 
 tstart=time()
 
@@ -102,7 +105,7 @@ compute_cosine_similarities_from_corpus(path)
 
 # Create the combined similarities index matrix
 chunk_size=2500 # cut the whole dataset into chunks so it can be processed
-protomemes_count= 43959#db["hashtags"].count()
+protomemes_count= 43959 #db["hashtags"].count()
 api=Similarity_API(path,protomemes_count,chunk_size)
 
 if not os.path.exists(path+"/similarity_matrix.npy"):
@@ -115,60 +118,64 @@ else:
 5. Identify important clusters in the dataset
 '''
 
-sims=api.get_similarity_matrix()
-# labels=api.get_labels()
-print sims.shape
-
-similarity_treshold = 0.7 # minimum value of similarity between protomemes
+similarity_treshold = 0.9 # minimum value of similarity between protomemes
 similar_protomemes_treshold=20
-print 'getting rows with %d protomemes that are at least %.3fx similar'%(similar_protomemes_treshold,similarity_treshold)
 
-# get index of row containing enough similar elements
-index_of_rows_containing_memes=np.where( (sims > similarity_treshold).sum(axis=1) >= similar_protomemes_treshold)[0]
+sims=api.get_similarity_matrix()
 
-# np.save(path+"/row_memes_matrix.npy")
+if not os.path.exists(path+"/index_of_rows_containing_memes.npy") : 
+    # labels=api.get_labels()
+    print sims.shape
 
-# print type(remarquable_rows)
-print " found %d row containing enough similar elements"%len(index_of_rows_containing_memes)
-print index_of_rows_containing_memes
-
-# get_similar_protomemes()
-# for row in rows_containing_memes:
-#     protomemes_id=
-    # print get_protomemes_ids_by_row(row)
+    print 'getting rows with %d protomemes that are at least %.0f percent similar'%(similar_protomemes_treshold,similarity_treshold*100)
 
 
-# matrix_data=sims[index_of_rows_containing_memes]
-# print matrix_data
+    # get index of row containing enough similar elements
+    index_of_rows_containing_memes=np.where( (sims > similarity_treshold).sum(axis=1) >= similar_protomemes_treshold)[0]
 
-# calculate matrix w average linkage algorithm
-# linkage_matrix=get_linkage_matrix(matrix_data)
-# print linkage_matrix
 
-# plot results
-# create_dendogram(linkage_matrix,"Protomemes clusters in Week 1", True)
-# print " clusters: n_samples: %d, n_features: %d" % linkage_matrix.shape
+    # print type(remarquable_rows)
+    print " found %d row containing enough similar elements"%len(index_of_rows_containing_memes)
+    print index_of_rows_containing_memes
 
-# ordered_data_matrix
-# reordered=hierarchy.leaves_list(linkage_matrix)
-# print reordered
+    np.save(path+"/index_of_rows_containing_memes.npy",index_of_rows_containing_memes)
+else :
+    print 
+    "Row containing memes already exists %s"%(path+"/index_of_rows_containing_memes.npy")
+
+t0=time()
+
+index_of_rows_containing_memes=np.load(path+"/index_of_rows_containing_memes.npy")
+
+# rows_containing_memes
+rows_containing_memes=sims[index_of_rows_containing_memes]
 
 # '''
 # 6. Extract memes from protomemes cluters
 # '''
 
-# from looking at the dendogram plot, we know that :
-# memes_rows =[(11,425),(99,162(321,7))]
-# dendo_rows=[11,425]
-
-# protomemes=[]
-
-# for d in dendo_rows:
-#     proto_row=index_of_rows_containing_memes[d]
-    # protomemes=get_protomemes_ids_by_rows(path,protomemes_rows)
+# create the list of all memes set
+# meme_list=[np.arange(0,len(i))[i] for i in (rows_containing_memes > similarity_treshold)]
+# print len(meme_list)
 
 
-# print protomemes
+for row in (rows_containing_memes > similarity_treshold):
+  
+  # recreate row id 
+  similar_protomemes_indexes=np.arange(0,len(row))[row]
+  print type(similar_protomemes_indexes)
+
+  protomemes=get_protomemes_ids_by_rows(path,similar_protomemes_indexes)
+  
+  # print protomemes
+  print " %d protomemes"%len(protomemes)
+  
+  # generate random name
+  meme_name = tempfile.NamedTemporaryFile().name.split('/')[2]
+
+  create_meme_from_protomemes(meme_name,protomemes)
+  
+print " done in %fs" % (time() - t0)
 
 # retrieve all protomemes id 
 # protomemes=get_protomemes_ids_by_rows(path,protomemes_rows)
