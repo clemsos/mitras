@@ -1,10 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import os
 from time import time
 from lib.mongo import MongoDB
 from models.meme import Meme
 import csv
+import numpy as np
+import tempfile
+from protomemes import get_protomemes_ids_by_rows
 
 # Connect to Mongo
 db=MongoDB("weibodata").db
@@ -113,3 +117,47 @@ def meme_to_gephi_csv(_name,_dir_path):
 def meme_to_d3_csv(_name,_dir_path):
 
     pass
+
+def create_meme_index(_tmp_path,_similarity_index,_similar_protomemes_treshold,_similarity_treshold):
+  if not os.path.exists(_tmp_path+"/index_of_rows_containing_memes.npy") : 
+      # labels=api.get_labels()
+      print _similarity_index.shape
+
+      print 'getting rows with %d protomemes that are at least %.0f percent similar'%(_similar_protomemes_treshold,_similarity_treshold*100)
+
+
+      # get index of row containing enough similar elements
+      index_of_rows_containing_memes=np.where( (_similarity_index > _similarity_treshold).sum(axis=1) >= _similar_protomemes_treshold)[0]
+
+
+      # print type(remarquable_rows)
+      print " found %d row containing enough similar elements"%len(index_of_rows_containing_memes)
+      print index_of_rows_containing_memes
+
+      np.save(path+"/index_of_rows_containing_memes.npy",index_of_rows_containing_memes)
+  else :
+      print 
+      "Row containing memes already exists %s"%(_tmp_path+"/index_of_rows_containing_memes.npy")
+
+def create_memes(_tmp_path,_similarity_index,_similarity_treshold):
+  index_of_rows_containing_memes=np.load(_tmp_path+"/index_of_rows_containing_memes.npy")
+
+  # rows_containing_memes
+  rows_containing_memes=_similarity_index[index_of_rows_containing_memes]
+
+  for row in (rows_containing_memes > _similarity_treshold):
+    
+    # recreate row id 
+    similar_protomemes_indexes=np.arange(0,len(row))[row]
+    # print type(similar_protomemes_indexes)
+
+    protomemes=get_protomemes_ids_by_rows(_tmp_path,similar_protomemes_indexes)
+    
+    # print protomemes
+    print " %d protomemes"%len(protomemes)
+    
+    # generate random name
+    # TODO : create meaningful name
+    meme_name = tempfile.NamedTemporaryFile().name.split('/')[2]
+
+    create_meme_from_protomemes(meme_name,protomemes)
