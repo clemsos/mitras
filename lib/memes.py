@@ -114,6 +114,49 @@ def meme_to_gephi_csv(_name,_dir_path):
     print 
     # print " done in %fs" % (time() - t0)
 
+def meme_to_gv_file(_name,_dir_path):
+    '''
+    Convert meme corpus to Graphviz file
+    '''
+    # t0=time()
+
+    # get meme data
+    query={ "name" : _name}
+    meme=list(db["memes"].find(query))[0]
+    print " tweets in meme :  %d" % len(meme["tweets"])
+
+    # 
+    gv_filepath=_dir_path+"/"+_name+".gv"
+    print gv_filepath
+
+    with open(gv_filepath,'w') as f:
+        
+
+        line = "digraph mentions {\n" # open .gv file
+        f.write(line)
+
+        for i,t in enumerate(meme["tweets"]):
+    
+            # add mentions
+            for m in t["mentions"]:
+                if t["userId"] != m:
+                    line = '"'+t["userId"]+'"'+"->"+'"'+m+'"'+"\n"
+                    # print line 
+                    f.write(line)
+            
+            # add RTs
+            if t["retweetFromUserId"] != "": 
+                if t["retweetFromUserId"] != t["userId"]: 
+                    line='"'+t["retweetFromUserId"]+'"'+"->"+'"'+t["userId"]+'"'+"\n"
+                    # print line 
+                    f.write(line)
+
+        line = "}"+"\n" # close .gv file
+        f.write(line)
+
+    print " graphiz file save as %s"%gv_filepath
+    # print " done in %fs" % (time() - t0)
+
 def meme_to_d3_csv(_name,_dir_path):
 
     pass
@@ -121,7 +164,7 @@ def meme_to_d3_csv(_name,_dir_path):
 def create_meme_index(_tmp_path,_similarity_index,_similar_protomemes_treshold,_similarity_treshold):
   if not os.path.exists(_tmp_path+"/index_of_rows_containing_memes.npy") : 
       # labels=api.get_labels()
-      print _similarity_index.shape
+      # print _similarity_index.shape
 
       print 'getting rows with %d protomemes that are at least %.0f percent similar'%(_similar_protomemes_treshold,_similarity_treshold*100)
 
@@ -134,7 +177,7 @@ def create_meme_index(_tmp_path,_similarity_index,_similar_protomemes_treshold,_
       print " found %d row containing enough similar elements"%len(index_of_rows_containing_memes)
       print index_of_rows_containing_memes
 
-      np.save(path+"/index_of_rows_containing_memes.npy",index_of_rows_containing_memes)
+      np.save(_tmp_path+"/index_of_rows_containing_memes.npy",index_of_rows_containing_memes)
   else :
       print 
       "Row containing memes already exists %s"%(_tmp_path+"/index_of_rows_containing_memes.npy")

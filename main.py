@@ -111,8 +111,8 @@ else:
 5. Identify important clusters in the dataset
 '''
 
-similarity_treshold = 0.9 # minimum value of similarity between protomemes
-similar_protomemes_treshold=20
+similarity_treshold = 0.8 # minimum value of similarity between protomemes
+similar_protomemes_treshold=100
 
 # load the complete similarity matrix
 similarity_index=api.get_similarity_matrix()
@@ -124,7 +124,7 @@ create_meme_index(tmp_path,similarity_index,similar_protomemes_treshold,similari
  6. Extract memes from protomemes cluters
 '''
 
-create_memes(tmp_path,similarity_index,similarity_treshold)
+# create_memes(tmp_path,similarity_index,similarity_treshold)
 
 '''
  7. Process and visualize meme structure
@@ -136,9 +136,9 @@ meme_list =get_meme_list()
 
 # create conversational graph data (to be used with Gephi)
 # TODO : check for CSV files
-if os.path.exists(out_path+"*.csv"):
-  for meme_name in get_meme_list():
-      meme_to_gephi_csv(meme_name,out_path)    
+# if os.path.exists(out_path+"*.csv"):
+for meme_name in get_meme_list():
+  meme_to_gephi_csv(meme_name,out_path)    
 
 
 data = get_graph_csv_filenames(out_path)

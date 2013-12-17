@@ -15,6 +15,7 @@ from time import time
 
 import tempfile
 
+
 path="/home/clemsos/Dev/mitras/data/tmp"
 
 # Create the combined similarities index matrix
@@ -26,8 +27,8 @@ sims=api.get_similarity_matrix()
 # labels=api.get_labels()
 print sims.shape
 
-similarity_treshold = 0.7 # minimum value of similarity between protomemes
-similar_protomemes_treshold=20
+similarity_treshold = 0.8 # minimum value of similarity between protomemes
+similar_protomemes_treshold=100
 print 'getting rows with %d protomemes that are at least %.0f percent similar'%(similar_protomemes_treshold,similarity_treshold*100)
 
 # get index of row containing enough similar elements
@@ -42,7 +43,7 @@ index_of_rows_containing_memes=np.load(path+"/index_of_rows_containing_memes.npy
 
 # rows_containing_memes
 rows_containing_memes=sims[index_of_rows_containing_memes]
-# print rows_containing_memes.shape
+print rows_containing_memes.shape
 
 # create the list of all memes set
 # meme_list=[np.arange(0,len(i))[i] for i in (rows_containing_memes > similarity_treshold)]
@@ -53,11 +54,17 @@ for row in (rows_containing_memes > similarity_treshold):
   # recreate row id 
   similar_protomemes_indexes=np.arange(0,len(row))[row]
   print type(similar_protomemes_indexes)
+  print similar_protomemes_indexes.shape
 
   protomemes=get_protomemes_ids_by_rows(path,similar_protomemes_indexes)
   
   # print protomemes
-  print " %d protomemes"%len(protomemes)
+  n=0
+  for p in protomemes:
+    for a in protomemes[p]:
+        n+=1
+
+  print " %d protomemes"%n
   
   # generate random name
   meme_name = tempfile.NamedTemporaryFile().name.split('/')[2]
