@@ -16,6 +16,10 @@ here=path.dirname(path.dirname(path.abspath(__file__)))
 stopwords_file=here+"/lib/stopwords/zh-stopwords"
 dico_file=here+'/lib/dict/dict.txt.big'
 
+# TODO : implement those stopwords
+# TODO : add username type "uB5NNODBJ"
+weibo_stopwords=["回复","】","【 ","ukn"]
+
 class NLPMiner:
     def __init__(self): 
 

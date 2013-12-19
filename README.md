@@ -91,6 +91,10 @@ Viz engine will be developed in NodeJS, HTML5, ProcessingJS, d3.js, MapBox - usi
 	git clone https://github.com/dat/pyner
     python setup.py install
 
+To install Tilemill on Debian : 
+	
+	https://www.mapbox.com/tilemill/docs/source/
+	https://gist.github.com/springmeyer/2164897
 
 ### Prepare Data
 

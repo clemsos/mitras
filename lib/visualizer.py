@@ -1,12 +1,15 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from __future__ import division
+
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 import datetime
 import time
 from utils import slugify
 from scipy.cluster.hierarchy import dendrogram
+import numpy as np
 
 import networkx as nx
 
@@ -14,6 +17,8 @@ from os import listdir
 from os.path import isfile, join
 import math
 import csv
+
+from pytagcloud import create_tag_image,make_tags
 
 try:
     from networkx import graphviz_layout
@@ -31,13 +36,18 @@ def create_bar_graph(_x,_y,_title,_disp):
 
     print "Creating bar graph..."
     # VARIABLES 
-    bar_color='#CCCCCC'
-    bar_width=.35
+    bar_color='#2ca02c'
+
 
     images_path="/home/clemsos/Dev/mitras/out/"
 
-    w=len(_x) # width of the canvas
-    h=len(_y) # height of the canvas
+    w=18 # width of the canvas
+    h=15 # height of the canvas
+
+    print min(_x), max(_x)
+
+    bar_width= 0.026 #w/len(_x)
+    print w, len(_x), bar_width
 
     # Create a figure with size 6 _x 6 inches.
     fig = plt.figure(figsize=(w,h))
@@ -48,12 +58,14 @@ def create_bar_graph(_x,_y,_title,_disp):
     # bar plot for volume of
     bars = fig.add_subplot(111)
 
+    # Display Bars
+    bars.bar(_x, _y, width=bar_width, facecolor=bar_color, align='center', edgecolor="#74c476")
+
     # Display Grid
     bars.grid(True,linestyle='-',color='0.75')
 
-    # Display Bars
-    bars.bar(_x, _y, facecolor=bar_color, 
-           align='center', ecolor='black')
+    # TODO : set the axis below
+    # Axis.set_axisbelow()
 
     # This sets the ticks on the x axis to be exactly where we put the center of the bars.
     # bars.set_xticks(_x)
@@ -137,6 +149,52 @@ def create_dendogram(_matrix,_title,_disp):
     if _disp is True :
         plt.show() 
     pass
+
+def create_pie_chart(_fracs,_labels, _title,_disp):
+    
+    # make a square figure and axes
+    print "Creating pie chart..."
+
+    # VARIABLES 
+    images_path="/home/clemsos/Dev/mitras/out/"
+
+    w=8 # width of the canvas
+    h=8 # height of the canvas
+
+    # Create a figure with size 6 _x 6 inches.
+    fig = plt.figure(figsize=(w,h))
+
+    # Create a canvas and add the figure to it.
+    canvas = FigureCanvas(fig)
+    # ax = axes([0.1, 0.1, 0.8, 0.8])
+    # explode=(0, 0.05, 0, 0)
+
+    pie = fig.add_subplot(111)
+
+    cmap = plt.cm.prism
+    colors = cmap(np.random.random(len(_fracs)))
+
+    pie.pie(_fracs, labels=_labels, labeldistance=1.05, autopct='%1.1f%%', shadow=False, colors=colors)
+
+    pie.set_title(_title,fontstyle='italic')
+
+    # Save the generated Scatter Plot to a PNG file.
+    fn=images_path+slugify(_title)
+    canvas.print_figure(fn,dpi=200)
+    fig.savefig(fn+".pdf")
+    
+    print " graph file has been at %s.png"%fn
+    print " graph file has been at %s.pdf"%fn
+
+        # Show us everything
+    if _disp is True :
+        plt.show() 
+
+def create_tag_cloud(_count, _name):
+    tags = make_tags(_count, maxsize=150,colors=((59,76,76), (125,140,116), (217,175,95), (127,92,70), (51,36,35)))
+    print tags
+    create_tag_image(tags, _name, size=(900, 600), fontname="Chinese",background=(0, 0, 0),  )
+
 
 def augmented_dendrogram(*args, **kwargs):
     ddata = dendrogram(*args, **kwargs)
