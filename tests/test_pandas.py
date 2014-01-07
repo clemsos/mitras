@@ -18,7 +18,27 @@ csvfile=pd.read_csv(file_path, iterator=True, chunksize=1000)
 
 for i,df in enumerate(csvfile):
     if i==1 : break
-    # print df.head()
-    # print df.describe()
+    print df.describe()
     df.reindex(index=df["created_at"])
-    df["mentions"],df["urls"],df["hashtags"],df["clean"]=minetweet.extract_tweet_entities(df["text"])
+    # print df.head()
+    # print df
+
+    text = df[df.text.notnull()].text.values
+    print len(text)
+    # df["mentions"],df["urls"],df["hashtags"],df["clean"]=minetweet.extract_tweet_entities(df["text"])
+    mentions=[]
+    urls=[]
+    hashtags=[]
+    clean=[]
+    for t in text:
+        # print t
+        a,b,c,d=minetweet.extract_tweet_entities(t)
+        mentions.append(a)
+        urls.append(b)
+        hashtags.append(c)
+        clean.append(d)
+
+    print len(mentions),len(urls),len(hashtags),len(clean)
+    df["mentions"],df["urls"],df["hashtags"],df["clean"]=mentions,urls,hashtags,clean
+
+    
