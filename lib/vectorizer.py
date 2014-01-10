@@ -41,6 +41,7 @@ def compute_and_save_similarity_corpus(_path):
             print " Diffusion vector corpus already exists %s/%s.mm"%(_path,t)
             print
 
+
 # Compile corpus and dictionary
 def create_similarity_corpus(_corpus,_path, _type):
 
@@ -69,6 +70,7 @@ def create_similarity_corpus(_corpus,_path, _type):
     else:
         # print type(_corpus)
         print " create %s corpus and dictionary"% _type
+        
         # create index of values
         dictionary=create_dictionary(_corpus,dic_path)  
 

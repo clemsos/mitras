@@ -22,6 +22,9 @@ out
 data/datazip
 data/*.csv
 data/tmp
+data/clean
+data/train
+data
 
 *.png
 *.pdf

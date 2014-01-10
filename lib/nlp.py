@@ -29,6 +29,7 @@ class NLPMiner:
 
         # parse list of stopwords
         self.stoplist=[i.strip() for i in open(stopwords_file)]
+        self.stoplist+=weibo_stopwords
 
         # better support for traditional character
         jieba.set_dictionary(dico_file)
