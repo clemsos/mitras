@@ -31,7 +31,6 @@ except ImportError:
 # TODO : VIZ lib
 # http://bokeh.pydata.org/
 
-
 def create_bar_graph(_x,_y,_title,_disp):
 
     print "Creating bar graph..."
@@ -194,7 +193,6 @@ def create_tag_cloud(_count, _name):
     tags = make_tags(_count, maxsize=150,colors=((59,76,76), (125,140,116), (217,175,95), (127,92,70), (51,36,35)))
     print tags
     create_tag_image(tags, _name, size=(900, 600), fontname="Chinese",background=(0, 0, 0),  )
-
 
 def augmented_dendrogram(*args, **kwargs):
     ddata = dendrogram(*args, **kwargs)
@@ -376,3 +374,45 @@ def create_network_graph(_path,_graph_filenames):
         
         # print "done in %.3fs"%(time()-t0)
 
+def meme_to_gv_file(_name,_dir_path):
+    '''
+    Convert meme corpus to Graphviz file
+    '''
+    # t0=time()
+
+    # get meme data
+    query={ "name" : _name}
+    meme=list(db["memes"].find(query))[0]
+    print " tweets in meme :  %d" % len(meme["tweets"])
+
+    # 
+    gv_filepath=_dir_path+"/"+_name+".gv"
+    print gv_filepath
+
+    with open(gv_filepath,'w') as f:
+        
+
+        line = "digraph mentions {\n" # open .gv file
+        f.write(line)
+
+        for i,t in enumerate(meme["tweets"]):
+    
+            # add mentions
+            for m in t["mentions"]:
+                if t["userId"] != m:
+                    line = '"'+t["userId"]+'"'+"->"+'"'+m+'"'+"\n"
+                    # print line 
+                    f.write(line)
+            
+            # add RTs
+            if t["retweetFromUserId"] != "": 
+                if t["retweetFromUserId"] != t["userId"]: 
+                    line='"'+t["retweetFromUserId"]+'"'+"->"+'"'+t["userId"]+'"'+"\n"
+                    # print line 
+                    f.write(line)
+
+        line = "}"+"\n" # close .gv file
+        f.write(line)
+
+    print " graphiz file save as %s"%gv_filepath
+    # print " done in %fs" % (time() - t0)

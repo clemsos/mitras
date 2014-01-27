@@ -2,9 +2,14 @@
 
 	**Work in Progress : not ready to use yet**
 
-Mitras is a prototype for memes analysis in a large tweets corpus that includes detection of memes (clustering), localization in Chinese (NLP), geo-entities (NER, geotag) and visualization for classification.
+Mitras is a data analysis project. Its purpose is to detect and visualize memes from a large corpus of tweets from Sina Weibo. It has been developed by Clément Renaud for his phD research on memes on Sina Weibo.
 
-This SNA toolkit is developed by Clément Renaud for his phD research on memes on Sina Weibo.
+## Thanks to :
+* The Weiboscope team in HKU
+* Mingli Yuan
+* 
+
+
 
 
 ## Workflow : Overview 
@@ -17,6 +22,8 @@ This SNA toolkit is developed by Clément Renaud for his phD research on memes o
 6. Detect clusters and identify important memes (k-means)
 7. Create meme dataset and extract geo-entities (NER,map-reduce,Neo4J)
 9. Visualize identified memes (gephi, node, d3.js)
+
+It includes detection of memes (clustering), localization in Chinese (NLP), geo-entities (NER, geotag) and visualization for classification.
 
 ## Detailed Workflow 
 
@@ -96,7 +103,7 @@ To install Tilemill on Debian :
 	https://www.mapbox.com/tilemill/docs/source/
 	https://gist.github.com/springmeyer/2164897
 
-### Prepare Data
+### Download & Prepare Data
 
 	# to download the data
 	bash bin/get_raw_data.sh
@@ -109,13 +116,3 @@ To install Tilemill on Debian :
 
 	# remove zip files
 	ls data/datazip/*zip | xargs -i rm {} 
-	
-	# Parse data and store tweets in MongoDB
-	bash bin/prepare_data.sh
-
-	# in mySQL (DEPRECIATED)
-	# bash data/data_csv_to_mysql.sh
-
-	# run the big thing 
-	python main.py # TODO ! now still
-

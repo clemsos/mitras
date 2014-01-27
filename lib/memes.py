@@ -76,7 +76,7 @@ def list_to_csv(_keys,_rows,_csv_filepath):
     # get keys for csv value
     # keys=_rows[0].keys()
 
-    print " extracting %s from tweets"%(_keys)
+    # print " extracting %s from tweets"%(_keys)
     # write to csv
     with open(_csv_filepath,'w') as f: # writes the final output to CSV
         csv_out=csv.writer(f)
@@ -112,49 +112,6 @@ def meme_to_gephi_csv(_name,_dir_path):
     list_to_csv(["Id", "Label"],nodes,_dir_path + '/'+_name+'_nodes.csv')
     list_to_csv(["Source","Target"],edges,_dir_path +'/'+_name+'_edges.csv')
     print 
-    # print " done in %fs" % (time() - t0)
-
-def meme_to_gv_file(_name,_dir_path):
-    '''
-    Convert meme corpus to Graphviz file
-    '''
-    # t0=time()
-
-    # get meme data
-    query={ "name" : _name}
-    meme=list(db["memes"].find(query))[0]
-    print " tweets in meme :  %d" % len(meme["tweets"])
-
-    # 
-    gv_filepath=_dir_path+"/"+_name+".gv"
-    print gv_filepath
-
-    with open(gv_filepath,'w') as f:
-        
-
-        line = "digraph mentions {\n" # open .gv file
-        f.write(line)
-
-        for i,t in enumerate(meme["tweets"]):
-    
-            # add mentions
-            for m in t["mentions"]:
-                if t["userId"] != m:
-                    line = '"'+t["userId"]+'"'+"->"+'"'+m+'"'+"\n"
-                    # print line 
-                    f.write(line)
-            
-            # add RTs
-            if t["retweetFromUserId"] != "": 
-                if t["retweetFromUserId"] != t["userId"]: 
-                    line='"'+t["retweetFromUserId"]+'"'+"->"+'"'+t["userId"]+'"'+"\n"
-                    # print line 
-                    f.write(line)
-
-        line = "}"+"\n" # close .gv file
-        f.write(line)
-
-    print " graphiz file save as %s"%gv_filepath
     # print " done in %fs" % (time() - t0)
 
 def meme_to_d3_csv(_name,_dir_path):
