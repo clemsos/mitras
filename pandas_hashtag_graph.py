@@ -58,7 +58,6 @@ stop_hashtags_file=root_path+"/lib/stopwords/stop_hashtags"
 stop_hashtags=[i.strip() for i in open(stop_hashtags_file)]
 
 
-
 ###
 # CREATE HASHTAGS LIST 
 ###
@@ -74,7 +73,7 @@ hashtag_collection=db[destination]
 hashtag_collection.ensure_index("value.count")
 
 
-h=hashtag_collection.find().sort("value.count",-1).limit(1000)
+h=hashtag_collection.find().sort("value.count",-1).skip(1600).limit(1000)
 top_hashtags=list(h)
 
 with open("hashtags","w") as out_file:
