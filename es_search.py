@@ -1,5 +1,7 @@
-from pyelasticsearch import ElasticSearch
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
+from pyelasticsearch import ElasticSearch
 
 es = ElasticSearch('http://localhost:9200/')
 es.refresh('weiboscope')

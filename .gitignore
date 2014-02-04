@@ -18,7 +18,6 @@ miner/corpus
 
 lib/jsonviewer
 out
-
 data/datazip
 data/*.csv
 data/tmp
@@ -29,3 +28,5 @@ data
 *.png
 *.pdf
 *.sublime*
+
+.ipynb_checkpoints

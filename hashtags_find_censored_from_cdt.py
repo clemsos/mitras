@@ -11,8 +11,6 @@ with open(censored_list_path, 'rb') as cs_file:
     csv_censor=csv.reader(cs_file)
     censored_words=[word[0] for word in csv_censor]
 
-# print censored_words
-
 # get hashtags
 hashtags_path=root_path+"top_hashtags.csv"
 hashtags=[]
