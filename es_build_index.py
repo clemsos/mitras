@@ -7,8 +7,6 @@ from time import time
 import os, zipfile
 import codecs
 
-
-
 root_path="/home/clemsos/Dev/mitras/"
 raw_data_path=root_path+"data/datazip/selected/"
 pid_file=root_path+"data/tmp/csv_chunk"
@@ -21,6 +19,7 @@ chunksize=1000
 # init ElasticSearch
 es = ElasticSearch('http://localhost:9200/')
 
+index_name="weiboscope_jul_aug"
 # try :
 #     es.delete_index("weiboscope")
 # except :
@@ -76,9 +75,9 @@ for path, subdirs, files in os.walk(raw_data_path):
                 for i,df in enumerate(csvfile):
 
                     if i <= previous_chunk:
-                        print i, "%d/52 files, already indexed %s"%(i_file,raw_csvname)
+                        print i, "%d files, already indexed %s"%(i_file,raw_csvname)
                     else:
-                        print i, "%d/52 files, now indexing %s"%(i_file,raw_csvname)
+                        print i, "%d files, now indexing %s"%(i_file,raw_csvname)
 
                         # fix the date formatting
                         df["created_at"]=df["created_at"].str.replace(" ", "T")
@@ -96,7 +95,7 @@ for path, subdirs, files in os.walk(raw_data_path):
 
                             # insert into elasticsearch
                             try :
-                                es.bulk_index("weiboscope","tweet",list_records)
+                                es.bulk_index(index_name,"tweet",list_records)
                             except :
                                 print "error with elasticsearch"
                                 pass

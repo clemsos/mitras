@@ -23,7 +23,7 @@ t0=time()
 
 # Connect to Mongo
 db=MongoDB("weiboclean").db
-collection=db["selected"]
+collection=db["tweets_with_hastags"]
 
 # get corpus length
 tweets_count=collection.count()

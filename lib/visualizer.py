@@ -18,7 +18,7 @@ from os.path import isfile, join
 import math
 import csv
 
-from pytagcloud import create_tag_image,make_tags
+# from pytagcloud import create_tag_image,make_tags
 
 try:
     from networkx import graphviz_layout
@@ -40,12 +40,13 @@ def create_bar_graph(_x,_y,_title,_disp):
 
     images_path="/home/clemsos/Dev/mitras/out/"
 
-    w=18 # width of the canvas
+    w=60 # width of the canvas
     h=15 # height of the canvas
 
     print min(_x), max(_x)
 
-    bar_width= 0.026 #w/len(_x)
+    bar_width=0.032
+
     print w, len(_x), bar_width
 
     # Create a figure with size 6 _x 6 inches.
