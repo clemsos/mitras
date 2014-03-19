@@ -15,6 +15,20 @@ To run those scripts, you will need some Python scientific libraries like : nump
     git clone https://github.com/dat/pyner
     python setup.py install
 
+## Scipy / Numpy
+
+Optimized BLAS Installation for numpy see this [post](http://williamjohnbert.com/2012/03/how-to-install-accelerated-blas-into-a-python-virtualenv/)
+
+    #!/bin/bash
+    workon [envname]
+    pip uninstall numpy ## only if numpy is already installed
+    pip uninstall scipy ## only if scipy is already installed
+    export LAPACK=/usr/lib/liblapack.so
+    export ATLAS=/usr/lib/libatlas.so
+    export BLAS=/usr/lib/libblas.so
+    pip install scipy numpy
+
+
 
 ## Pandas
 
