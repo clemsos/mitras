@@ -1,4 +1,4 @@
-# Install and configure your libs
+# Install and configure
 
 To run those scripts, you will need some Python scientific libraries like : numpy / scipy, pandas, scikit-learn, etc. I strongly advice you use iPython to have the full stack and run step by step through the notebook for better comprehension of the workflows.
 
