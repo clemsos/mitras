@@ -7,13 +7,14 @@ import csv
 es = elasticsearch.Elasticsearch(["localhost:9200"])
 
 # Setup your variables
-index_name="weiboscope"
-meme_keywords="杜甫很忙"
-csv_file="杜甫很忙.csv"
+index_name="weiboscope_jul_aug"
+meme_name="The_Voice"
+csv_file=meme_name+".csv"
 chunksize=1000
+meme_keywords='"中国好声音"'
 
 # Get the number of results
-res = es.search(index=index_name, body={"query": {"match": { "text" : "'杜甫很忙'" }}})
+res = es.search(index=index_name, body={"query": {"match": { "text" : meme_keywords }}})
 data_size=res['hits']['total']
 print("Total %d Hits" % data_size)
 
@@ -36,10 +37,11 @@ with open(csv_file, 'wb') as csvfile:
         per=round(float(chunk)/data_size*100, 1)
 
         # request data
-        res=es.search(index=index_name, body={"query": {"match": { "text" : "'杜甫很忙'" }}}, size=chunksize, from_=chunk)
+        res=es.search(index=index_name, body={"query": {"match": { "text" : meme_keywords }}}, size=chunksize, from_=chunk)
 
         print"%.01f %% %d Hits Retreived" % (per,chunk)
 
+        print res['hits']['hits'][0]["_score"]
         if res['hits']['hits'][0]["_score"] < 1 : break
 
         for sample in res['hits']['hits']: 

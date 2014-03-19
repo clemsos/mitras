@@ -37,15 +37,14 @@ def create_bar_graph(_x,_y,_title,_disp):
     # VARIABLES 
     bar_color='#2ca02c'
 
-
     images_path="/home/clemsos/Dev/mitras/out/"
 
-    w=60 # width of the canvas
+    w=30 # width of the canvas
     h=15 # height of the canvas
 
     print min(_x), max(_x)
 
-    bar_width=0.032
+    bar_width=0.023
 
     print w, len(_x), bar_width
 
