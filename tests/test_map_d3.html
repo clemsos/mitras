@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <script src="http://code.jquery.com/jquery-2.0.0.js"></script>
+    <style>
+        .provinces {
+          background-color: #fff;
+          border: 1px solid #ccc;
+        }
+        .hk {
+            position:relative;
+            left:-750px;
+            top:0px;
+        }
+        /*
+        .background {
+          fill: none;
+          pointer-events: all;
+        }
+
+        .province {
+          fill: #cde;
+          stroke: #fff;
+            stroke-linejoin: round;
+          stroke-linecap: round;
+        }
+        */
+        
+        /*#provinces .active, #states .active {
+          fill: #89a;
+        }
+        #cities {
+          stroke-width: 0;
+        }
+        .city {
+          fill: #345;
+          stroke: #fff;
+        }
+        pre.prettyprint {
+          border: 1px solid #ccc;
+          margin-bottom: 0;
+          padding: 9.5px;
+        }*/
+    </style>
+  </head>
+  <body>
+    <div id="map"></div>
+    <script src="http://d3js.org/d3.v3.min.js"></script>
+    <script src="http://d3js.org/topojson.v1.min.js"></script>
+    <script>
+        
+        // data 
+        var data= [
+            ["Xianggang", 530],
+            ["Guangdong", 240],
+            ["Beijing", 100],
+            ["Shanghai", 60],
+            ["Taiwan", 160],
+            ["Qita", 512],
+            ["Shanxi", 225],
+            ["Zhejiang", 132],
+            ["Haiwai", 241],
+            ["Hunan", 123],
+            ["Yunnan", 289],
+            ["Anhui", 415],
+            ["Tianjin", 421],
+            ["Jiangsu", 501],
+            ["Fujian", 234],
+            ["Liaoning", 131],
+            ["Guangxi", 100],
+            ["Henan", 231]
+        ]; 
+
+
+        
+
+        // MAP setup
+        var width = 800,
+            height = 500;
+
+        // data
+        var umap = []
+        data.map(function(d) {umap[d[0]]=Number(d[1])});
+        console.log(umap);
+        var v = Object.keys(umap).map(function(k){return umap[k]})
+        console.log(v);
+
+
+        var projection = d3.geo.mercator()
+            .center([116,39])
+            .scale(600);
+
+        var svg = d3.select("#map").append("svg")
+            .attr("width", width)
+            .attr("height", height)
+            .attr("preserveAspectRatio", "xMidYMid")
+            .attr("viewBox", "0 0 " + width + " " + height);
+        
+        // color scale
+        var colorScale = d3.scale.linear()
+                   .domain(d3.extent(v))
+                   .interpolate(d3.interpolateHcl)
+                   .range(["orange", "green"]);
+        
+        var color = function(i){ 
+            if (i==undefined) {return "#cccccc"}
+            else return colorScale(i)
+        }
+
+
+        // LEGEND
+        
+        // Scale for color bar
+        svg.selectAll("rect")
+           .data(d3.range(d3.min(v), d3.max(v), (d3.max(v)-d3.min(v))/50.0))
+           .enter()
+           .append("rect")
+           .attr({width: 25,
+                  height: 5,
+                  y: function(d,i) { return height-25-i*5 },
+                  x: width-50,
+                  fill: function(d,i) { return color(d); } })
+
+        svg.append("g")
+           .attr("transform", "translate(" + (width-25) + "," + (height-25-5*49) + ")")
+           .call(d3.svg.axis()
+                   .scale(d3.scale.linear().domain(d3.extent(v)).range([5*50,0]))
+                    .orient("right"));
+
+        // var svg = d3.select("#map").append("svg")
+        //     
+        //     .attr("width", m_width)
+        //     .attr("height", m_width * height / width);
+
+        // svg.append("rect")
+        //     .attr("class", "background")
+        //     .attr("width", width)
+        //     .attr("height", height);
+        //     // .on("click", country_clicked)
+
+        // Color bar
+        // Adapted from http://tributary.io/tributary/3650755/
+
+        var path = d3.geo.path()
+            .projection(projection);
+
+        // Chinese provinces
+        d3.json("data/zh-mainland-provinces.topo.json", function(error, cn) {
+            
+            var codes=[];
+            for (var i = 0; i < topojson.feature(cn, cn.objects.provinces).features.length; i++) {
+                codes.push(topojson.feature(cn, cn.objects.provinces).features[i].properties.name)
+                
+            };
+            console.log(codes);
+
+            svg.append("g")
+                .attr("class", "provinces")
+                .selectAll("path")
+                .data(topojson.feature(cn, cn.objects.provinces).features)
+                .enter()
+                .append("path")
+                .attr("d", path)
+                .attr("id", function(d) { return d.id; })
+                .attr("class", "province")
+                // .attr("fill", function(d) { return color(d.id); })
+                .attr("fill", "#cccccc")
+                .attr("fill", function(d) { return color(umap[d.properties.name]); })
+                .attr("stroke", "black")
+                .attr("stroke-width", "0.35");
+
+        });
+
+
+        // Add Taiwan
+        d3.json("data/zh-countries.topo.json", function(error, cn) {
+
+            svg.append("g")
+                .attr("class", "tw")
+                .attr("class", "provinces")
+                .selectAll("path")
+                .data(topojson.feature(cn, cn.objects.countries).features.filter(function(d) { return d.id === 2; }))
+                .enter()
+                .append("path")
+                .attr("d", path)
+                .attr("id", function(d) { return d.id; })
+                .attr("class", "province")
+                .attr("fill", "#cccccc")
+                .attr("fill", function(d) { return color(umap["Táiwān"]); })
+                .attr("stroke", "black")
+                .attr("stroke-width", "0.35");
+
+        });
+
+        // Add HK
+        d3.json("data/zh-countries.topo.json", function(error, cn) {
+
+            var svgHK = d3.select("#map").append("svg")
+                .attr("class", "hk")
+                .attr("width", 100)
+                .attr("height", 100)
+
+            var projection2 = d3.geo.mercator()
+                .center([126,17])
+                .scale(2000);
+
+            var path2 = d3.geo.path()
+                .projection(projection2);
+
+            svgHK.append("g")
+                // .attr("class", "provinces")
+                .selectAll("path")
+                .data(topojson.feature(cn, cn.objects.countries).features.filter(function(d) { return d.id === 1; }))
+                .enter()
+                .append("path")
+                .attr("d", path2)
+                .attr("id", function(d) { return d.id; })
+                .attr("class", "province")
+                .attr("fill", function(d) { return color(umap["Xiānggǎng"]); })
+                .attr("stroke", "black")
+                .attr("stroke-width", "0.35");
+
+            svgHK.append("text") //add some text
+                .attr("dx", function(d){return 20})
+                .attr("dy", function(d){return 35})
+                .attr("font-family", "sans-serif")
+                .attr("fill", "#aaaaaa")
+                .attr("font-size", 10)
+                .text("Hong Kong")
+
+        });
+        
+        //TODO Aomen / Haiwai
+    
+    </script>
+  </body>
+</html>

@@ -1,27 +1,29 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from bulbs.model import Node, Relationship
-from bulbs.property import String, Integer, DateTime, Null
-from bulbs.utils import current_datetime
+from minimongo import Model, Index, configure
+import json
 
+# Mongo db
+configure(host="localhost", port=27017)
+db_name="tweets"
 
-class User(Node):
-    element_type = "user"
-    uid = Integer(nullable=False)
-    name = String()
-    gender = String() # Self-reported gender
-    verified = Null() # verified - VIP status ("V")
+class User(Model):
 
-class isFromProvince(Relationship):
-    #Self-reported province of origin
-    label="isFromProvince"
+    class Meta:
+        # Here, we specify the database and collection names.
+        # A connection to your DB is automatically created.
+        database = db_name
+        collection = "weibousers"
 
-class Province(Node):
-    element_type="province"
-    name=String()
-    code_weibo=String()
-    
-class Publishs(Relationship):
-    label = "posts"
-    created = DateTime(default=current_datetime, nullable=False)
+        # Now, we programatically declare what indices we want.
+        # The arguments to the Index constructor are identical to
+        # the args to pymongo"s ensure_index function.
+        # TODO : add indexes 
+        indices = (
+            Index("uid"),
+            Index("province")
+        )
+
+        def __init__(self):
+            pass

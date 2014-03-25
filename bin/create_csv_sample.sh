@@ -6,7 +6,7 @@ die () {
 
 [ "$#" -eq 1 ] || die "1 argument required, $# provided"
 
-f=~/Data/HKU/weiboscope/week1.csv
+f=/home/clemsos/Dev/mitras/data/datazip/others/userdata.csv
 
 echo "Creating a sample from ${f} of ${1} lines "
 head -n${1} ${f} > sampleweibo.csv
