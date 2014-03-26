@@ -56,8 +56,6 @@ svg.append("g")
 // TITLE AND INFOS
 svg.append('g')
     .attr("class","info")
-    // .attr("x", width-220)
-    // .attr("y", height-180)
     .attr("transform", "translate("+(width-140)+","+(height-180)+")")
     .append("rect")
     .attr({fill : "transparent", height: 160,width:160})
@@ -120,7 +118,7 @@ svg.append("g")
           x: width-50,
           fill: function(d,i) { return color(d); } })
 
-d3.select(".caption")
+svg.select(".caption")
     .append("g")
     .attr("transform", "translate(" + (width-25) + "," + (height-25-5*49) + ")")
     .call(d3.svg.axis()
@@ -129,6 +127,21 @@ d3.select(".caption")
     .attr("font-family", "sans-serif")
     .attr("fill", "#4B4B4B")
     .attr("font-size", 10)
+
+svg.select('.caption')
+    .append("g")
+    .attr("class","units")
+    .attr("transform", "translate("+(width-35)+","+(height/2-20)+")")
+    .append("text")
+    .attr("dx", function(d){return 0})          
+    .attr("dy", 9 )
+    .attr("text-anchor", "middle")  
+    .attr("font-family", "sans-serif")
+    .attr("fill", "#4b4b4b")
+    .attr("font-size", 10)
+    .text(units)
+    .call(wrap, 50);
+
 
 // DRAW
 function drawMap(error,mainland,taiwan,hkmacau) {
@@ -192,6 +205,9 @@ function drawHkMacau(error, cn) {
     
     // console.log(topojson.feature(cn, cn.objects.layer1).features.filter(function(d) { return d.properties.GU_A3 === "HKG" }))
 
+    
+
+
     var projection2 = d3.geo.mercator()
     .center([126,17])
     .scale(2000);
@@ -202,6 +218,7 @@ function drawHkMacau(error, cn) {
     svg.select('.map')
         .append("g")
         .attr("class", "hk")
+        .attr("transform", "translate(50,"+(height-120)+")")
         .selectAll("path")
         .data(topojson.feature(cn, cn.objects.layer1).features)
         .enter()
@@ -221,10 +238,29 @@ function drawHkMacau(error, cn) {
         .attr("fill", "#aaaaaa")
         .attr("font-size", 10)
         .text("Hong Kong & Macau")
+
+    // add demarcation
+    svg.select(".hk")
+       .append("svg:line")
+         .attr("x1", 30)
+         .attr("y1", -10)
+         .attr("x2", 150)
+         .attr("y2", 20)
+         .style("stroke", "#cccccc")
+         .style("stroke-width", 3);
+    
+    svg.select(".hk")
+        .append("svg:line")
+         .attr("x1", 150)
+         .attr("y1", 20)
+         .attr("x2", 150)
+         .attr("y2", 60)
+         .style("stroke", "#cccccc")
+         .style("stroke-width", 3);
+
 }
 
 // TODO : Haiwai
-
 
 
 function wrap(text, width) {

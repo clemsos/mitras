@@ -23,6 +23,7 @@ from lib.users import UserAPI
 map_title="Population of Sina Weibo users for a specific keyword"
 map_desc="Based on Sina Weibo user profiles during a period of time. Data from weiboscope."
 map_credits="by Clement Renaud - 2013"
+map_units="Volume of tweets"
 tweets_file="/home/clemsos/Dev/mitras/data/sampleweibo.csv"
 #tweets_file="/home/clemsos/Dev/mitras/lib/cities/usersample.csv"
 
@@ -64,6 +65,7 @@ jsvar="var data=["+','.join([ '["'+p[0]+'",'+str(p[1])+']' for p in province_cou
 jsvar+="var title='"+map_title+"';"
 jsvar+="var desc='"+map_desc+"';"
 jsvar+="var credits='"+map_credits+"';"
+jsvar+="var units='"+map_units+"';"
 print jsvar
 
 # parse html
