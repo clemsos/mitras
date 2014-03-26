@@ -22,7 +22,7 @@ from lib.users import UserAPI
 # variables
 map_title="Population of Sina Weibo users for a specific keyword"
 map_desc="Based on Sina Weibo user profiles during a period of time. Data from weiboscope."
-
+map_credits="by Clement Renaud - 2013"
 tweets_file="/home/clemsos/Dev/mitras/data/sampleweibo.csv"
 #tweets_file="/home/clemsos/Dev/mitras/lib/cities/usersample.csv"
 
@@ -63,6 +63,7 @@ out_filename=out_dir+"/meme_example.html"
 jsvar="var data=["+','.join([ '["'+p[0]+'",'+str(p[1])+']' for p in province_count])+"];"
 jsvar+="var title='"+map_title+"';"
 jsvar+="var desc='"+map_desc+"';"
+jsvar+="var credits='"+map_credits+"';"
 print jsvar
 
 # parse html
@@ -72,24 +73,3 @@ print html
 # save htmlfile
 with codecs.open(out_filename, "w", "utf-8") as outfile:
     outfile.write(html)
-
-# var data= [
-#     ["Xianggang", 530],
-#     ["Guangdong", 240],
-#     ["Beijing", 100],
-#     ["Shanghai", 60],
-#     ["Taiwan", 160],
-#     ["Qita", 512],
-#     ["Shanxi", 225],
-#     ["Zhejiang", 132],
-#     ["Haiwai", 241],
-#     ["Hunan", 123],
-#     ["Yunnan", 289],
-#     ["Anhui", 415],
-#     ["Tianjin", 421],
-#     ["Jiangsu", 501],
-#     ["Fujian", 234],
-#     ["Liaoning", 131],
-#     ["Guangxi", 100],
-#     ["Henan", 231]
-# ]; 

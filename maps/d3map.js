@@ -53,12 +53,12 @@ svg.append("g")
     .attr("stroke", "black")
     .attr("stroke-width", "0.35");
 
-// TITLE
+// TITLE AND INFOS
 svg.append('g')
     .attr("class","info")
     // .attr("x", width-220)
     // .attr("y", height-180)
-    .attr("transform", "translate("+(width-220)+","+(height-180)+")")
+    .attr("transform", "translate("+(width-140)+","+(height-180)+")")
     .append("rect")
     .attr({fill : "transparent", height: 160,width:160})
 
@@ -85,9 +85,23 @@ svg.select('.info')
     .attr("dy", 12 )
     .attr("text-anchor", "middle")  
     .attr("font-family", "sans-serif")
-    .attr("fill", "#cccccc")
+    .attr("fill", "#aaaaaa")
     .attr("font-size", 12)
     .text(desc)
+    .call(wrap, 150);
+
+svg.select('.info')
+    .append("g")
+    .attr("class","credits")
+    .attr("transform", "translate(0,140)")
+    .append("text")
+    .attr("dx", function(d){return 0})          
+    .attr("dy", 9 )
+    .attr("text-anchor", "middle")  
+    .attr("font-family", "sans-serif")
+    .attr("fill", "#aaaaaa")
+    .attr("font-size", 11)
+    .text(credits)
     .call(wrap, 150);
 
 // CAPTION
