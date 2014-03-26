@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <script src="http://code.jquery.com/jquery-2.0.0.js"></script>
+    <style>
+        .provinces {
+          background-color: #fff;
+          border: 1px solid #ccc;
+        }
+        .hk {
+            position:relative;
+            left:-750px;
+            top:0px;
+        }
+        /*
+        .background {
+          fill: none;
+          pointer-events: all;
+        }
+
+        .province {
+          fill: #cde;
+          stroke: #fff;
+            stroke-linejoin: round;
+          stroke-linecap: round;
+        }
+        */
+        
+        /*#provinces .active, #states .active {
+          fill: #89a;
+        }
+        #cities {
+          stroke-width: 0;
+        }
+        .city {
+          fill: #345;
+          stroke: #fff;
+        }
+        pre.prettyprint {
+          border: 1px solid #ccc;
+          margin-bottom: 0;
+          padding: 9.5px;
+        }*/
+    </style>
+  </head>
+  <body>
+    <div id="d3map"></div>
+    <script src="http://d3js.org/d3.v3.min.js"></script>
+    <script src="http://d3js.org/topojson.v1.min.js"></script>
+    <script>
+        
+        // data 
+        var data= [
+            ["Xianggang", 530],
+            ["Guangdong", 240],
+            ["Beijing", 100],
+            ["Shanghai", 60],
+            ["Taiwan", 160],
+            ["Qita", 512],
+            ["Shanxi", 225],
+            ["Zhejiang", 132],
+            ["Haiwai", 241],
+            ["Hunan", 123],
+            ["Yunnan", 289],
+            ["Anhui", 415],
+            ["Tianjin", 421],
+            ["Jiangsu", 501],
+            ["Fujian", 234],
+            ["Liaoning", 131],
+            ["Guangxi", 100],
+            ["Henan", 231]
+        ]; 
+
+        // MAP setup
+        var width = 800,
+            height = 500;
+
+        var d3ObjId="d3map"
+    
+    </script>
+    <script src="../lib/maps/d3map.js"></script>
+        
+  </body>
+</html>
