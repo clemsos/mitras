@@ -19,14 +19,19 @@ chunksize=1000
 # init ElasticSearch
 es = ElasticSearch('http://localhost:9200/')
 
-index_name="weiboscope_jul_aug"
 # try :
 #     es.delete_index("weiboscope")
 # except :
 #     pass
-
 # es.create_index("weiboscope")
 
+
+# parse index name : 2 weeks per index to fasten search
+weeks={}
+for r in xrange(1,52,2):
+    weeks[r]=weeks[r+1]="weiboscope_"+str(r)+"_"+str(r+1)
+
+for w in  weeks: print w,weeks[w]
 
 previous_chunk=0
 for path, subdirs, files in os.walk(raw_data_path):
@@ -71,6 +76,10 @@ for path, subdirs, files in os.walk(raw_data_path):
 
                 f = z.open(raw_csvname) # read csv
                 csvfile=pd.read_csv(f, iterator=True, chunksize=chunksize) 
+                
+                week_number=filename.split(".")[0][4:]
+                index_name=weeks[int(week_number)]
+                # print index_name
 
                 for i,df in enumerate(csvfile):
 
@@ -110,7 +119,8 @@ for path, subdirs, files in os.walk(raw_data_path):
             print "%s processed in %.3fs"%(raw_csvname,time()-t1)
 
             # flag the file : done
-            os.rename(zip_path, zip_path+".done")
+            # os.rename(zip_path, zip_path+".done")
+            os.remove(zip_path)
             
             # reset counters
             previous_chunk=0

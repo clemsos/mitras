@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <style>
+        .provinces {
+          background-color: #fff;
+          border: 1px solid #ccc;
+        }
+        .hk {
+            position:relative;
+            left:-750px;
+            top:0px;
+        }
+        
+        /*
+        .background {
+          fill: none;
+          pointer-events: all;
+        }
+
+        .province {
+          fill: #cde;
+          stroke: #fff;
+            stroke-linejoin: round;
+          stroke-linecap: round;
+        }
+        */
+        
+        /*#provinces .active, #states .active {
+          fill: #89a;
+        }
+        #cities {
+          stroke-width: 0;
+        }
+        .city {
+          fill: #345;
+          stroke: #fff;
+        }
+        pre.prettyprint {
+          border: 1px solid #ccc;
+          margin-bottom: 0;
+          padding: 9.5px;
+        }*/
+    </style>
+  </head>
+  <body>
+    <div id="map"></div>
+    <script src="//d3js.org/d3.v3.min.js"></script>
+    <script src="//d3js.org/queue.v1.min.js"></script>
+    <script src="//d3js.org/topojson.v1.min.js"></script>
+    <script>
+        
+        // MAP setup
+        var map_width = 800,
+            map_height = 550;
+
+        // data goes here
+        var data=[["Beijing",51],["Guangdong",35],["Shanghai",25],["Zhejiang",19],["Jiangsu",11],["Haiwai",10],["Liaoning",9],["Fujian",9],["Sichuan",9],["Qita",8],["Xianggang",8],["Shandong",8],["Hubei",7],["Henan",6],["Hunan",5],["Shaanxi",5],["Tianjin",4],["Hebei",4],["Chongqing",4],["Heilongjiang",4],["Inner Mongol",3],["Anhui",3],["Guangxi",3],["Jiangxi",2],["Jilin",2],["Shanxi",2],["Yunnan",2],["Guizhou",1],["Xinjiang",1],["Hainan",1],["Gansu",1],["Taiwan",0],["Ningxia",0],["Aomen",0],["Qinghai",0],["Xizang",0],["0",0]];var title='Population of Sina Weibo users for The Voice';var desc='Based on Sina Weibo user profiles info. Data from HKU Weiboscope.';var credits='by Clement Renaud - 2013';var units='Volume of tweets (per 100)';
+
+    </script>
+    <script src="d3map.js"></script>
+
+  </body>
+</html>

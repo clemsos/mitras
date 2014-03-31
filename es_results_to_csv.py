@@ -3,54 +3,92 @@
 import elasticsearch
 import unicodedata
 import csv
+import os
 
 es = elasticsearch.Elasticsearch(["localhost:9200"])
 
 # Setup your variables
-index_name="weiboscope_jul_aug"
-meme_name="The_Voice"
-csv_file=meme_name+".csv"
+indexes_names=["weiboscope_39_40","weiboscope_41_42","weiboscope_43_44","weiboscope_45_46","weiboscope_47_48","weiboscope_49_50"]
+meme_name="tuhao"
+meme_keywords=["土豪", "暴发户"]
+
+
+results_path="/home/clemsos/Dev/mitras/results/"+meme_name
+
+# write path and files
+if not os.path.exists(results_path):
+    os.makedirs(results_path)
+csv_file=results_path+"/"+meme_name+".csv"
+log_file=results_path+"/"+meme_name+".log"
+
+
+# ES : config
 chunksize=1000
-meme_keywords='"中国好声音"'
 
-# Get the number of results
-res = es.search(index=index_name, body={"query": {"match": { "text" : meme_keywords }}})
-data_size=res['hits']['total']
-print("Total %d Hits" % data_size)
+# ES : Build query
+meme_query=""
+for i,k in enumerate(meme_keywords):
+    meme_query+='\"'+k+'\"'
+    if i+1 < len(meme_keywords): meme_query+= " OR "
 
-# get headers
-headers=[value for value in res['hits']['hits'][0]["_source"]]
+
+query={ "query": {
+        "query_string": {
+            "query": meme_query
+         }
+      }
+    }
 
 # Open a csv file and write the stuff inside
 with open(csv_file, 'wb') as csvfile: 
 
     filewriter = csv.writer(csvfile)
 
-    # create column header row
-    filewriter.writerow(headers)
-
-    # Get numbers of results 
-    for chunk in xrange(0,data_size,chunksize):
-
+    for i,index_name in enumerate(indexes_names):
         
-        # display progress as percent
-        per=round(float(chunk)/data_size*100, 1)
+        # Get the number of results
+        res = es.search(index=index_name, body=query)
+        data_size=res['hits']['total']
+        print "Total %d Hits from %s" % (data_size, index_name)
 
-        # request data
-        res=es.search(index=index_name, body={"query": {"match": { "text" : meme_keywords }}}, size=chunksize, from_=chunk)
+        # file headers
+        if i==0 : 
+            # get headers
+            headers=[value for value in res['hits']['hits'][0]["_source"]]
 
-        print"%.01f %% %d Hits Retreived" % (per,chunk)
+            # create column header row
+            filewriter.writerow(headers)
 
-        print res['hits']['hits'][0]["_score"]
-        if res['hits']['hits'][0]["_score"] < 1 : break
+        # Get numbers of results 
+        for chunk in xrange(0,data_size,chunksize):
+            
+            # display progress as percent
+            per=round(float(chunk)/data_size*100, 1)
 
-        for sample in res['hits']['hits']: 
-            row=[]
-            for id in sample["_source"]:
-                if type(sample["_source"][id]) == unicode : data = sample["_source"][id].encode("utf-8") 
-                else : data = sample["_source"][id] 
-                row.append(data)
+            # request data
+            res=es.search(index=index_name, body=query, size=chunksize, from_=chunk)
 
-            filewriter.writerow(row)
+            print"%.01f %% %d Hits Retreived - fiability %.3f" % (per,chunk, res['hits']['hits'][0]["_score"])
+            # if res['hits']['hits'][0]["_score"] < 0.2 : break
+
+            for sample in res['hits']['hits']: 
+                row=[]
+                for id in sample["_source"]:
+                    if type(sample["_source"][id]) == unicode : data = sample["_source"][id].encode("utf-8") 
+                    else : data = sample["_source"][id] 
+                    row.append(data)
+
+                filewriter.writerow(row)
+
+        # Write log file
+        with open(log_file, 'ab') as logfile: 
+            logfile.write("index_name : %s \n"%index_name)
+            logfile.write("meme_name : %s \n"% meme_name)
+            logfile.write("meme_query : %s \n"% meme_query)
+            logfile.write("%.01f %% %d Hits Retreived - fiability %.3f \n" % (per,chunk, res['hits']['hits'][0]["_score"]) )
+            logfile.write("Done. Data saved in %s \n"%csv_file)
+
 
 print "Done. Data saved in %s"%csv_file
+print "Log is stored at %s"%log_file
+

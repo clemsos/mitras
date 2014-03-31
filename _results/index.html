@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<head>
+     <title>Meme analysis </title>
+     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <!-- Bootstrap CSS -->
+    <!-- <link href="//netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap.min.css" rel="stylesheet" media="screen"> -->
+    <style>
+        /*grao*ph*/
+            .node {
+              cursor: pointer;
+              stroke: #3182bd;
+              stroke-width: 1.5px;
+            }
+
+            path.link {
+              fill: none;
+              stroke: #9ecae1;
+              stroke-width: 1.5px;
+            }
+
+            circle {
+              fill: #ccc;
+              stroke: #fff;
+              stroke-width: 1.5px;
+            }
+
+            text {
+              fill: #000;
+              stroke:none;
+              font: 10px sans-serif;
+              pointer-events: none;
+            }
+
+        /*time*/
+        .axis path,
+        .axis line {
+          fill: none;
+          stroke: #000;
+          shape-rendering: crispEdges;
+        }
+        .count {
+          fill: steelblue;
+        }
+        .x.axis path {
+          display: none;
+        }
+
+        /*map*/
+        .provinces {
+          background-color: #fff;
+          border: 1px solid #ccc;
+        }
+        .hk {
+            position:relative;
+            left:-750px;
+            top:0px;
+        }
+    </style>
+</head>
+<body>
+    <h1 class="text-center">Meme name</h1>
+    <div id="info"></div>
+    <div id="graph"></div>
+    <div id="timeserie"></div>
+    <div id="map"></div>
+    <div id="cloud"></div>
+    <div id="urls"></div>
+    <div id="hashtags"></div>
+    
+    <script  type="text/javascript" src="libs/d3.v3.min.js"></script>
+    <script  type="text/javascript" src="libs/queue.v1.min.js"></script>
+    <script  type="text/javascript" src="libs/topojson.v1.min.js"></script>    
+    <script  type="text/javascript" src="libs/d3.layout.cloud.js"></script>
+    <script>
+        
+        // MAP setup
+        var map_width = 800,
+            map_height = 550;        
+
+        var graphFile,mapFile,timeFile,wordsFile;
+
+        var meme_name="thevoice"
+
+        graphFile=meme_name+"/"+meme_name+"_d3graph.csv";
+        mapFile=meme_name+"/"+meme_name+"_usermap.json";
+        timeFile=meme_name+"/"+meme_name+"_time_series.json";
+        wordsFile=meme_name+"/"+meme_name+"_words.json";
+
+        console.log(graphFile,mapFile,timeFile,wordsFile)
+            
+
+    </script>
+
+    <script src="d3words.js"></script>
+    <script src="d3map.js"></script>
+    <script src="d3time.js"></script>
+    <script src="d3graph.js"></script>
+<!-- 
+ -->
+</body>
+</html>

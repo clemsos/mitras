@@ -11,7 +11,7 @@ from lib.visualizer import create_bar_graph
 import json
 
 
-meme_name="thevoice"
+meme_name="diaosi"
 
 # Init
 tstart=time()
@@ -186,9 +186,6 @@ if generate_words:
     with open(words_file, 'w') as outfile:
         json.dump(data_words, outfile)
     print "json data have been saved to %s"%(words_file)
-    
-    
-
 
 
 print  "Content : %d words, %d hashtags, %d urls"%(len(words),len(meme_urls), len(meme_hashtags))
