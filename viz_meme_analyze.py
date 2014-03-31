@@ -11,7 +11,7 @@ from lib.visualizer import create_bar_graph
 import json
 
 
-meme_name="diaosi"
+meme_name="yuanfang"
 
 # Init
 tstart=time()

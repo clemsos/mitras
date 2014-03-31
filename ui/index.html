@@ -190,7 +190,9 @@
   
   <script>
       // load list of memes
-      var memes_list="data/2012_sina-weibo-memes_list.csv";
+      var memes_list="memes.json";
+      // var memes_list="data/2012_sina-weibo-memes_list.csv";
+
       var graphFile,mapFile,timeFile,wordsFile;
       var memes,load_meme;
 
@@ -198,9 +200,9 @@
           
           // load the lis of memes from csv
           $.get(memes_list, function(memes_list_data) {
-                  memes=$.csv.toObjects(memes_list_data);
+                  // memes=$.csv.toObjects(memes_list_data);
                   // console.log(memes);
-                  memes.forEach(function(meme) {
+                  memes_list_data.data.forEach(function(meme) {
                     add_meme(meme);
                   })
                   load_meme("dufu")
