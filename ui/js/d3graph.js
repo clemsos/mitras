@@ -1,30 +1,45 @@
 // get the data
 function drawD3Graph(graphFile) {
-    d3.csv(graphFile, function(error, links) {
+    d3.json(graphFile, function(error, data) {
 
+        // console.log(data);
+
+        var graph_width = 1260,
+            graph_height = 800;
+
+
+        var color = d3.scale.category20b();
+
+        var scale_size=d3.scale.linear().domain([0, 0.1]).range([5, 30]);
+
+        
+        // parse nodes
         var nodes = {};
+        for (var i = 0; i < data.nodes.length; i++) {
+            nodes[data.nodes[i]["name"]] =data.nodes[i]
+        };
 
         // Compute the distinct nodes from the links.
-        links.forEach(function(link) {
+        data.edges.forEach(function(link) {            
             link.source = nodes[link.source] || 
                 (nodes[link.source] = {name: link.source});
             link.target = nodes[link.target] || 
                 (nodes[link.target] = {name: link.target});
-            link.value = +link.value;
+            link.value = +link.weight;
         });
 
-        var graph_width = 960,
-            graph_height = 500;
-
         var force = d3.layout.force()
-            .nodes(d3.values(nodes))
-            .links(links)
+            .nodes(data.nodes)
+            .links(data.edges)
             .size([graph_width, graph_height])
-            .linkDistance(50)
-            .charge(-150)
-            .gravity(0.5)
+            .linkDistance(30)
+            .charge(-120)
+            .gravity(0.3)
             .on("tick", tick)
             .start();
+        
+        // console.log(force.nodes());
+        // console.log(force.links());
 
         var svg = d3.select("#graph")
             .append("svg")
@@ -34,6 +49,17 @@ function drawD3Graph(graphFile) {
             // .attr("viewBox","0 0 600 1500")
             .append("g").attr('class', "graph");
 
+        // add the links and the arrows
+        var path = svg.append("g").selectAll("path")
+            .data(force.links())
+          .enter() //.append("svg:path")
+            .append("line")
+            .attr("class", "link")
+            .style("stroke", function(d) { return "#000" })
+            .style("stroke-opacity", function(d) { return d.weight/10 })
+            .attr("marker-end", "url(#end)")
+            .style("stroke-width", function(d) {  return 3 });
+            
         // build the arrow.
         svg.append("defs")
           .selectAll("marker")
@@ -47,25 +73,24 @@ function drawD3Graph(graphFile) {
             .attr("markergraph_Height", 6)
             .attr("orient", "auto")
           .append("svg:path")
-            .attr("d", "M0,-5L10,0L0,5");
-
-        // add the links and the arrows
-        var path = svg.append("g").selectAll("path")
-            .data(force.links())
-          .enter().append("svg:path")
-            .attr("class", "link")
-            .attr("marker-end", "url(#end)");
-
+            .attr("d", "M0,-5L10,0L0,5");  
+        
         // define the nodes
         var node = svg.selectAll(".node")
             .data(force.nodes())
           .enter().append("g")
             .attr("class", "node")
+            .on("mouseenter", display_info)
             .call(force.drag);
+
+        // console.log(node)
 
         // add the nodes
         node.append("circle")
-            .attr("r", function(d) {return d.weight});
+            .style("fill", function(d) { return color(d.community); })
+            .attr("r", function(d) { return scale_size(d.btw_cent) }) 
+            ;
+
 
         // add the text 
         // node.append("text")
@@ -73,23 +98,25 @@ function drawD3Graph(graphFile) {
         //     .attr("dy", ".35em")
         //     .text(function(d) { return d.name; });
 
-        // add the curvy lines
-        function tick() {
-            path.attr("d", function(d) {
-                var dx = d.target.x - d.source.x,
-                    dy = d.target.y - d.source.y,
-                    dr = Math.sqrt(dx * dx + dy * dy);
-                return "M" + 
-                    d.source.x + "," + 
-                    d.source.y + "A" + 
-                    dr + "," + dr + " 0 0,1 " + 
-                    d.target.x + "," + 
-                    d.target.y;
-            });
 
-            node
-                .attr("transform", function(d) { 
+        function tick() {
+            path.attr("x1", function(d) { return d.source.x; })
+                    .attr("y1", function(d) { return d.source.y; })
+                    .attr("x2", function(d) { return d.target.x; })
+                    .attr("y2", function(d) { return d.target.y; });
+
+            node.attr("transform", function(d) { 
                     return "translate(" + d.x + "," + d.y + ")"; });
+        }
+
+        function display_info(d){
+            d3.select(".nodeinfo").selectAll("li").remove()
+            var i=0;
+            for (var key in d) {
+                d3.select(".nodeinfo")
+                    .append("li").append("p").text(key + " : "+d[key])
+                i++;
+            }
         }
 
     });

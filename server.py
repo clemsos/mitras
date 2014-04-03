@@ -58,6 +58,10 @@ def server_static(filename):
 def index():  
     return template('ui/index')
 
+@route("/<url:path>")
+def index(url):
+  return template('ui/meme')
+
 @route('/memes.json')
 def images_getallitems():
     data = generate_data()

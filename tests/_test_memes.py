@@ -52,4 +52,3 @@ labels=get_protomemes_labels(path)
 print " calculate matrix w average linkage algorithm"
 linkage_matrix=linkage(similarity_matrix, method='average')
 print " clusters: n_samples: %d, n_features: %d" % linkage_matrix.shape
-
