@@ -12,8 +12,9 @@ import community
 
 # get meme_names
 results_path="/home/clemsos/Dev/mitras/results/"
-meme_names=[ meme for meme in os.listdir(results_path) if meme[-3:] != "csv"]
+# meme_names=[ meme for meme in os.listdir(results_path) if meme[-3:] != "csv"]
 # meme_names=["biaoge"]
+meme_names=['moyan','hougong','gangnam','sextape','dufu','yuanfang','qiegao']
 
 meme_names.sort()
 
@@ -113,6 +114,7 @@ for meme_name in meme_names:
     for node in in_degrees: d3nodes[node]["in_degree"]=str(in_degrees[node])
     for node in out_degrees: d3nodes[node]["out_degree"]=str(out_degrees[node])
 
+    '''
     # Cliques
     #################################
 
@@ -178,7 +180,7 @@ for meme_name in meme_names:
     print "Biggest connected component is %.2f %% of the graph" % G_mc_per_total
     nx.write_graphml(G_mc, meme_path+"/"+meme_name+"_main_component.graphml")
 
-
+    '''
     # Communities
     # from http://perso.crans.org/aynaud/communities/ 
     ##################################################################
@@ -206,7 +208,7 @@ for meme_name in meme_names:
     # CENTRALITIES 
     # http://toreopsahl.com/tnet/weighted-networks/node-centrality/
     #################################
-
+    '''
     # Betweeness centrality
     jsondata["betweeness_centrality"]={}
     # Create ordered tuple of centrality data
@@ -232,7 +234,7 @@ for meme_name in meme_names:
 
     jsondata["betweeness_centrality"]["distribution"]=btw_cent_dist
     jsondata["graph"]["average_betweeness_centrality"]=sum([c[0] for c in cent_items])/len(cent_items)
-
+    '''
     # Closeness centrality
     # print "Computing closeness_centrality..."
     # clo_cen = nx.closeness_centrality(G.to_undirected())
@@ -254,11 +256,19 @@ for meme_name in meme_names:
     # OUTPUT D3 GRAPH
     ################################
 
+    # write d3js annotated graph
+    d3_file=meme_path+"/"+meme_name+"_d3graph.full.json"
+    d3fulldata={}
+    d3fulldata["nodes"]=[d3nodes[node] for node in d3nodes ]
+    d3fulldata["edges"]=[ {"source":edge[0],"target":edge[1],"weight":edge[2]["weight"] } for edge in G.edges(data=True)]
+
+    with open(d3_file, 'w') as outfile:
+        json.dump(d3fulldata, outfile)
+        print "full json data have been saved to %s"%(d3_file)
+
+    # only partial graph
     min_weight=2
-
-
-    # d3data["nodes"]=[d3nodes[node] for node in d3nodes ]
-    # d3data["edges"]=[ {"source":edge[0],"target":edge[1],"weight":edge[2]["weight"] } for edge in G.edges(data=True)]
+    d3_file=meme_path+"/"+meme_name+"_d3graph.json"
 
     d3data={}
     d3data["nodes"]=[]

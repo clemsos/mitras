@@ -14,29 +14,46 @@ import os
 # get meme_names
 results_path="/home/clemsos/Dev/mitras/results/"
 # meme_names=[ meme for meme in os.listdir(results_path) if meme[-3:] != "csv"]
-meme_names=["diaosi"]
+meme_names=["biaoge"]
 print meme_names
+
+'''
+# Data to be produced
+words = [ Mot1, Mot2, Mot3 ]
+users=[user1,user2]
+provinces=[province1,province2]
+
+words_weighted_edges=[( Mot1, Mot2, w), (Mot2, Mot3, w)]
+words_users_weight= [(Mot1,User1,w),(Mot1,User2,w)]
+user_weighted_edges=[(User1, User2),(User2, User2)]
+user_provinces=[(user1, province1), (user2, province2)]
+'''
 
 # 
 t0=time()
 minetweet.init_tweet_regex()
 
 # d3
-generate_users_map=True
-generate_d3_graph=True
-generate_timeseries=True
-generate_words=True
+generate_users_map=False
+generate_d3_graph=False
+generate_timeseries=False
+generate_words_graph=True
+general_info=False
 
 # gephi
 generate_gephi_graph=False
 
-if generate_words: 
+if generate_words_graph: 
     from lib.nlp import NLPMiner
+    import locale
+    locale.setlocale(locale.LC_ALL, "")
+
     nlp=NLPMiner()
 
     stoplist=[i.strip() for i in open("lib/stopwords/zh-stopwords","r")]
     stoplist+=[i.strip() for i in open("lib/stopwords/stopwords.txt","r")]
     stoplist+=["转发","微博","说 ","一个","【 ","年 ","转 ","请","＂ ","问题","知道","中 ","已经","现在","说","【",'＂',"年","中","今天","应该","真的","月","希望","想","日","这是","太","转","支持"]
+    stoplist+=["事儿","中国"]
 
 if generate_users_map:
     # get user data 
@@ -62,10 +79,10 @@ def analyze_meme(meme_name):
     meme_path=outfile=results_path+meme_name
     meme_csv=meme_path+"/"+meme_name+".csv"
 
+    general_file=meme_path+"/"+meme_name+"_general.json"
     timeseries_file=meme_path+"/"+meme_name+"_time_series.json"
     d3_edges_path=meme_path+"/"+meme_name+"_d3graph.csv"
     user_map_file=meme_path+"/"+meme_name+"_usermap.json"
-
     words_file=meme_path+"/"+meme_name+"_words.json"
 
     gephi_nodes_path=meme_path+"/"+meme_name+"_nodes.csv"
@@ -80,7 +97,10 @@ def analyze_meme(meme_name):
         
         edges=[]
         nodes=[]
-        words=[]
+        
+        words_series=[]
+        words_list=[]
+
         meme_urls=[]
         meme_hashtags=[]
         dates=[]
@@ -117,14 +137,15 @@ def analyze_meme(meme_name):
                     # if row[7] not in nodes : nodes.append(row[7])
 
             # Extract keywords
-            if generate_words : 
+            if generate_words_graph : 
                 dico=nlp.extract_dictionary(clean)
                 # remove stopwords and store clean dico
                 clean_dico=nlp.remove_stopwords(dico)
                 
                 # add words not in stopwords
-                words+=[w for w in clean_dico if w.encode('utf-8') not in stoplist]
-
+                tmp_words=[w for w in clean_dico if w.encode('utf-8') not in stoplist]
+                words_series.append(tmp_words)
+                words_list+=tmp_words # global list for counter
 
             # Collect time series data
             if generate_timeseries :
@@ -182,24 +203,66 @@ def analyze_meme(meme_name):
             json.dump(map_data, outfile)
         print "json data have been saved to %s"%(user_map_file)
 
-    if generate_words:    
+    if general_info: 
+        data_info={}
+        data_info["tweets_count"]=count
+        data_info["urls"]=[ {"name":url[0],"count":url[1]} for url in Counter(meme_urls).most_common() if url[1]>10 ]
+
+        data_info["hashtags"]=[{"name":hashtag[0],"count":hashtag[1]} for hashtag in Counter(meme_hashtags).most_common() if hashtag[1]>10]
+
+        data_info["urls_count"]=len(meme_urls)
+        data_info["hashtags_count"]=len(meme_hashtags)
+
+        with open(general_file, 'w') as outfile:
+            json.dump(general_file, outfile)
+        print "json data have been saved to %s"%(general_file)
+
+        print  "Content : %d tweets %d words, %d hashtags, %d urls"%(count, len(words),len(meme_urls), len(meme_hashtags))
+
+
+    if generate_words_graph: 
 
         data_words={}
-        data_words["count"]=count
-        data_words["urls"]=[ {"name":url[0],"count":url[1]} for url in Counter(meme_urls).most_common() if url[1]>10 ]
+        data_words["edges"]=[]
+        # node_words=[{"name":word[0],"count":word[1]} for word in Counter(words).most_common() if word[1]>10]
 
-        data_words["hashtags"]=[{"name":hashtag[0],"count":hashtag[1]} for hashtag in Counter(meme_hashtags).most_common() if hashtag[1]>10]
+        # build nodesnode_words
+        node_words=[c[0] for c in Counter(words_list).most_common(500)]
+        
+        # print len(node_words), " nodes in words"
+        tmp_words_edges=[]
+        word_edges=[]
 
-        data_words["words"]=[{"name":word[0],"count":word[1]} for word in Counter(words).most_common() if word[1]>10]
+        for serie in words_series:     
+            tmp_words_edges+= [(word, serie) for word in serie if word in node_words]
 
-        data_words["urls_count"]=len(meme_urls)
-        data_words["hashtags_count"]=len(meme_hashtags)
+        for edge_pack in tmp_words_edges:
+            for word in edge_pack[1]:
+                if word is not edge_pack[0] and edge_pack[0] != word:
+                    tmp=[edge_pack[0], word]
+                    tmp.sort(cmp=locale.strcoll) # sort chinese characters to create undirected graph
+                    word_edges.append((tmp[0],tmp[1]))
+        
+        data_words["edges"]= [ {"source" : c[0][0], "target" : c[0][1], "weight": c[1] } for c in Counter(word_edges).most_common(1000) ]
+    
+        words_map={}
+        for c in Counter(words_list).most_common():
+            words_map[c[0]]=c[1]
+            
+        unique_nodes=[]
+        for e in data_words["edges"]:
+            if e["source"] not in unique_nodes : unique_nodes.append(e["source"]) 
+            if e["target"] not in unique_nodes : unique_nodes.append(e["target"]) 
+
+
+        data_words["nodes"]=[{"name" : node, "count": words_map[node]} for node in unique_nodes]
+    
+
+    # node_words=[{"name":word[0],"count":word[1]} for word in Counter(words).most_common() if word[1]>10]
 
         with open(words_file, 'w') as outfile:
             json.dump(data_words, outfile)
         print "json data have been saved to %s"%(words_file)
-
-    print  "Content : %d tweets %d words, %d hashtags, %d urls"%(count, len(words),len(meme_urls), len(meme_hashtags))
 
     print "done in %.3fs"%(time()-tstart)
 
