@@ -81,7 +81,7 @@ for meme_name in meme_names:
     print "Average clustering coeficient: %f"%avg_clust_coef
     jsondata["graph"]["average_clustering_coeficient"]=avg_clust_coef
 
-
+    '''
     # In/Out Degrees 
     #################################
 
@@ -114,7 +114,7 @@ for meme_name in meme_names:
     for node in in_degrees: d3nodes[node]["in_degree"]=str(in_degrees[node])
     for node in out_degrees: d3nodes[node]["out_degree"]=str(out_degrees[node])
 
-    '''
+    
     # Cliques
     #################################
 

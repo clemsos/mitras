@@ -1,73 +1,46 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import csv
+import os, csv, json
 from time import time 
 import datetime
 from collections import Counter
 import lib.tweetminer as minetweet
-from lib.memes import list_to_csv
-from lib.visualizer import create_bar_graph
-import json
-import os
+from lib.users import UserAPI
+import networkx as nx
+import community
+from lib.nlp import NLPMiner
+import locale
 
-# get meme_names
 results_path="/home/clemsos/Dev/mitras/results/"
-# meme_names=[ meme for meme in os.listdir(results_path) if meme[-3:] != "csv"]
 meme_names=["biaoge"]
 print meme_names
 
-'''
-# Data to be produced
-words = [ Mot1, Mot2, Mot3 ]
-users=[user1,user2]
-provinces=[province1,province2]
 
-words_weighted_edges=[( Mot1, Mot2, w), (Mot2, Mot3, w)]
-words_users_weight= [(Mot1,User1,w),(Mot1,User2,w)]
-user_weighted_edges=[(User1, User2),(User2, User2)]
-user_provinces=[(user1, province1), (user2, province2)]
-'''
-
-# 
 t0=time()
 minetweet.init_tweet_regex()
 
-# d3
-generate_users_map=False
-generate_d3_graph=False
-generate_timeseries=False
-generate_words_graph=True
-general_info=False
 
-# gephi
-generate_gephi_graph=False
+locale.setlocale(locale.LC_ALL, "")
 
-if generate_words_graph: 
-    from lib.nlp import NLPMiner
-    import locale
-    locale.setlocale(locale.LC_ALL, "")
+nlp=NLPMiner()
 
-    nlp=NLPMiner()
+stoplist=[i.strip() for i in open("lib/stopwords/zh-stopwords","r")]
+stoplist+=[i.strip() for i in open("lib/stopwords/stopwords.txt","r")]
+stoplist+=["转发","微博","说 ","一个","【 ","年 ","转 ","请","＂ ","问题","知道","中 ","已经","现在","说","【",'＂',"年","中","今天","应该","真的","月","希望","想","日","这是","太","转","支持"]
+stoplist+=["事儿","中国"]
 
-    stoplist=[i.strip() for i in open("lib/stopwords/zh-stopwords","r")]
-    stoplist+=[i.strip() for i in open("lib/stopwords/stopwords.txt","r")]
-    stoplist+=["转发","微博","说 ","一个","【 ","年 ","转 ","请","＂ ","问题","知道","中 ","已经","现在","说","【",'＂',"年","中","今天","应该","真的","月","希望","想","日","这是","太","转","支持"]
-    stoplist+=["事儿","中国"]
 
-if generate_users_map:
-    # get user data 
-    from lib.users import UserAPI
-    api=UserAPI()
+api=UserAPI()
 
-    def get_province(_userid):
-        province_code= api.get_province(_userid)
-        # print province_code
-        try :
-            return api.provinces[province_code]
-        except KeyError :
-            return 0
-            pass
+def get_province(_userid):
+    province_code= api.get_province(_userid)
+    # print province_code
+    try :
+        return api.provinces[province_code]
+    except KeyError :
+        return 0
+        pass
 
 def analyze_meme(meme_name):
 
@@ -79,37 +52,23 @@ def analyze_meme(meme_name):
     meme_path=outfile=results_path+meme_name
     meme_csv=meme_path+"/"+meme_name+".csv"
 
-    general_file=meme_path+"/"+meme_name+"_general.json"
-    timeseries_file=meme_path+"/"+meme_name+"_time_series.json"
-    d3_edges_path=meme_path+"/"+meme_name+"_d3graph.csv"
-    user_map_file=meme_path+"/"+meme_name+"_usermap.json"
-    words_file=meme_path+"/"+meme_name+"_words.json"
+    jsondata={}
+    jsondata["meme_name"]=meme_name
 
-    gephi_nodes_path=meme_path+"/"+meme_name+"_nodes.csv"
-    gephi_edges_path=meme_path+"/"+meme_name+"_edges.csv"
+    user_edges=[]
+    user_nodes=[]
+    words_series=[]
+    words_list=[]
+    words_users={}
+    count=0
 
-    
+
     # process the data
     with open(meme_csv, 'rb') as csvfile:
-        # ['uid', 'text', 'image', 'deleted_last_seen', 'mid', 'source', 'permission_denied', 'retweeted_uid', 'geo', 'created_at', 'retweeted_status_mid']
         memecsv=csv.reader(csvfile)
         memecsv.next() # skip headers
-        
-        edges=[]
-        nodes=[]
-        
-        words_series=[]
-        words_list=[]
-
-        meme_urls=[]
-        meme_hashtags=[]
-        dates=[]
-        values={}
-        user_provinces=[]
-        count=0
 
         for row in memecsv:
-
             # extract text
             t=row[1]    
             count+=1
@@ -117,154 +76,192 @@ def analyze_meme(meme_name):
             # regexp extract tweet entities
             mentions,urls,hashtags,clean=minetweet.extract_tweet_entities(t)
             
-            meme_hashtags+=hashtags
-            meme_urls+=urls
+            # extract text 
+            dico=nlp.extract_dictionary(clean)
 
-            # Data : graph user diffusion
-            if generate_gephi_graph or generate_d3_graph : 
-                
-                d=datetime.datetime.strptime(row[9], "%Y-%m-%dT%H:%M:%S")
-                timestamp=datetime.datetime(d.year,d.month,d.day,d.hour,d.minute,d.second)
-                
-                # if row[0] not in nodes : nodes.append(row[0])
-                for mention in mentions:
-                    edges.append((row[0],mention,timestamp))
-                    # if mention not in nodes : nodes.append(mention)
+            # remove stopwords and get clean dico
+            clean_dico=nlp.remove_stopwords(dico)
+            
+            # remove more stopwords
+            tmp_words=[w for w in clean_dico if w.encode('utf-8') not in stoplist and w[0] != "u" ]
+
+            words_list+=tmp_words # global list for counter            
+
+            # User diffusion graph
+            user_diff=[]
+            for mention in mentions:
+                user_edges.append((row[0],mention))
+                if mention not in user_diff : user_diff.append(mention)
 
                 # retweeted_uid
-                if row[7] != "" : 
-                    edges.append((row[7],row[0],timestamp))        
-                    # if row[7] not in nodes : nodes.append(row[7])
+            if row[7] != "" : 
+                user_edges.append((row[7],row[0]))
+                if row[7] not in user_diff : user_diff.append(row[7])
 
-            # Extract keywords
-            if generate_words_graph : 
-                dico=nlp.extract_dictionary(clean)
-                # remove stopwords and store clean dico
-                clean_dico=nlp.remove_stopwords(dico)
-                
-                # add words not in stopwords
-                tmp_words=[w for w in clean_dico if w.encode('utf-8') not in stoplist]
-                words_series.append(tmp_words)
-                words_list+=tmp_words # global list for counter
+            words_series.append(tmp_words)
 
-            # Collect time series data
-            if generate_timeseries :
-                d=datetime.datetime.strptime(row[9], "%Y-%m-%dT%H:%M:%S")
-                day = datetime.datetime(d.year,d.month,d.day,d.hour,0,0)
-                i=day.strftime("%s")
-                if day not in dates : # collect values 
-                    values[i]=0    
-                values[i]+=1
-                dates.append(day)
+            for w in tmp_words :
+                try :
+                    words_users[w] += user_diff
+                except KeyError:
+                    words_users[w] = []
+                    words_users[w] += user_diff
 
-            # collect province for all users
-            if generate_users_map :
-                province=get_province(row[0])
-                if province!=0 : user_provinces.append(province)
-                
-                # for mention in mentions:
-                #     user_provinces.append(get_province(mention))
+    # CSV processed
+    edges_weighted=[str(p[0][0]+" "+p[0][1]+" "+str(p[1])) for p in Counter(user_edges).most_common()] # if p[1] > 1]
 
-                # # retweeted_uid
-                # if row[7] != "" : 
-                #     user_provinces.append(get_province(row[7]))
-                
-    if generate_gephi_graph : 
-        print "User diffusion : %d nodes, %d edges"%(len(nodes), len(edges))
-        list_to_csv(["Id", "Label"],nodes,gephi_nodes_path)
-        list_to_csv(["Source","Target", "Time"],edges,gephi_edges_path)
+    print "Edges (raw files) : %d edges"%len(user_edges)
+    print "Weighted edges %d"%len(edges_weighted)
 
-    if generate_d3_graph :
-        print "User diffusion : %d nodes, %d edges"%(len(nodes), len(edges))
-        user_graph=[(e[0], e[1]) for e in edges]
-        user_graph_weighted=[[p[0][0],p[0][1],p[1]] for p in Counter(user_graph).most_common()  if p[1] > 2]
-        list_to_csv(["source","target","weight"],user_graph_weighted,d3_edges_path)
+    G = nx.read_weighted_edgelist(edges_weighted, nodetype=str, delimiter=" ",create_using=nx.DiGraph())
 
-    # create time series grpah
-    if generate_timeseries :
-        graph_title="_time_series"
-        with open(timeseries_file, 'w') as outfile:
-            json.dump([{"timestamp" : v, "count": values[v]  } for v in values], outfile)
-        print "json data have been saved to %s"%(timeseries_file)
+    N,K = G.order(), G.size()
+    print "Nodes: ", N
+    print "Edges: ", K
 
-        # vy=[values[v] for v in values]
-        # vx=[datetime.datetime.fromtimestamp(float(v)) for v in values.keys()]
-        # print vx,vy
-        # create_bar_graph(vx,vy,graph_title,True)
+    jsondata["graph"]={}
+    jsondata["graph"]["total_raw_edges"]=len(user_edges)
+    jsondata["graph"]["total_nodes"]=N
+    jsondata["graph"]["total_edges"]=K
 
-    if generate_users_map:
-        map_data={}
-        map_data["title"]="Population distribution for Sina Weibo users."
-        map_data["desc"]="Based on Sina Weibo user profiles info. Data from HKU Weiboscope."
-        map_data["credits"]="by Clement Renaud - 2013"
-        map_data["units"]="Volume of tweets (per 100)"
-        map_data["provinces"]=[{ "name": p[0], "count" :(p[1]/100) } for p in Counter(user_provinces).most_common()]
-        with open(user_map_file, 'w') as outfile:
-            json.dump(map_data, outfile)
-        print "json data have been saved to %s"%(user_map_file)
-
-    if general_info: 
-        data_info={}
-        data_info["tweets_count"]=count
-        data_info["urls"]=[ {"name":url[0],"count":url[1]} for url in Counter(meme_urls).most_common() if url[1]>10 ]
-
-        data_info["hashtags"]=[{"name":hashtag[0],"count":hashtag[1]} for hashtag in Counter(meme_hashtags).most_common() if hashtag[1]>10]
-
-        data_info["urls_count"]=len(meme_urls)
-        data_info["hashtags_count"]=len(meme_hashtags)
-
-        with open(general_file, 'w') as outfile:
-            json.dump(general_file, outfile)
-        print "json data have been saved to %s"%(general_file)
-
-        print  "Content : %d tweets %d words, %d hashtags, %d urls"%(count, len(words),len(meme_urls), len(meme_hashtags))
+    # init nodes
+    d3nodes={}
+    for n in G.nodes(data=True) : 
+        d3nodes[ n[0] ]=n[1]
+        d3nodes[ n[0]]["name"]=n[0]
+        d3nodes[ n[0]]["province"]=get_province(n[0])
 
 
-    if generate_words_graph: 
+    # Clustering and degree coeficient
+    #################################
 
-        data_words={}
-        data_words["edges"]=[]
-        # node_words=[{"name":word[0],"count":word[1]} for word in Counter(words).most_common() if word[1]>10]
+    avg_deg = float(K)/N
+    print "Average degree: ", avg_deg
+    jsondata["graph"]["average_degree"]=avg_deg
 
-        # build nodesnode_words
-        node_words=[c[0] for c in Counter(words_list).most_common(500)]
-        
-        # print len(node_words), " nodes in words"
-        tmp_words_edges=[]
-        word_edges=[]
+    # Clustering coefficient of all nodes (in a dictionary)
+    ccs = nx.clustering(G.to_undirected())
 
-        for serie in words_series:     
-            tmp_words_edges+= [(word, serie) for word in serie if word in node_words]
+    # Average clustering coefficient
+    avg_clust_coef = sum(ccs.values()) / len(ccs) # also : nx.algorithms.cluster.average_clustering(G.to_undirected())
+    print "Average clustering coeficient: %f"%avg_clust_coef
+    jsondata["graph"]["average_clustering_coeficient"]=avg_clust_coef
 
-        for edge_pack in tmp_words_edges:
-            for word in edge_pack[1]:
-                if word is not edge_pack[0] and edge_pack[0] != word:
-                    tmp=[edge_pack[0], word]
-                    tmp.sort(cmp=locale.strcoll) # sort chinese characters to create undirected graph
-                    word_edges.append((tmp[0],tmp[1]))
-        
-        data_words["edges"]= [ {"source" : c[0][0], "target" : c[0][1], "weight": c[1] } for c in Counter(word_edges).most_common(1000) ]
+     # Communities
+    # from http://perso.crans.org/aynaud/communities/ 
+    ##################################################################
+
+    jsondata["communities"]={}
+
+    # Best partition
+    best_partition = community.best_partition(G.to_undirected()) 
+    modularity=community.modularity(best_partition,G.to_undirected())
+    print "Modularity of the best partition: %f"%modularity
+    print "Number of nodes in the best partition : ", len(set(best_partition.values())) 
+
+    jsondata["communities"]={}
+    jsondata["communities"]={}
+    jsondata["communities"]["modularity"]=modularity
+    jsondata["communities"]["number_of_communities"]=len(set(best_partition.values()))
+
+    # write best partition graph to GraphML file
+    # G_ok=community.induced_graph(best_partition,G.to_undirected())
+    # nx.write_graphml(G_ok, meme_path+"/"+meme_name+"_best_partition.graphml")
+
+    for node in best_partition:
+        d3nodes[node]["community"]=best_partition[node]
+
     
-        words_map={}
-        for c in Counter(words_list).most_common():
-            words_map[c[0]]=c[1]
-            
-        unique_nodes=[]
-        for e in data_words["edges"]:
-            if e["source"] not in unique_nodes : unique_nodes.append(e["source"]) 
-            if e["target"] not in unique_nodes : unique_nodes.append(e["target"]) 
+    # CREATE WORDS GRAPH
+    ################################
 
-
-        data_words["nodes"]=[{"name" : node, "count": words_map[node]} for node in unique_nodes]
-    
-
+    data_words={}
+    data_words["edges"]=[]
     # node_words=[{"name":word[0],"count":word[1]} for word in Counter(words).most_common() if word[1]>10]
 
-        with open(words_file, 'w') as outfile:
-            json.dump(data_words, outfile)
-        print "json data have been saved to %s"%(words_file)
+    # build nodesnode_words
+    node_words=[c[0] for c in Counter(words_list).most_common(500)]
+    
+    # print len(node_words), " nodes in words"
+    tmp_words_edges=[]
+    word_edges=[]
+
+    for serie in words_series:
+        tmp_words_edges+= [(word, serie) for word in serie if word in node_words]
+
+    for edge_pack in tmp_words_edges:
+        for word in edge_pack[1]:
+            if word is not edge_pack[0] and edge_pack[0] != word:
+                tmp=[edge_pack[0], word]
+                tmp.sort(cmp=locale.strcoll) # sort chinese characters to create undirected graph
+                word_edges.append((tmp[0],tmp[1]))
+    
+    data_words["edges"]= [ {"source" : c[0][0], "target" : c[0][1], "weight": c[1] } for c in Counter(word_edges).most_common(200) ]
+
+    words_map={}
+    word_user_edges=[]
+    for c in Counter(words_list).most_common():
+        words_map[c[0]]=c[1]
+        # create user > word graph
+        for user in Counter(words_users[c[0]]).most_common():
+            if user[1] > 2 : word_user_edges.append({"source": c[0], "target": user[0], "weight": user[1]})
+        
+        
+    unique_nodes=[]
+    for e in data_words["edges"]:
+        if e["source"] not in unique_nodes : unique_nodes.append(e["source"]) 
+        if e["target"] not in unique_nodes : unique_nodes.append(e["target"]) 
+
+    data_words["nodes"]=[{"name" : node, "count": words_map[node]} for node in unique_nodes]
+
+    # OUTPUT D3 GRAPH
+    ################################
+
+    # write d3js conversational graph
+    # (only partial graph)
+    min_weight=2
+    d3_file=meme_path+"/"+meme_name+"_d3graph.json"
+
+    d3data={}
+    d3data["info"]=jsondata
+    d3data["words"]=data_words
+    d3data["words_user"]=word_user_edges
+    
+    d3data["nodes"]=[]
+    d3data["edges"]=[ {"source":edge[0],"target":edge[1],"weight":edge[2]["weight"] } for edge in G.edges(data=True) if edge[2]["weight"] >= min_weight]
+    
+    d3_nodes_done=[]
+    for edge in d3data["edges"]:
+        if edge["source"] not in d3_nodes_done:
+            d3_nodes_done.append(edge["source"])
+            d3data["nodes"].append(d3nodes[edge["source"]])
+        if edge["target"] not in d3_nodes_done:
+            d3_nodes_done.append(edge["target"])
+            d3data["nodes"].append(d3nodes[edge["target"]])
+
+    d3data["users"]={}
+    d3data["users"]["nodes"]=d3data["nodes"]
+    del(d3data["nodes"])
+    d3data["users"]["edges"]=d3data["edges"]
+    del(d3data["edges"])
+
+    # write d3js annotated graph
+    with open(d3_file, 'w') as outfile:
+        json.dump(d3data, outfile)
+        print "json data have been saved to %s"%(d3_file)
 
     print "done in %.3fs"%(time()-tstart)
+
+    # d3_file=meme_path+"/"+meme_name+"_d3graph.full.json"
+
+    # d3fulldata={}
+    # d3fulldata["info"]=jsondata
+    # d3fulldata["nodes"]=[d3nodes[node] for node in d3nodes ]
+    # d3fulldata["edges"]=[ {"source":edge[0],"target":edge[1],"weight":edge[2]["weight"] } for edge in G.edges(data=True)]
+
+    # with open(d3_file, 'w') as outfile:
+    #     json.dump(d3fulldata, outfile)
+    #     print "full json data have been saved to %s"%(d3_file)
 
 for meme in meme_names:
     analyze_meme(meme)

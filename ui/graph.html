@@ -36,14 +36,13 @@
 <script type="text/javascript" src="libs/jquery.min.js"></script>
 <script type="text/javascript" src="libs/d3.v3.min.js"></script>
 <!-- <script type="text/javascript" src="js/d3graph_click.js"></script> -->
-<script type="text/javascript" src="js/d3graph.js"></script>
+<script type="text/javascript" src="js/d3multilayer.js"></script>
 
 <script>
     var safename="biaoge";
     $(document).ready(function() {
-        var graphFile="data/"+safename+"/"+safename+"_d3graph.json";
+        var graphFile="data/"+safename+"/"+safename+"_words.json";
         console.log(graphFile);
-
         drawD3Graph(graphFile);
     });
 </script>

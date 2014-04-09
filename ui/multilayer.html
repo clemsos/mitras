@@ -1,0 +1,66 @@
+<style>
+    /*grao*ph*/
+              .node {
+                cursor: pointer;
+                stroke: #3182bd;
+                stroke-width: 1.5px;
+              }
+
+              path.link {
+                fill: none;
+                stroke: #9ecae1;
+                stroke-width: 1.5px;
+              }
+
+              circle {
+                fill: #ccc;
+                stroke: none;
+                stroke-width: 1.5px;
+              }
+
+              text {
+                fill: #000;
+                stroke:none;
+                font: 10px sans-serif;
+                pointer-events: none;
+              }
+</style>
+<h2 class="sub-header">Map <small>Users map</small></h4>
+<div class="row">
+  <div class="col-xs-12 col-sm-6 placeholder">
+    <div id="map"></div>
+    
+    
+    <button type="button" onClick="toggleGraph()" class="btn btn-default">Conversations</button>
+    <button type="button" onClick="toggleUsers()" class="btn btn-default">Users</button>
+    <button type="button" onClick="toggleMap()" class="btn btn-default">Map</button>
+    <button type="button" onClick="toggleMapCentroids()" class="btn btn-default">Centroids</button>
+    <button type="button" onClick="toggleUserMaps()" class="btn btn-default">User Provinces</button>
+    <button type="button" onClick="toggleWords()" class="btn btn-default">Words</button>
+    <button type="button" onClick="toggleWordsPath()" class="btn btn-default">Words Edges</button>
+
+  </div>
+    <div><ul  class="nodeinfo"></ul></div>
+</div>
+
+<script type="text/javascript" src="libs/jquery.min.js"></script>
+<script type="text/javascript" src="libs/d3.v3.min.js"></script>
+<!-- <script type="text/javascript" src="js/d3graph_click.js"></script> -->
+<!-- <script type="text/javascript" src="js/d3multilayer.js"></script> -->
+<script type="text/javascript" src="libs/queue.v1.min.js"></script>
+<script type="text/javascript" src="libs/topojson.v1.min.js"></script>    
+<script type="text/javascript" src="js/d3multilayer.js"></script>
+
+<script>
+    var safename="biaoge";
+
+    $(document).ready(function() {
+        var mapFile="data/"+safename+"/"+safename+"_usermap.json";
+        var graphFile="data/"+safename+"/"+safename+"_d3graph.json";
+
+        drawD3Layers(graphFile,mapFile)
+
+
+    });
+
+</script>
