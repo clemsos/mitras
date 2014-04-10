@@ -24,6 +24,7 @@ function drawD3Layers(graphFile) {
 
         var usersX={}
         var communitiesX={}
+        var communitiesY=518;
 
         // parse nodes
         var myUserNodes = {};
@@ -82,9 +83,9 @@ function drawD3Layers(graphFile) {
                     var self = d3.select(this);
 
                     var startx=communitiesX[d.source.community],
-                        starty=399,
+                        starty=communitiesY,
                         endx=communitiesX[d.target.community],
-                        endy=399;
+                        endy=communitiesY;
 
                     // console.log(d.source.community,d.target.community,startx,endx)
                     var r = (endx - startx) * 0.51;
@@ -122,7 +123,7 @@ function drawD3Layers(graphFile) {
                     var self = d3.select(this);
                     var r=d.users.length,
                         x=communitiesX[d.id],
-                        y=399;
+                        y=communitiesY;
 
                     self.append("circle")
                         .attr("class",function(d) { return "community_"+d.id; })
@@ -162,8 +163,6 @@ function drawD3Layers(graphFile) {
         
         drawUserArcs()
         drawCommunity()
-        
-
 
         // Toggle children.
         function toggleChildren(d) {

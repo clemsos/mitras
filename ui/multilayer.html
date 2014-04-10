@@ -28,16 +28,19 @@
 <h2 class="sub-header">Map <small>Users map</small></h4>
 <div class="row">
   <div class="col-xs-12 col-sm-6 placeholder">
-    <div id="map"></div>
-    
-    
-    <button type="button" onClick="toggleGraph()" class="btn btn-default">Conversations</button>
-    <button type="button" onClick="toggleUsers()" class="btn btn-default">Users</button>
-    <button type="button" onClick="toggleMap()" class="btn btn-default">Map</button>
-    <button type="button" onClick="toggleMapCentroids()" class="btn btn-default">Centroids</button>
-    <button type="button" onClick="toggleUserMaps()" class="btn btn-default">User Provinces</button>
-    <button type="button" onClick="toggleWords()" class="btn btn-default">Words</button>
-    <button type="button" onClick="toggleWordsPath()" class="btn btn-default">Words Edges</button>
+  
+    <button type="button" class="btn btn-default btn-arcs">Arcs</button>
+    <button type="button" class="btn btn-default btn-communities">Communities</button>
+    <button type="button" class="btn btn-default btn-map">Map</button>
+    <button type="button" class="btn btn-default btn-centroids">Centroids</button>
+    <!-- <button type="button" class="btn btn-default Provinces">User Provinces</button> -->
+    <button type="button" class="btn btn-default btn-words">Words</button>
+    <button type="button" class="btn btn-default btn-wordforce">Stop Words</button>
+    <button type="button" class="btn btn-default btn-wordgraph">Words Graph</button>
+    <button type="button" class="btn btn-default btn-wordusers">Words Users</button>
+    <button type="button" class="btn btn-default btn-mapusers">Map Users</button>
+  
+  <div id="viz"></div>
 
   </div>
     <div><ul  class="nodeinfo"></ul></div>
@@ -49,7 +52,7 @@
 <!-- <script type="text/javascript" src="js/d3multilayer.js"></script> -->
 <script type="text/javascript" src="libs/queue.v1.min.js"></script>
 <script type="text/javascript" src="libs/topojson.v1.min.js"></script>    
-<script type="text/javascript" src="js/d3multilayer.js"></script>
+<script type="text/javascript" src="js/d3flatlayers.js"></script>
 
 <script>
     var safename="biaoge";
@@ -59,8 +62,7 @@
         var graphFile="data/"+safename+"/"+safename+"_d3graph.json";
 
         drawD3Layers(graphFile,mapFile)
-
-
+        console.log(wordForce);
     });
 
 </script>

@@ -200,13 +200,12 @@ def analyze_meme(meme_name):
 
     words_map={}
     word_user_edges=[]
-    for c in Counter(words_list).most_common():
+    for c in Counter(words_list).most_common(500):
         words_map[c[0]]=c[1]
         # create user > word graph
         for user in Counter(words_users[c[0]]).most_common():
-            if user[1] > 2 : word_user_edges.append({"source": c[0], "target": user[0], "weight": user[1]})
-        
-        
+            if user[1] > 2 : word_user_edges.append({"source": c[0], "target": user[0], "weight": user[1], "community" : best_partition[user[0]]})
+    
     unique_nodes=[]
     for e in data_words["edges"]:
         if e["source"] not in unique_nodes : unique_nodes.append(e["source"]) 

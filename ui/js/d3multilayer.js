@@ -192,10 +192,6 @@ function drawD3Layers(graphFile, mapFile) {
 
     var userGraph=map_svg.append("g").attr('class', "graph");
 
-
-
-
-
 // USER PROVINCES ///////////////////////////////////////////////////////////////
         
     function drawUserMapEdges() {
