@@ -3,7 +3,8 @@ function drawD3Layers(graphFile, mapFile) {
     map_width=800;
     map_height=550;
 
-    // LOAD DATA
+
+// LOAD DATA /////////////////////////////////////////////////////////////
     queue()
         .defer(d3.json, "maps/zh-mainland-provinces.topo.json") // mainland
         .defer(d3.json, "maps/zh-chn-twn.topo.json") // taiwan 
@@ -12,7 +13,8 @@ function drawD3Layers(graphFile, mapFile) {
         .defer(d3.json, graphFile)
         .await(drawMap); // function that uses files
 
-    // DRAW 
+// SETUP /////////////////////////////////////////////////////////////
+
     // create SVG map
     var map_svg = d3.select("#map").append("svg")
         .attr("width", map_width)
@@ -36,12 +38,9 @@ function drawD3Layers(graphFile, mapFile) {
     var userColor = d3.scale.category20b();
     var userScaleSize=d3.scale.linear().domain([0, 0.1]).range([5, 30]);
 
-    // DRAW
     function drawMap(error,mainland,taiwan,hkmacau,mapData,graphData) {
         
-        // DATA 
-        // console.log(mapData)
-        // parse data properly
+        // DATA : parse data properly
 
         // sort provinces 
         mapData.provinces.map(function(d) { umap[d.name]=d.count });
@@ -73,14 +72,15 @@ function drawD3Layers(graphFile, mapFile) {
         drawHkMacau(error,hkmacau);
     }
 
-
 // USER GRAPH ///////////////////////////////////////////////////////////////
 
-    function drawUserGraph() {
+    function drawUserGraph(graphData) {
 
         // Load Graph Data
-        var userNodes=graphData.nodes;
-        var userEdges=graphData.edges;
+        var userNodes=graphData.users.nodes;
+        var userEdges=graphData.users.edges;
+
+        // console.log(graphData,userEdges,userNodes)
 
         // parse nodes
         var myUserNodes = {};
@@ -167,6 +167,34 @@ function drawD3Layers(graphFile, mapFile) {
         }
     }
         
+// USER PLOT //////////////////////////////////////////////////////////////
+
+    // Load Graph Data
+    var userNodes=graphData.users.nodes;
+    var userEdges=graphData.users.edges;
+
+    // console.log(graphData,userEdges,userNodes)
+
+    // parse nodes
+    var myUserNodes = {};
+    for (var i = 0; i < userNodes.length; i++) {
+        myUserNodes[userNodes[i]["name"]] =userNodes[i]
+    };
+
+    // Compute the distinct nodes from the links.
+    userEdges.forEach(function(link) {            
+        link.source = myUserNodes[link.source] || 
+            (nodes[link.source] = {name: link.source});
+        link.target = myUserNodes[link.target] || 
+            (myUserNodes[link.target] = {name: link.target});
+        link.value = +link.weight;
+    });
+
+    var userGraph=map_svg.append("g").attr('class', "graph");
+
+
+
+
 
 // USER PROVINCES ///////////////////////////////////////////////////////////////
         
@@ -277,6 +305,8 @@ function drawD3Layers(graphFile, mapFile) {
 
 // WORD GRAPH ///////////////////////////////////////////////////////////////
         
+    function drawWordGraph(graphData) {
+
         console.log(graphData);
 
         var wordNodes=graphData.words.nodes;
@@ -350,7 +380,7 @@ function drawD3Layers(graphFile, mapFile) {
           .enter() //.append("svg:path")
             .append("line")
             .attr("class", "word-link")
-            .style("stroke", function(d) { console.log(d);return "#CCC" })
+            .style("stroke", function(d) { return "#CCC" })
             .style("stroke-opacity", function(d) { return 0.3 })
             .style("stroke-width", function(d) {  return 1 });
 
@@ -362,12 +392,16 @@ function drawD3Layers(graphFile, mapFile) {
                     .attr("y2", function(d) { return d.target.y; });        
 
             wordNodesText.attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; });
-        }
+        } 
+    }
 
+// drawUserGraph(graphData)
+// drawWordGraph(graphData)
 
     }
 
 
+// FUNCTIONS //////////////////////////////////////////////////////////////
     // Mainland provinces
     function drawMainland(error, cn) {
         
@@ -480,6 +514,7 @@ function drawD3Layers(graphFile, mapFile) {
     }
 
     // TODO : rest of the world - Haiwai / Qita
+
     function wrap(text, width) {
       text.each(function() {
         var text = d3.select(this),
@@ -505,30 +540,32 @@ function drawD3Layers(graphFile, mapFile) {
     }
 }
 
-function toggleGraph() {
-    $(".graph").toggle()
-}
+// BUTTONS //////////////////////////////////////////////////////////////
 
-function toggleUsers() {
-    $(".users").toggle()
-}
+    function toggleGraph() {
+        $(".graph").toggle()
+    }
 
-function toggleMap() {
-    $(".map").toggle()
-}
+    function toggleUsers() {
+        $(".users").toggle()
+    }
 
-function toggleMapCentroids() {
-    $(".mapCentroids").toggle()
-}
+    function toggleMap() {
+        $(".map").toggle()
+    }
 
-function toggleUserMaps() {
-    $(".users-map").toggle()
-}
+    function toggleMapCentroids() {
+        $(".mapCentroids").toggle()
+    }
 
-function toggleWordsPath() {
-    $(".word-paths").toggle()
-}
+    function toggleUserMaps() {
+        $(".users-map").toggle()
+    }
 
-function toggleWords() {
-    $(".words").toggle()
-}
+    function toggleWordsPath() {
+        $(".word-paths").toggle()
+    }
+
+    function toggleWords() {
+        $(".words").toggle()
+    }
