@@ -1,6 +1,8 @@
 function drawD3Words(wordsFile) {
   d3.json(wordsFile, function(error,data){
     
+    console.log(data);
+    
     tabulate("#hashtags", data.hashtags.splice(0,5), ["name","count"])
     tabulate("#urls", data.urls.splice(0,5), ["name","count"])
 

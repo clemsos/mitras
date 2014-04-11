@@ -1,7 +1,9 @@
+var projection, path;
+
 function drawD3Map(mapFile) {
 
-    map_width=800;
-    map_height=550;
+    map_width=300;
+    map_height=300;
     // LOAD DATA
     queue()
         .defer(d3.json, "maps/zh-mainland-provinces.topo.json") // mainland
@@ -18,11 +20,11 @@ function drawD3Map(mapFile) {
         .attr("preserveAspectRatio", "xMidYMid")
         .attr("viewBox", "0 0 " + map_width + " " + map_height);
 
-    var projection = d3.geo.mercator()
-        .center([116,39])
-        .scale(600);
+    projection = d3.geo.mercator()
+        .center([180,8])
+        .scale(250);
 
-    var path = d3.geo.path()
+    path = d3.geo.path()
         .projection(projection);
 
     var umap = [];
@@ -32,7 +34,7 @@ function drawD3Map(mapFile) {
     function drawMap(error,mainland,taiwan,hkmacau,data) {
         
         // DATA 
-        console.log(data)
+        // console.log(data)
         // parse data properly
         
         data.provinces.map(function(d) { console.log(d); umap[d.name]=d.count });
@@ -44,19 +46,18 @@ function drawD3Map(mapFile) {
         // console.log(v);
 
         // COLORS
-        // define color scale
-        var colorScale = d3.scale.linear()
-                   .domain(d3.extent(v))
-                   .interpolate(d3.interpolateHcl)
-                   .range(["white","red"]);
 
-        // add grey color if no values
-        color = function(i){ 
-            if (i==undefined) {return "#cccccc"}
-            else return colorScale(i)
-        }
+        // province color scale
+        var pro={}, i=0, val=[];
+        for(key in umap) { pro[key]=i; i++; val.push(umap[key])}
+        console.log(d3.extent(val))
+        
+        // range of green with grey color if no values
+        var greens=d3.scale.quantize().domain(d3.extent(val)).range(colorbrewer.Greens[9]);
+        color = function(key){ return (key==undefined)? "#cccccc" : greens(key) };
 
         // BACKGROUND
+        /*
         map_svg.append("g")
             .attr("class", "background")
             .append("rect")
@@ -124,6 +125,7 @@ function drawD3Map(mapFile) {
 
             // .call(wrap, 150);
 
+        
         map_svg.select('.info')
             .append("g")
             .attr("class","credits")
@@ -137,10 +139,11 @@ function drawD3Map(mapFile) {
             .attr("font-size", 11)
             .text(data.credits)
             .call(wrap, 150);
-
+        */
 
         // CAPTION
         // Color bar adapted from http://tributary.io/tributary/3650755/
+        var cw=10;
         map_svg.append("g")
             .attr("class","caption")
             .append("g")
@@ -149,35 +152,38 @@ function drawD3Map(mapFile) {
             .data(d3.range(d3.min(v), d3.max(v), (d3.max(v)-d3.min(v))/50.0))
             .enter()
             .append("rect")
-            .attr({width: 25,
+            .attr({width: cw,
                   height: 5,
-                  y: function(d,i) { return map_height-25-i*5 },
+                  y: function(d,i) { return map_height-cw-i*5 },
                   x: map_width-50,
                   fill: function(d,i) { return color(d); } })
 
+        /*
         map_svg.select(".caption")
             .append("g")
-            .attr("transform", "translate(" + (map_width-25) + "," + (map_height-25-5*49) + ")")
+            .attr("transform", "translate(" + (map_width-cw) + "," + (map_height-cw-5*49) + ")")
             .call(d3.svg.axis()
                    .scale(d3.scale.linear().domain(d3.extent(v)).range([5*50,0]))
                     .orient("right"))
             .attr("font-family", "sans-serif")
             .attr("fill", "#4B4B4B")
             .attr("font-size", 10)
-
+        */
         map_svg.select('.caption')
             .append("g")
             .attr("class","units")
-            .attr("transform", "translate("+(map_width-35)+","+(map_height/2-35)+")")
+            .attr("transform", "translate("+(map_width-cw-10)+","+(map_height/2-cw)+")")
+            // .attr("transform", "rotate(90 "+(map_width-cw)+","+(map_height/2-cw)+")")
             .append("text")
-            .attr("dx", function(d){return 0})          
-            .attr("dy", 9 )
+            .attr("dx", -5)          
+            .attr("dy", 2 )
             .attr("text-anchor", "middle")  
             .attr("font-family", "sans-serif")
             .attr("fill", "#4b4b4b")
             .attr("font-size", 10)
+            .attr("transform", "rotate(-90)")//function(d){ console.log(d); return "rotate(90 "+d.x+","+d.y+")"})          
             .text(data.units)
-            .call(wrap, 50);
+            // .call(wrap, 50);
 
         drawProvinces(error,mainland);
         drawTaiwan(error,taiwan);
@@ -252,7 +258,7 @@ function drawD3Map(mapFile) {
         map_svg.select('.map')
             .append("g")
             .attr("class", "hk")
-            .attr("transform", "translate(50,"+(map_height-120)+")")
+            .attr("transform", "translate(0,"+(map_height-120)+")")
             .selectAll("path")
             .data(topojson.feature(cn, cn.objects.layer1).features)
             .enter()
@@ -262,7 +268,7 @@ function drawD3Map(mapFile) {
             .attr("class", "province")
             .attr("fill", function(d) { return color(umap["Xianggang"]); })
             .attr("stroke", "black")
-            .attr("stroke-width", "0.35");
+            .attr("stroke-width", "0.15");
 
         map_svg.select(".hk")
             .append("text") //add some text
@@ -278,19 +284,19 @@ function drawD3Map(mapFile) {
            .append("svg:line")
              .attr("x1", 30)
              .attr("y1", -10)
-             .attr("x2", 150)
+             .attr("x2", 130)
              .attr("y2", 20)
              .style("stroke", "#cccccc")
-             .style("stroke-width", 3);
+             .style("stroke-width", 1);
         
         map_svg.select(".hk")
             .append("svg:line")
-             .attr("x1", 150)
+             .attr("x1", 130)
              .attr("y1", 20)
-             .attr("x2", 150)
+             .attr("x2", 160)
              .attr("y2", 60)
              .style("stroke", "#cccccc")
-             .style("stroke-width", 3);
+             .style("stroke-width", 1);
 
     }
 

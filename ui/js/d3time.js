@@ -1,10 +1,14 @@
 function drawD3Time (timeFile) {
  
     // Margins, time_width and time_height. 
-    var margin = {top: 20, right: 20, bottom: 90, left: 50},
-        body_time_width = 500,
+    var w=300,
+        h=300;
+
+
+    var margin = {top: 20, right: 20, bottom: 90, left: 30},
+        body_time_width = w,
         time_width = body_time_width - margin.left - margin.right,
-        time_height = 400 - margin.top - margin.bottom;
+        time_height = h - margin.top - margin.bottom;
 
     // Construct our SVG object.
     var svg = d3.select("#timeserie").append("svg")
