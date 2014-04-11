@@ -10,8 +10,10 @@ var wordForce,
     mapToUsers,
     colorScale;
 
+var showWordPath=false;
+
 var updateCommunityXY,
-    communityLayout="YAxis", //default layout : "YAxis", "XAxis"
+    communityLayout="XAxis", //default layout : "YAxis", "XAxis"
     tickCommunity,
     drawMapToUsers,
     updateWordXY;
@@ -20,7 +22,7 @@ function drawD3Layers(graphFile,mapFile) {
 
     var vizWidth=860,
         vizHeight=900,
-        vizMiddleY=550,
+        vizMiddleY=750,
         mapY=450;
 
     var viz = d3.select("#viz").append("svg")
@@ -167,17 +169,21 @@ function drawD3Layers(graphFile,mapFile) {
 
         updateWordXY= function updateWordXY() {
 
+            var margin=50,
+                rgx=d3.scale.linear().domain([0,wordNodes.length]).range([margin,vizWidth-margin]),
+                s=d3.shuffle(wordNodes);
+            // var rgy=d3.scale.linear().domain([0,wordNodes.length]).range([0,vizHeight])
+
             for (var i = 0; i < wordNodes.length; i++) {
-                var d=wordNodes[i];
+                var d=s[i];
 
-                var x=i*20;
-                var y=80;
+                // console.log(wordScaleFont(d.count))
+                wordsX[d.name]=rgx(i);
+                wordsY[d.name]=wordScaleFont(d.count)*8;
 
-                wordsX[d.name]=x;
-                wordsY[d.name]=y;
             };
-            // console.log("wordsXY",wordsX,wordsY);
-
+            console.log("wordsXY",wordsX,wordsY);
+            
         }
 
         // MAP : parse data properly
@@ -388,56 +394,63 @@ function drawD3Layers(graphFile,mapFile) {
     }
 
     function tickWord(e) {
+        
+        console.log("tickWord");
+        console.log(wordsX,wordsY)
 
         words.attr("transform", function(d) { 
             
             // console.log(d)
             var r=wordScaleFont(d.count),
-                w=wordForce.size()[0],
-                h=wordForce.size()[1],
-                x=Math.max(r, Math.min(w - r, d.x)),
-                y=Math.max(r, Math.min(h - r, d.y));
+                w=vizWidth,
+                h=vizMiddleY-30,
+                x=(d.x == undefined)? wordsX[d.name] : Math.max(r, Math.min(w - r, d.x)),
+                y=(d.y == undefined)? wordsY[d.name] : Math.max(r, Math.min(h - r, d.y));
 
             wordsX[d.name]=x;
             wordsY[d.name]=y;
 
-            // console.log(x,y)
             return "translate(" + x + "," + y + ")"; 
+
         });
+        // drawWords()
+        // drawWordsToUsers()
+        if(showWordPath) tickWordPath()
+    }
+
+    function tickWordPath() {
 
         wordPath.attr("x1", function(d){
-                var r=wordScaleFont(d.source.count),
-                    w=wordForce.size()[0],
-                    x=Math.max(0, Math.min(w, d.source.x));
-                    // console.log(x>w)
-                    return d.source.x=x;
+            var r=wordScaleFont(d.source.count),
+                w=wordForce.size()[0],
+                x=Math.max(0, Math.min(w, d.source.x));
+                // console.log(x>w)
+                return d.source.x=x;
 
-            }).attr("y1", function(d){
-                var r=wordScaleFont(d.source.count),
-                    h=wordForce.size()[1],
-                    y=Math.max(0, Math.min(h, d.source.y));
-                    // console.log(r,h)
-                    return d.source.y=y;
-            })
-            .attr("x2", function(d) { 
-                
-                var r=wordScaleFont(d.target.count),
-                    w=wordForce.size()[0],
-                    x=Math.max(0, Math.min(w, d.target.x));
-                    // console.log(x>w)
-                    return d.target.x=x;
-                     })
-            .attr("y2", function(d) { 
-                var r=wordScaleFont(d.target.count),
-                    h=wordForce.size()[1],
-                    y=Math.max(0, Math.min(h, d.target.y));
-                    // console.log(r,h)
-                    return d.target.y=y;
-             });
+        }).attr("y1", function(d){
+            var r=wordScaleFont(d.source.count),
+                h=wordForce.size()[1],
+                y=Math.max(0, Math.min(h, d.source.y));
+                // console.log(r,h)
+                return d.source.y=y;
+        })
+        .attr("x2", function(d) { 
+            
+            var r=wordScaleFont(d.target.count),
+                w=wordForce.size()[0],
+                x=Math.max(0, Math.min(w, d.target.x));
+                // console.log(x>w)
+                return d.target.x=x;
+                 })
+        .attr("y2", function(d) { 
+            var r=wordScaleFont(d.target.count),
+                h=wordForce.size()[1],
+                y=Math.max(0, Math.min(h, d.target.y));
+                // console.log(r,h)
+                return d.target.y=y;
+         });
+    }
 
-        // drawWords()
-        drawWordsToUsers()
-    } 
 
     var wordScaleFont=d3.scale.linear().domain([100, 3000]).range([15, 80]);
 
@@ -608,13 +621,12 @@ function drawD3Layers(graphFile,mapFile) {
 
             })
             tickCommunity();
-            drawMapToUsers();
+            // drawMapToUsers();
     }
  
     // province color scale
     var pro={}, i=0, val=[];
     for(key in umap) { pro[key]=i; i++; val.push(umap[key])}
-    console.log(d3.extent(val))
     
     // range of green with grey color if no values
     // var greens=d3.scale.quantize().domain(d3.extent(val)).range(colorbrewer.Greens[9]);
@@ -625,7 +637,7 @@ function drawD3Layers(graphFile,mapFile) {
     
     tickCommunity=function tickCommunity() {
         // var userColor = d3.scale.category20b();
-        console.log("tickCommunity");
+        // console.log("tickCommunity");
 
         communities.each(function (d, i) {
                 var self = d3.select(this);
@@ -665,7 +677,7 @@ function drawD3Layers(graphFile,mapFile) {
                 }
             })
         tickArcs();
-        drawMapToUsers();
+        // drawMapToUsers();
     }
 
     // Mainland provinces
@@ -787,15 +799,20 @@ function drawD3Layers(graphFile,mapFile) {
 
 // INIT /////////////////////////////////////////////////////////
     
-    // drawWords()
+    drawWords();
+    updateWordXY(); // sort data
+    console.log(wordsY,wordsX);
+    tickWord();
     // drawWordsToUsers()
     // wordForce.start()
+    // wordForce.stop()
     
     drawCommunity()
     drawUserArcs()
-    drawMap()
-    drawMapToUsers()
-    drawCentroids()
+    
+    // drawCentroids()
+    // drawMap()
+    // drawMapToUsers()
 
 // UTILS //////////////////////////////////////////////////////////
 
@@ -845,7 +862,7 @@ $(".btn-wordforce").click(function(e){
     if(wfStarted) {
         wordForce.stop();
         wfStarted=false;
-        updateWordXY(); // sort data
+        
         // wordTick();
 
     } else {
@@ -875,58 +892,3 @@ $(".switchs button").each(function(e){
         $(this).addClass( ($("."+n).css('display') != 'none')? "active":"" );
     })
 })
-
-/*
-function drawPie(self, data) {
-
-  data.forEach(function(d) {
-    d.value = +d.value;
-  });
-  console.log(data)
-
-  var width = 200,
-    height = 200,
-    radius = Math.min(width, height) / 2;
-
-  var color = d3.scale.category20c();
-
-  var arc = d3.svg.arc()
-      .outerRadius(radius - 10)
-      .innerRadius(0);
-
-  var pie = d3.layout.pie()
-      .sort(null)
-      .value(function(d) { console.log(d);return d.value; });
-
-  var svg = d3.select(self)
-      .append("svg")
-      .attr("width", width)
-      .attr("height", height)
-      .append("g")
-      .attr("transform", "translate(" + width / 2 + "," + height / 2 + ")");
-
-  var g = svg.selectAll(".pie")
-      .data(pie(data))
-    .enter().append("g")
-      .attr("class", "pie");
-
-  g.append("path")
-      .attr("d", arc)
-      .attr("data-legend", function(d){return d.data.label})
-      .style("fill", function(d) { return color(d.data.label); });
-
-  g.append("text")
-      .attr("transform", function(d) { return "translate(" + arc.centroid(d) + ")"; })
-      .attr("dy", ".25em")
-      .style("fill","#000")
-      .style("fill-opacity","0.8")
-      .style("text-anchor", "middle")
-      .text(function(d) { return d.data.label; });
-
-  svg.append("g")
-      .attr("class", "legend")
-      .attr("transform", "translate(50,30)")
-      .style("font-size", "12px")
-      .call(d3.legend)
-}
-*/

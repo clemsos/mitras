@@ -3,8 +3,8 @@ function drawD3Words(wordsFile) {
     
     console.log(data);
     
-    tabulate("#hashtags", data.hashtags.splice(0,5), ["name","count"])
-    tabulate("#urls", data.urls.splice(0,5), ["name","count"])
+    // tabulate("#hashtags", data.hashtags.splice(0,5), ["name","count"])
+    // tabulate("#urls", data.urls.splice(0,5), ["name","count"])
 
     // word clouds  
     var words=data.words.splice(3,100).map(function(d) {

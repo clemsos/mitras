@@ -37,10 +37,9 @@ function drawD3Map(mapFile) {
         // console.log(data)
         // parse data properly
         
-        data.provinces.map(function(d) { console.log(d); umap[d.name]=d.count });
+        data.provinces.map(function(d) {umap[d.name]=d.count });
         delete(umap[null]);
         delete(umap[0]);
-        console.log(umap);
 
         var v = Object.keys(umap).map(function(k){return umap[k]})
         // console.log(v);
@@ -50,7 +49,6 @@ function drawD3Map(mapFile) {
         // province color scale
         var pro={}, i=0, val=[];
         for(key in umap) { pro[key]=i; i++; val.push(umap[key])}
-        console.log(d3.extent(val))
         
         // range of green with grey color if no values
         var greens=d3.scale.quantize().domain(d3.extent(val)).range(colorbrewer.Greens[9]);
@@ -220,7 +218,7 @@ function drawD3Map(mapFile) {
     // Taiwan
     function drawTaiwan(error, cn) {
         // console.log(error)
-        console.log(topojson.feature(cn, cn.objects.layer1))
+        // console.log(topojson.feature(cn, cn.objects.layer1))
 
         // Taiwan
         map_svg.select(".map")
