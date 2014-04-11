@@ -10,20 +10,24 @@ var wordForce,
     mapToUsers,
     colorScale;
 
-var showWordPath=false;
+var showWordPath=false,
+    wfStarted=false,
+    centroidsOnMap=false;
 
 var updateCommunityXY,
     communityLayout="XAxis", //default layout : "YAxis", "XAxis"
     tickCommunity,
     drawMapToUsers,
-    updateWordXY;
+    updateWordXY,
+    tickWords,
+    drawCentroids;
 
 function drawD3Layers(graphFile,mapFile) {
 
     var vizWidth=860,
         vizHeight=900,
         vizMiddleY=750,
-        mapY=450;
+        mapY=200;
 
     var viz = d3.select("#viz").append("svg")
             .attr("width", vizWidth)
@@ -168,7 +172,7 @@ function drawD3Layers(graphFile,mapFile) {
         });
 
         updateWordXY= function updateWordXY() {
-
+            // console.log("updateWordXY")
             var margin=50,
                 rgx=d3.scale.linear().domain([0,wordNodes.length]).range([margin,vizWidth-margin]),
                 s=d3.shuffle(wordNodes);
@@ -182,8 +186,8 @@ function drawD3Layers(graphFile,mapFile) {
                 wordsY[d.name]=wordScaleFont(d.count)*8;
 
             };
-            console.log("wordsXY",wordsX,wordsY);
-            
+            // console.log("wordsXY",wordsX,wordsY);
+
         }
 
         // MAP : parse data properly
@@ -207,33 +211,58 @@ function drawD3Layers(graphFile,mapFile) {
         var mapCentroids=[];
         var mapFeatures= [topojson.feature(mainland, mainland.objects.provinces).features,topojson.feature(taiwan, taiwan.objects.layer1).features.filter(function(d) { return d.properties.GU_A3 === 'TWN'; }),topojson.feature(hkmacau, hkmacau.objects.layer1).features]
         
-        for (var i = 0; i < mapFeatures.length; i++) {
-            mapFeatures[i].forEach(function(d, i) {
+        function updateCentroidsXY() {
+            console.log(centroidsOnMap)
+            
+            var cnt=0,
+                margin=20,
+                rgx=d3.scale.linear().domain([0,30]).range([margin,vizWidth-margin]);
 
-                // if (d.id === 2 || d.id === 15 || d.id === 72) return; // lower 48
-                var centroid = mapPath.centroid(d);
-                if (centroid.some(isNaN)) return;
-                centroid.x = centroid[0];
-                centroid.y = centroid[1];
-                centroid.cx = centroid[0];
-                centroid.cy = centroid[1];
-                centroid.feature = d;
-                if (d.properties.name != undefined) centroid.name=d.properties.name
-                else if (d.properties.name==undefined && d.properties.NAME=="Taiwan") centroid.name='Taiwan';
-                else if (d.properties.name==undefined && d.properties.NAME=="Macao") centroid.name='Aomen';
-                else centroid.name='Xianggang';
+            for (var i = 0; i < mapFeatures.length; i++) {
+                mapFeatures[i].forEach(function(d, i) {
+                    cnt++;
 
-                centroid.type="province";
-                // centroid.color="#ccc";    
-                mapCentroids.push(centroid);
-            });
-        };
+                    // if (d.id === 2 || d.id === 15 || d.id === 72) return; // lower 48
+                    var centroid = mapPath.centroid(d);
+                    if (centroid.some(isNaN)) return;
+
+
+                    centroid.x = centroid[0];
+                    centroid.y = centroid[1];
+                    centroid.cx = centroid[0];
+                    centroid.cy = centroid[1];
+                    centroid.fixx = rgx(cnt); // fix display
+                    centroid.fixy = vizHeight-50; // fix display
+
+                    
+                    centroid.feature = d;
+                    if (d.properties.name != undefined) centroid.name=d.properties.name
+                    else if (d.properties.name==undefined && d.properties.NAME=="Taiwan") centroid.name='Taiwan';
+                    else if (d.properties.name==undefined && d.properties.NAME=="Macao") centroid.name='Aomen';
+                    else centroid.name='Xianggang';
+
+                    centroid.type="province";
+                    // centroid.color="#ccc";    
+                    mapCentroids.push(centroid);
+                });
+            };
+
+            var centroids={}
+            for (var i = 0; i < mapCentroids.length; i++) {
+                var c=mapCentroids[i];
+                centroids[c.name]=c;
+            };
+
+        }
+
+        updateCentroidsXY();
 
         var centroids={}
         for (var i = 0; i < mapCentroids.length; i++) {
             var c=mapCentroids[i];
             centroids[c.name]=c;
         };
+
 
         // GEO COMMUNITIES        
         var mapUsersEdges=[];
@@ -278,7 +307,6 @@ function drawD3Layers(graphFile,mapFile) {
         .gravity(gravity)
         .on("tick", tickWord);
         // .start();
-
 
     wordsToUsers = viz.append("g")
         .attr("class", "wordusers")
@@ -340,31 +368,52 @@ function drawD3Layers(graphFile,mapFile) {
 // DRAW FUNCTIONS ///////////////////////////////////////////////////////
 
 
-    function drawCentroids() {
-        // console.log(centroids, mapCentroids);
-        nodeCentroids.each(function (d, i) {
+    drawCentroids=function drawCentroids() {
+
+        nodeCentroids.data(mapCentroids)
+            .each(function (d, i) {
             var self=d3.select(this);
-
-            var y=mapY+d.cy,
-                x=d.cx; 
-
+            // console.log(d);
 
             self.append("circle")
                 .attr("r", 2)
-                .style("fill", function(d) {return "green"})
+                .style("fill", function(d) {return "green"});
 
             self.append("text")
                 .attr("dx", 2)
                 .attr("dy", "0.35em")
                 .style("fill", "#aaa" )
                 .style("fill-opacity", "0.8" )
-                .text(d.name)
+                .text(d.name);
 
-            self.attr("transform", function(d) { return "translate(" + x + "," + y + ")"; })
+            if (!centroidsOnMap) 
+                self.select("text")
+                    .attr("transform", "rotate(60)")
+                    .attr("dy","0.45em")
         })
+
+        tickCentroids();
     }
 
-    drawMapToUsers=function drawMapToUsers() {
+    tickCentroids = function() {
+
+        updateCentroidsXY();
+        nodeCentroids.each(function (d, i) {
+            
+            var x,y;
+            if (centroidsOnMap){ y=mapY+d.cy; x=d.cx; }
+            else { y=d.fixy; x=d.fixx; }
+
+            console.log(x,y)
+            
+            var self=d3.select(this);
+            self.transition().attr("transform", function(d) { return "translate(" + x + "," + y + ")"; })
+        })
+
+
+    }
+
+    drawMapToUsers=function() {
 
         mapToUsers.each(function (d, i) {
             
@@ -393,19 +442,30 @@ function drawD3Layers(graphFile,mapFile) {
         })
     }
 
-    function tickWord(e) {
+    tickWords=function(){ 
         
-        console.log("tickWord");
-        console.log(wordsX,wordsY)
+        (wfStarted)? wordForce.start():wordForce.stop();
+        if(!wfStarted) updateWordXY();
+        // showWordPath=!wfStarted;
+        tickWord();
 
-        words.attr("transform", function(d) { 
+    };
+
+    function tickWord() {
+        
+        // console.log("tickWord",wfStarted,showWordPath);
+
+        // remove transition for force
+        var ww = (wfStarted)? words : words.transition();
+
+        ww.attr("transform", function(d) { 
             
             // console.log(d)
             var r=wordScaleFont(d.count),
                 w=vizWidth,
                 h=vizMiddleY-30,
-                x=(d.x == undefined)? wordsX[d.name] : Math.max(r, Math.min(w - r, d.x)),
-                y=(d.y == undefined)? wordsY[d.name] : Math.max(r, Math.min(h - r, d.y));
+                x=(d.x == undefined || !wfStarted)? wordsX[d.name] : Math.max(r, Math.min(w - r, d.x)),
+                y=(d.y == undefined || !wfStarted)? wordsY[d.name] : Math.max(r, Math.min(h - r, d.y));
 
             wordsX[d.name]=x;
             wordsY[d.name]=y;
@@ -413,9 +473,8 @@ function drawD3Layers(graphFile,mapFile) {
             return "translate(" + x + "," + y + ")"; 
 
         });
-        // drawWords()
-        // drawWordsToUsers()
-        if(showWordPath) tickWordPath()
+
+        if(showWordPath) tickWordPath();
     }
 
     function tickWordPath() {
@@ -801,16 +860,15 @@ function drawD3Layers(graphFile,mapFile) {
     
     drawWords();
     updateWordXY(); // sort data
-    console.log(wordsY,wordsX);
-    tickWord();
+    tickWords();
     // drawWordsToUsers()
-    // wordForce.start()
-    // wordForce.stop()
     
-    drawCommunity()
-    drawUserArcs()
+    drawCommunity();
+    drawUserArcs();
     
-    // drawCentroids()
+    updateCentroidsXY();
+    drawCentroids();
+    // console.log(centroids, mapCentroids)
     // drawMap()
     // drawMapToUsers()
 
@@ -857,21 +915,22 @@ function drawD3Layers(graphFile,mapFile) {
 
 // BUTTONS //////////////////////////////////////////////////////////
 
-var wfStarted=true;
-$(".btn-wordforce").click(function(e){
-    if(wfStarted) {
-        wordForce.stop();
-        wfStarted=false;
-        
-        // wordTick();
 
-    } else {
-        wordForce.start();
-        wfStarted=true;
-    }
+$(".btn-wordforce").click(function(e){
     
+    wfStarted=(wfStarted)?false:true;
+    tickWords();  
     $(".btn-wordforce").html( (wfStarted) ?  "Stop Words" : "Start Words");
 })
+
+$(".btn-centroids").click(function(e){
+    
+    centroidsOnMap=(centroidsOnMap)?false:true;
+    tickCentroids(); 
+    console.log(centroidsOnMap)
+    // $(".btn-wordforce").html( (wfStarted) ?  "Show map" : "Show list");
+})
+
 
 $(".btn-userlayout").click(function(e){
     communityLayout=(communityLayout == "YAxis")? "XAxis":"YAxis";
