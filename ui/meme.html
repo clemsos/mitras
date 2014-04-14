@@ -13,51 +13,56 @@
     .x.axis path {
       display: none;
     }
-/*
   body {
     padding-bottom: 100px;
   }
+/*
   .navbar-tools {
     height : 100px;
-
   }
 */
 </style>
 
 <nav class="navbar-tools navbar-default navbar-tools navbar navbar-fixed-bottom" role="navigation">
   <div class="container-fluid">
-     <div class="btn-group dropup">
-    <button type="button" class="btn btn-info dropdown-toggle" data-toggle="dropdown">
-      Meme
-      <span class="caret"></span>
-    </button>
+    <div class="btn-group dropup">
+      <button type="button" class="btn btn-info dropdown-toggle" data-toggle="dropdown">
+        Meme
+        <span class="caret"></span>
+      </button>
 
-    <ul class="dropdown-menu memelist"></ul>
+      <ul class="dropdown-menu memelist"></ul>
   
-  </div>
+    </div>
+
+    <button type="button" class="btn btn-sm btn-alert btn-showall">Show all</button>
 
     <div class="btn-group">
       <button type="button" class="btn btn-sm btn-default btn-userlayout">Layout</button>
       <button type="button" class="btn btn-sm btn-default btn-wordforce">Start Words</button>
-      <button type="button" class="btn btn-sm btn-default btn-centroids">Centroids</button>
+      <button type="button" class="btn btn-sm btn-default btn-centroids">Place on map</button>
     </div>
 
     <div class="btn-group switchs">
       <button type="button" class="btn btn-xs btn-default btn-arcs">Arcs</button>
-      <button type="button" class="btn btn-xs btn-default btn-communities">Communities</button>
+      <!-- <button type="button" class="btn btn-xs btn-default btn-communities">Communities</button> -->
       <button type="button" class="btn btn-xs btn-default btn-map">Map</button>
-      <button type="button" class="btn btn-xs btn-default btn-centroids">Centroids</button>
-      <button type="button" class="btn btn-xs btn-default btn-words">Words</button>
-      <button type="button" class="btn btn-xs btn-default btn-wordgraph">Words Graph</button>
+      <!-- <button type="button" class="btn btn-xs btn-default btn-centroids">Centroids</button> -->
+      <!-- <button type="button" class="btn btn-xs btn-default btn-words">Words</button> -->
+      <!-- <button type="button" class="btn btn-xs btn-default btn-wordgraph">Words Graph</button> -->
       <button type="button" class="btn btn-xs btn-default btn-wordusers">Words Users</button>
       <button type="button" class="btn btn-xs btn-default btn-mapusers">Map Users</button>    
       <!-- <button type="button" class="btn btn-default Provinces">User Provinces</button> -->
     </div>
 
+    
+    <div class="legend pull-right"></div>
+
   </div>
 </nav>
 
 <div class="container-fluid">
+  
   
   <div class="row">
     <div class="col-md-3">
