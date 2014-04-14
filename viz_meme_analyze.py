@@ -1,6 +1,15 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+'''
+
+TODO 
+
+* add numbers into stopwords
+
+
+'''
+
 import os, csv, json
 from time import time 
 import datetime
