@@ -51,7 +51,9 @@ function drawD3Map(mapFile) {
         for(key in umap) { pro[key]=i; i++; val.push(umap[key])}
         
         // range of green with grey color if no values
-        var greens=d3.scale.quantize().domain(d3.extent(val)).range(colorbrewer.Greens[9]);
+        // var greens=d3.scale.quantize().domain(d3.extent(val)).range(colorbrewer.Greens[9]);
+        var greens=d3.scale.linear().domain([1,5]).range(["black","white"]);
+
         color = function(key){ return (key==undefined)? "#cccccc" : greens(key) };
 
         // BACKGROUND
@@ -211,7 +213,7 @@ function drawD3Map(mapFile) {
             .attr("class", "province")
             .attr("fill", "#cccccc")
             .attr("fill", function(d) { return color(umap[d.properties.name]); })
-            .attr("stroke", "black")
+            .attr("stroke", "#ccc")
             .attr("stroke-width", "0.35");
     }
 
@@ -233,7 +235,7 @@ function drawD3Map(mapFile) {
             .attr("class", "province")
             .attr("fill", "#cccccc")
             .attr("fill", function(d) { return color(umap["Taiwan"]); })
-            .attr("stroke", "black")
+            .attr("stroke", "#ccc")
             .attr("stroke-width", "0.35");
     }
 
@@ -265,7 +267,7 @@ function drawD3Map(mapFile) {
             .attr("id", function(d) { return d.id; })
             .attr("class", "province")
             .attr("fill", function(d) { return color(umap["Xianggang"]); })
-            .attr("stroke", "black")
+            .attr("stroke", "#ccc")
             .attr("stroke-width", "0.15");
 
         map_svg.select(".hk")

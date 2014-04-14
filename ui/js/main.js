@@ -66,12 +66,11 @@ $(document).ready(function() {
       console.log();
     };
 
-    // console.log((meme.graphFile,meme.mapFile))
-    drawD3Layers(meme.graphFile,meme.mapFile);
-    drawD3Time(meme.timeFile);
     // drawD3Map(meme.mapFile)
-
     // drawD3Words(meme.wordsFile);
+    // console.log((meme.graphFile,meme.mapFile))
+    drawD3Layers(meme.graphFile,meme.mapFile,meme.timeFile);
+
   }
 
   function reset_display() {

@@ -13,12 +13,12 @@ var wordForce,
 
 // Layout
 var wfStarted=false,
-    centroidsOnMap=false,
+    centroidsOnMap=true,
     initViz;
 
 // hide/show things
 var displayWordForce=false,
-    displayWordToUsers=true,
+    displayWordToUsers=false,
     displayMapToUsers=true;
 
 var updateCommunityXY,
@@ -27,16 +27,17 @@ var updateCommunityXY,
     drawMapToUsers,
     updateWordXY,
     tickWords,
-    drawCentroids;
+    drawCentroids,
+    tickMapToUsers;
 
-var selectedCommunity=11 //null;
+var selectedCommunity=[] //null; //11
 
-function drawD3Layers(graphFile,mapFile) {
+function drawD3Layers(graphFile,mapFile,timeFile) {
 
-    var vizWidth=860,
-        vizHeight=700,
+    var vizWidth=1200,
+        vizHeight=1100,
         vizMiddleY=500,
-        mapY=200;
+        mapY=500;
 
     var viz = d3.select("#viz").append("svg")
             .attr("width", vizWidth)
@@ -49,12 +50,13 @@ function drawD3Layers(graphFile,mapFile) {
         .defer(d3.json, "maps/zh-mainland-provinces.topo.json") // mainland
         .defer(d3.json, "maps/zh-chn-twn.topo.json") // taiwan 
         .defer(d3.json, "maps/zh-hkg-mac.topo.json") // hk and macau
-        .defer(d3.json, mapFile)
+        .defer(d3.json, mapFile) // hk and macau
         .defer(d3.json, graphFile)
+        .defer(d3.json, timeFile) 
         .await(draw); // function that uses files
 
 // PARSE DATA /////////////////////////////////////////////////////////////
-    function draw(error,mainland,taiwan,hkmacau,mapData,graphData) {
+    function draw(error,mainland,taiwan,hkmacau,mapData,graphData,timeData) {
 
         // USER COMMUNITIES
         var userNodes=graphData.users.nodes;
@@ -73,7 +75,7 @@ function drawD3Layers(graphFile,mapFile) {
             myUserNodes[userNodes[i]["name"]] =userNodes[i]
             
             if(myUserCommunities[userNodes[i]["community"]] == undefined) myUserCommunities[userNodes[i]["community"]]=[]
-            userNodes[i].btw_cent=Math.random()
+            userNodes[i].btw_cent=Math.random() // TODO :btw cent
             myUserCommunities[userNodes[i]["community"]].push(userNodes[i])        
 
         };
@@ -166,7 +168,8 @@ function drawD3Layers(graphFile,mapFile) {
 
                     r=userCommunities[i].users.length,
                     x=xprev+r*2+rprev-2,
-                    y=vizMiddleY;
+                    y=vizMiddleY+Math.random()*50;
+                    
                     // x=i*5*2,
                     // x=vizWidth-50,
                     // y=yprev+r*2+rprev-2;
@@ -217,7 +220,7 @@ function drawD3Layers(graphFile,mapFile) {
         updateWordXY= function updateWordXY() {
             // console.log("updateWordXY")
             var margin=50,
-                rgx=d3.scale.linear().domain([0,wordNodes.length]).range([margin,vizWidth-margin]),
+                rgx=d3.scale.linear().domain([0,wordNodes.length]).range([margin,vizWidth-margin-200]),
                 s=d3.shuffle(wordNodes);
             // var rgy=d3.scale.linear().domain([0,wordNodes.length]).range([0,vizHeight])
 
@@ -292,7 +295,7 @@ function drawD3Layers(graphFile,mapFile) {
                     centroid.cx = centroid[0];
                     centroid.cy = centroid[1];
                     centroid.fixx = rgx(cnt); // fix display
-                    centroid.fixy = vizHeight-50; // fix display
+                    centroid.fixy = mapY+200; // fix display
 
                     centroid.feature = d;
                     if (d.properties.name != undefined) centroid.name=d.properties.name
@@ -333,6 +336,9 @@ function drawD3Layers(graphFile,mapFile) {
                     "weight" : tmpUE[a] })
         }
 
+        // var mapUserScale=d3.extent(mapUsersEdges.map(function(d){ return d.weight }))
+        // console.log(mapUserScale);
+
 // SVG SETUP //////////////////////////////////////////////////////////
 
     var maxRadius=100,
@@ -346,9 +352,11 @@ function drawD3Layers(graphFile,mapFile) {
             .selectAll('.arc')
             .data(userEdges.filter(function (d) { 
                 // console.log(d)
-                if(selectedCommunity!=null) {
-                    if(d.source.community == selectedCommunity) return true 
-                    else if(d.target.community == selectedCommunity) return true 
+                if(selectedCommunity.length!=0) {
+                    for (var i = 0; i < selectedCommunity.length; i++) {
+                        if(d.source.community == selectedCommunity[i]) return true 
+                        else if(d.target.community == selectedCommunity[i]) return true 
+                    };
                 } else return true
             })) // if conditionfilter
             .enter()
@@ -364,21 +372,27 @@ function drawD3Layers(graphFile,mapFile) {
 
         wordForce= d3.layout.force()
             .nodes(wordNodes.filter(function (d) {
-                if(selectedCommunity!=null) {
-                    var com=communitiesIndex[selectedCommunity];
-                    for (var i = 0; i < com.words.length; i++) if(com.words[i].word == d.name) d.visible=true;
+
+                if(selectedCommunity.length!=0) {
+
+                    for (var i = 0; i < selectedCommunity.length; i++) {
+                        var com=communitiesIndex[selectedCommunity[i]];
+                        for (var i = 0; i < com.words.length; i++) if(com.words[i].word == d.name) d.visible=true;
+                    };
                 } else return true
 
             }))
             .links(wordEdges.filter(function (d) { 
-                if(selectedCommunity!=null) {
-                    var com=communitiesIndex[selectedCommunity];
-                    var sourceIn=false, targetIn=false;
-                    for (var i = 0; i < com.words.length; i++) {
-                        if(com.words[i].word==d.source.name) sourceIn=true;
-                        if(com.words[i].word==d.target.name) targetIn=true;
+                if(selectedCommunity.length!=0) {
+                    for (var i = 0; i < selectedCommunity.length; i++) {
+                        var com=communitiesIndex[selectedCommunity[i]];
+                        var sourceIn=false, targetIn=false;
+                        for (var i = 0; i < com.words.length; i++) {
+                            if(com.words[i].word==d.source.name) sourceIn=true;
+                            if(com.words[i].word==d.target.name) targetIn=true;
+                        }
+                        if(sourceIn && targetIn)  return true// d.visible=false;                
                     }
-                    if(sourceIn && targetIn)  return true// d.visible=false;                
                 } else return true
 
             }))
@@ -393,12 +407,13 @@ function drawD3Layers(graphFile,mapFile) {
             .attr("class", "wordusers")
             .selectAll("path")
             .data(wordsToCommunities.filter(function (d) { 
-                if(selectedCommunity!=null) {
-                    var com=communitiesIndex[selectedCommunity];
-                    // console.log(d);
-                    for (var i = 0; i < com.words.length; i++) {
-                        if(com.id == d.target.name && com.words[i].word == d.source.name) return true 
-                    };
+                if(selectedCommunity.length!=0) {
+                    for (var i = 0; i < selectedCommunity.length; i++) {
+                        var com=communitiesIndex[selectedCommunity[i]];
+                        for (var i = 0; i < com.words.length; i++) {
+                            if(com.id == d.target.name && com.words[i].word == d.source.name) return true 
+                        };
+                    }
                 } else return true
             }))
             .enter()
@@ -422,11 +437,13 @@ function drawD3Layers(graphFile,mapFile) {
             .attr("class", "words")
             .selectAll("path")
             .data(wordNodes.filter(function (d) { 
-                if(selectedCommunity!=null) {
-                    var com=communitiesIndex[selectedCommunity];
-                    for (var i = 0; i < com.words.length; i++) {
-                        if(com.words[i].word == d.name) return true 
-                    };
+                if(selectedCommunity.length!=0) {
+                    for (var j = 0; j < selectedCommunity.length; j++) {
+                        var com=communitiesIndex[selectedCommunity[j]];
+                        for (var i = 0; i < com.words.length; i++) {
+                            if(com.words[i].word == d.name) return true 
+                        };
+                    }
             } else return true
             }))
             .enter()
@@ -438,52 +455,58 @@ function drawD3Layers(graphFile,mapFile) {
             .attr("class", "map")
             .attr("transform", function(d) { return "translate(0,"+ mapY +")";})
 
-        var usermap = d3.select().append("g")
-            .attr("class", "usermap")
-            .attr("transform", function(d) { return "translate(0,"+ mapY +")";})
+        // var usermap = d3.select().append("g")
+        //     .attr("class", "usermap")
+        //     .attr("transform", function(d) { return "translate(0,"+ mapY +")";})
 
         // Draw centroids
-        nodeCentroids = viz.append("g")
-            .attr("class", "centroids")
-            .selectAll(".centroid")
-                .data(mapCentroids.filter(function (d) { 
-                    if(selectedCommunity!=null) {
-                        // console.log(d)
-                        var com=communitiesIndex[selectedCommunity];
-                        for (var i = 0; i < com.provinces.length; i++) {
-                            // if(com.provinces[i].label==d.name) console.log(d.name)
-                            if(com.provinces[i].label==d.name) return true 
-                        };
-                } else return true
-            }));
-
         mapToUsers = viz.append("g")
             .attr("class", "mapusers")
             .selectAll("path")
             .data(mapUsersEdges.filter(function (d) { 
-                if(selectedCommunity!=null) {
-                    var com=communitiesIndex[selectedCommunity];
-                    for (var i = 0; i < com.provinces.length; i++) {
-                        if(com.id==d.source && com.provinces[i].label==d.target) return true 
-                    };
+                if(selectedCommunity.length!=0) {
+                    for (var j = 0; j < selectedCommunity.length; j++) {
+                        var com=communitiesIndex[selectedCommunity[j]];
+                        for (var i = 0; i < com.provinces.length; i++) {
+                            console.log(i)
+                            if(com.id==d.source && com.provinces[i].label==d.target) return true 
+                        };
+                }
             } else return true
             }))
             .enter()
             .append("line")
             .attr("class", "map-user")
 
+        nodeCentroids = viz.append("g")
+            .attr("class", "centroids")
+            .selectAll(".centroid")
+                .data(mapCentroids.filter(function (d) { 
+
+                    if(selectedCommunity.length!=0) {
+                        for (var j = 0; j < selectedCommunity.length; j++) {
+                            var com=communitiesIndex[selectedCommunity[j]];
+                            for (var i = 0; i < com.provinces.length; i++) {
+                                if(com.provinces[i].label==d.name) return true 
+                            };
+                        }
+                    } else return true
+            }));
+
         communities = viz.append("g").attr("class","communities")
             .selectAll('.community')
             .data(userCommunities.filter(function (d) { 
                 // console.log(d);
-                    if(selectedCommunity!=null) {
-                        
-                        if(d.children) {
-                            for (var i = 0; i < d.children.length; i++) {
-                                if(d.children[i].name==selectedCommunity) return true 
-                            };
+                    if(selectedCommunity.length!=0) {
+
+                        for (var j= 0; j<selectedCommunity.length; j++) {
+                            if(d.children) {
+                                for (var i = 0; i < d.children.length; i++) {
+                                    if(d.children[i].name==selectedCommunity[j]) return true 
+                                };
+                            }
+                            if(d.id==selectedCommunity[j]) return true 
                         }
-                        if(d.id==selectedCommunity) return true 
                     } else return true
             }))
         
@@ -491,11 +514,13 @@ function drawD3Layers(graphFile,mapFile) {
 
     function drawLegend() {
 
-        var legendWidth=250,
+        var legendWidth=150,
             legendHeight=50,
             legendMargin=3;
 
-        var legend= d3.select(".legend").append("svg")
+        var legend= viz
+            .append("g")
+            .attr("class","legend")
             .attr("width", legendWidth)
             .attr("height", legendHeight)
             // .attr("preserveAspectRatio", "xMidYMid")
@@ -503,9 +528,13 @@ function drawD3Layers(graphFile,mapFile) {
 
         var communitiesLength=d3.extent(communities.data().map(function(d){ return d.users.length }))
         communitiesLength.push(Math.round((communitiesLength[0]+communitiesLength[1])/2))
+        if(communitiesLength[0]<5) communitiesLength[0]=5;
         
-        legendCommunities = legend.append("g")
+        legendCommunities=legend.append("g")
             .attr("class","legend-communities")
+            .attr("transform","translate("+(vizWidth-150)+"," + (mapY-30) + ")")
+            .append("g")
+                .attr("class","legend-size")
             .selectAll("circle")
                 .data(communitiesLength);
 
@@ -516,8 +545,8 @@ function drawD3Layers(graphFile,mapFile) {
         legendCommunities
             .enter()
             .append("circle")
-            .attr("r", function(d,i){  return d })
-            .attr("cy", function(d,i){ return legendMargin+d})
+            .attr("r", function(d,i){  return d*2 })
+            .attr("cy", function(d,i){ return d*2})
             .attr("cx", 50)
             .style("fill","transparent")
             .style("stroke","#ccc")
@@ -526,9 +555,9 @@ function drawD3Layers(graphFile,mapFile) {
             .enter()
             .append("line")
             .attr("x1", 50)
-            .attr("y1", function(d,i){ return legendMargin+d*2})
+            .attr("y1", function(d,i){ return (d*2)*2})
             .attr("x2", 100)
-            .attr("y2", function(d,i){ return legendMargin+d*2})
+            .attr("y2", function(d,i){ return (d*2)*2})
             .style("stroke","#ccc")
             .style("stroke-width",.5);
         
@@ -536,48 +565,62 @@ function drawD3Layers(graphFile,mapFile) {
             .enter()
             .append("text")
             .attr("dx", 100)
-            .attr("dy", function(d,i){ return legendMargin+d*2})
+            .attr("dy", function(d,i){ return (d*2)*2})
             .style("font-size",9)
             .style("fill","#aaa")
             // .attr("transform",function(d){ "translate("+ d*2+",150)" })
             .text(function(d){ return d+" users" })
 
         legendBtwCent = legend
+            .select(".legend-communities")
             .append("g")
             .attr("class","btw_centr")
-            .attr("transform","translate(130,0)")
+            .attr("transform","translate(10,90)")
             .selectAll("rect")
-                .data([1,2,3,4,5])
+                .data([0,1,2,3,4])
             .enter()
 
+        var cw=20;
         legendBtwCent.append("rect")
-            .attr("width",15)
-            .attr("height",10)
-            .attr("x",function(d){ return legendMargin+d*10})
+            .attr("width",cw+5)
+            .attr("height",cw)
+            .attr("x",function(d){ return legendMargin+d*(cw+5)})
             .attr("y",legendMargin+30)
-            .style("fill", function(d){ return greens(d)})
+            .style("fill", function(d){ return btwPieColor(d)})
 
-        legendBtwCent.append("text")
-            .text(function(d){return d/10})
-            .attr("dx", function(d){ return legendMargin+7+d*10})
-            .attr("dy", legendMargin+30)
+        var lg=["0",".2",".4",".6",".8","1"]
+
+        // legendBtwCent.append("text")
+        legendBtwCent
+            .append("g")
+            .append("text")   
+            .text(function(d,i){return lg[i]})
+            .attr("dx", function(d,i){ return legendMargin+d*(cw+5)})
+            .attr("dy", legendMargin+cw*3)
             .style("fill","#aaa")
-            .style("font-size",6)
-            // .attr("transform","rotate(-30)")
+            .style("font-size",9)
+            .style("text-anchor","middle");
 
         d3.select(".btw_centr")
             .append("text")
             .attr("dx",".35em")
             .attr("dy",10)
-            .text("Betweeness Centrality")
+            .text("Influence")
+            .style("fill","#aaa")
+            .style("margin-left",5)
+            .style("font-size",12)
+
+        d3.select(".btw_centr")
+            .append("text")
+            .attr("dx",".35em")
+            .attr("dy",25)
+            .text("Users Betweeness Centrality")
             .style("fill","#aaa")
             .style("margin-left",5)
             .style("font-size",10)
-            .call(wrap, 10);
+            // .call(wrap, 150);
 
     }
-
-
 
 // DRAW FUNCTIONS ///////////////////////////////////////////////////////
 
@@ -585,49 +628,45 @@ function drawD3Layers(graphFile,mapFile) {
     // colors
         var wordScaleFont=d3.scale.linear().domain([100, 3000]).range([15, 80]);
         var userPathColor = d3.scale.category20b();
-        var provinceColor= d3.scale.category20b();
-        var greens=d3.scale.quantize().domain([1,5]).range(colorbrewer.Greens[9]);
+        var mapColor;
+
+        var btwPieColor=d3.scale.linear().domain([1,5]).range(["#ffffd4","#993404"]) //.interpolate(d3.interpolateHcl);
         
         // province color scale
         var pro={}, i=0, val=[];
         for(key in umap) { pro[key]=i; i++; val.push(umap[key])}
         
-        // range of green with grey color if no values
-        // var greens=d3.scale.quantize().domain(d3.extent(val)).range(colorbrewer.Greens[9]);
+        // var c=d3.scale.category20c();
         // colorProvinces = function(key){ return (key==undefined)? "#cccccc" : greens(key) };
-       
-        var c=d3.scale.category20c();
-        colorProvinces= function(key){ return c(pro[key])}
+        colorProvinces= function(key){ return "#000" }//c(pro[key])}
 
     // WORDS
     function drawWords() {
-        
-        var wordColor = d3.scale.category20b();
-        var wordScaleSize=d3.scale.linear().domain([100, 3000]).range([65, maxRadius]);
+
         words.each(function (d, i) {
 
             var self = d3.select(this);
             
-            var fontSize=0;
-            if(selectedCommunity) {
-                var com=communitiesIndex[selectedCommunity];
-                for (var i = 0; i < com.words.length; i++) {
-                    if(com.words[i].word == d.name) fontSize=com.words[i].weight*5;
-                };
-            } else fontSize=d.count;
-
+            // var ext;
+            // if(selectedCommunity) ext=communitiesIndex[selectedCommunity].words.map(function(d) {return d.weight})
+            // else  
+            var ext=words.data().map(function(d){ return d.count })
+            // console.log(d3.extent(ext))
+            var wordScaleSize=d3.scale.linear().domain(d3.extent(ext)).range([15, 35]);
+            var wordScaleOpacity=d3.scale.linear().domain(d3.extent(ext)).range([.8,1]);
+            var wordColor = d3.scale.linear().domain(d3.extent(ext)).range(["#006d2c","#edf8e9"]);
             self.append("rect")
                 .attr("width", function(d) { return wordScaleSize(d.count) })
                 .attr("height", function(d) { return 20 })
                 .style("fill", function(d) {  return "transparent"; })
-                .style("stroke", function(d) { return "transparent" })
-                ;
+                .style("stroke", function(d) { return "transparent" });
 
             self.append("text")
                 .attr("dx", 12)
                 .attr("dy", 8)
-                .style("font-size", function(d) { return wordScaleFont(fontSize) })//scale_size(d.btw_cent) })
+                .style("font-size", function(d) { return wordScaleSize(d.count) })//scale_size(d.btw_cent) })
                 .style("fill", function(d) {  return wordColor(d.count) })
+                .style("fill-opacity", function(d) {  return wordScaleOpacity(d.count) })
                 .attr("text-anchor", "middle") // text-align: right
                 .text(function(d) { return d.name });
 
@@ -650,7 +689,7 @@ function drawD3Layers(graphFile,mapFile) {
             
             // console.log(d.count)
             var r=wordScaleFont(d.count),
-                w=vizWidth,
+                w=vizWidth-200,
                 h=vizMiddleY-30,
                 x=(d.x==undefined || !wfStarted)? wordsX[d.name] : Math.max(r, Math.min(w - r, d.x)),
                 y=(d.y==undefined || !wfStarted)? wordsY[d.name] : Math.max(r, Math.min(h - r, d.y));
@@ -683,14 +722,10 @@ function drawD3Layers(graphFile,mapFile) {
             self.append("text")
                 .attr("dx", 2)
                 .attr("dy", "0.35em")
-                .style("fill", "#aaa" )
+                .style("fill", "#ccc" )
                 .style("fill-opacity", "0.8" )
+                .style("font-size", 11 )
                 .text(d.name);
-
-            if (!centroidsOnMap) 
-                self.select("text")
-                    .attr("transform", "rotate(60)")
-                    .attr("dy","0.45em")
 
         })
 
@@ -706,6 +741,16 @@ function drawD3Layers(graphFile,mapFile) {
 
             var self=d3.select(this);
             self.transition().attr("transform", "translate(" + x + "," + y + ")")
+
+            if (!centroidsOnMap) 
+                self.select("text")
+                    .attr("transform", "rotate(60)")
+                    .attr("dy","0.45em")
+            else
+                self.select("text")
+                    .attr("transform", "rotate(0)")
+
+
         })
     }
 
@@ -713,7 +758,7 @@ function drawD3Layers(graphFile,mapFile) {
     function drawCommunity() {
         
         var scaleBtwCent=d3.scale.linear().domain([0,1]).range([1,5])
-
+        
         communities.enter()
             .append("g")
             .attr("class","community")
@@ -722,6 +767,8 @@ function drawD3Layers(graphFile,mapFile) {
                 var r=d.users.length,
                     x=communitiesX[d.id],
                     y=communitiesY[d.id];
+
+                d.selected=false; // init state
 
                 var pie = d3.layout.pie()
                       .sort(null)
@@ -748,6 +795,8 @@ function drawD3Layers(graphFile,mapFile) {
                       .data(pie(mapBtw))
                     .enter().append("g")
                       .attr("class", "piece")
+                      .style("stroke","transparent")
+                      .style("stroke-width",0)
                       .attr("transform", function(d) { 
                         return "translate(" + x + "," + y + ")"; });
 
@@ -755,17 +804,28 @@ function drawD3Layers(graphFile,mapFile) {
                   .outerRadius(r*2 - 10)
                   .innerRadius(0);
 
+                var dis=d;
                 g.append("path")
                   .attr("d", arc)
-                  .style("fill", function(d) { return greens(Number(d.data.label)); });
-
+                  .style("stroke","transparent")
+                  .style("stroke-width",0)
+                  .style("fill", function(d) { return btwPieColor(Number(d.data.label)); })
+                  .style("fill-opacity", function(e) { 
+                    for (var i = 0; i < selectedCommunity.length; i++) 
+                         if(Number(dis.id)== selectedCommunity[i]) return 1
+                    return .5
+                });
 
             }).on('click', function (d) {
+                                
+                // select / remove node on click
+                var isSelected=selectedCommunity.indexOf(d.id)
+                if (isSelected == -1)selectedCommunity.push(d.id);
+                else selectedCommunity.splice(isSelected,1)
 
-                // toggleChildren(d);
+                // infobox
                 showInfo((d.children ==null)?{"type":"community","data":d}:null);
-                // selectedCommunity=(selectedCommunity)? null:d.id
-                selectedCommunity=d.id;
+                
                 initViz();
             })
 
@@ -773,7 +833,11 @@ function drawD3Layers(graphFile,mapFile) {
     }    
 
     // MAP TO USERS
-    function tickMapToUsers() {
+    tickMapToUsers=function tickMapToUsers() {
+
+        var extent=mapToUsers.data().map(function(d){return d.weight})
+        var weightScale=d3.scale.linear().domain(d3.extent(extent)).range([.1,1]);
+
         mapToUsers.each(function (d, i) {
             
             var self=d3.select(this);
@@ -789,8 +853,8 @@ function drawD3Layers(graphFile,mapFile) {
                     .attr("y1", y1)
                     .attr("x2", x2)
                     .attr("y2", y2)
-                    .style("stroke", function(d) { return colorProvinces(d.weight) })
-                    .style("stroke-opacity", function(d) { return 1 })
+                    .style("stroke", function(d) { return "#ccc" })
+                    .style("stroke-opacity", function(d) { return weightScale(d.weight) })
                     .style("stroke-width", function(d) {  return 1 });
             }
             
@@ -884,11 +948,12 @@ function drawD3Layers(graphFile,mapFile) {
         arcs.each(function (d, i) {
             var self = d3.select(this);
             self.append("path")
+                .style("stroke-width",function(d) { return d.weight;})
         }).on('mouseover', function (d) {
                 var self = d3.select(this);
                 self.select("path")
                     .style("stroke","#000")
-                    .style("opacity","1");
+                    .style("opacity","1")
             })
             .on('mouseout', function (d) {
                 var self = d3.select(this);
@@ -983,7 +1048,6 @@ function drawD3Layers(graphFile,mapFile) {
     }
 
     tickWords=function(){ 
-        
         (wfStarted)? wordForce.start():wordForce.stop();
         if(!wfStarted) updateWordXY();
         // showWordPath=!wfStarted;
@@ -993,15 +1057,6 @@ function drawD3Layers(graphFile,mapFile) {
     // MAP
     // Mainland provinces
     function drawMainland(error, cn) {
-        
-        // var codes=[];
-        // for (var i = 0; i < topojson.feature(cn, cn.objects.provinces).features.length; i++) {
-        //     codes.push(topojson.feature(cn, cn.objects.provinces).features[i].properties.name)
-        //     console.log(topojson.feature(cn, cn.objects.provinces).features[i])
-            
-        // };
-        // console.log(codes);
-
         map.append("g")
             .attr("class", "mainland")
             .selectAll("path")
@@ -1011,12 +1066,13 @@ function drawD3Layers(graphFile,mapFile) {
             .attr("class", "province")
             .append("path")
             .attr("d", mapPath)
-            .attr("id", function(d) { return d.id; })
+            // .attr("id", function(d) { return d.id; })
             .attr("class", "province")
-            .attr("fill", "#cccccc")
-            // .attr("fill", function(d) { return colorProvinces(umap[d.properties.name]); })
-            .attr("fill", function(d) { return colorProvinces(d.properties.name); })
-            .attr("stroke", "black")
+            .attr("class", function(d){ return d.properties.name })
+            .attr("fill", "#000")
+            // .attr("fill", function(d) { return mapColor(umap[d.properties.name]); })
+            // .attr("fill", function(d) { return colorMap(d.properties.name); })
+            .attr("stroke", "#ccc")
             .attr("stroke-width", "0.35");
 
             // .text(function(d) {return "hha"});
@@ -1024,12 +1080,9 @@ function drawD3Layers(graphFile,mapFile) {
 
     // Taiwan
     function drawTaiwan(error, cn) {
-        // console.log(error)
-        // console.log(topojson.feature(cn, cn.objects.layer1))
 
-        // Taiwan
         map.append('g')
-            .attr("class", "taiwan")
+            .attr("class", "taiwan province")
             .selectAll("path")
             .data(topojson.feature(cn, cn.objects.layer1).features.filter(function(d) { return d.properties.GU_A3 === 'TWN'; }))
             .enter()
@@ -1037,42 +1090,43 @@ function drawD3Layers(graphFile,mapFile) {
             .attr("d", mapPath)
             .attr("id", function(d) { return d.id; })
             .attr("class", "province")
-            .attr("fill", "#cccccc")
-            // .attr("fill", function(d) { return colorProvinces(umap["Taiwan"]); })
-            .attr("fill", function(d) { return colorScale(umap["Taiwan"]); })
-            .attr("stroke", "black")
+            .attr("class", function(d){ return "Taiwan" })
+            .attr("fill", "#000")
+            // .attr("fill", function(d) { return mapColor(umap["Taiwan"]); })
+            .attr("stroke", "#ccc")
             .attr("stroke-width", "0.35");
     }
 
     // HK and Macau
     function drawHkMacau(error, cn) {
         // console.log(error)
-        
         // console.log(topojson.feature(cn, cn.objects.layer1).features.filter(function(d) { return d.properties.GU_A3 === "HKG" }))
 
         var projection2 = d3.geo.mercator()
-        .center([126,17])
-        .scale(2000);
+            .center([126,17])
+            .scale(2000);
 
         var path2 = d3.geo.path()
             .projection(projection2);
       
-        map.select('.map')
+        viz.select('.map')
             .append("g")
             .attr("class", "hk")
-            .attr("transform", "translate(50,"+(map_height-120)+")")
+            .attr("transform", "translate(50,"+350+")")
             .selectAll("path")
             .data(topojson.feature(cn, cn.objects.layer1).features)
             .enter()
             .append("path")
             .attr("d", path2)
-            .attr("id", function(d) { return d.id; })
+            // .attr("id", function(d) { return d.id; })
             .attr("class", "province")
-            .attr("fill", function(d) { return color(umap["Xianggang"]); })
-            .attr("stroke", "black")
+            .attr("class", "Xianggang")
+            .attr("fill", "#000")
+            // .attr("fill", function(d) { return mapColor(umap["Xianggang"]); })
+            .attr("stroke", "#ccc")
             .attr("stroke-width", "0.35");
 
-        map_svg.select(".hk")
+        viz.select(".hk")
             .append("text") //add some text
             .attr("dx", function(d){return 20})
             .attr("dy", function(d){return 35})
@@ -1082,30 +1136,209 @@ function drawD3Layers(graphFile,mapFile) {
             .text("Hong Kong & Macau")
 
         // add demarcation
-        map_svg.select(".hk")
+        viz.select(".hk")
            .append("svg:line")
              .attr("x1", 30)
              .attr("y1", -10)
-             .attr("x2", 150)
+             .attr("x2", 130)
              .attr("y2", 20)
              .style("stroke", "#cccccc")
-             .style("stroke-width", 3);
+             .style("stroke-width", 1);
         
-        map_svg.select(".hk")
+        viz.select(".hk")
             .append("svg:line")
-             .attr("x1", 150)
+             .attr("x1", 130)
              .attr("y1", 20)
-             .attr("x2", 150)
+             .attr("x2", 170)
              .attr("y2", 60)
              .style("stroke", "#cccccc")
-             .style("stroke-width", 3);
+             .style("stroke-width", 1);
+    }
+
+    function tickMap() {
+        
+
+        // var ext=mapToUsers.data().map(function(d){return d.weight });
+        // console.log(umap,v);
+        mapColor=d3.scale.linear().domain(d3.extent(v)).range(["black","white"])
+
+        for (var i = 0; i < mapToUsers.data().length; i++) {
+            var province="path."+mapToUsers.data()[i].target
+            // console.log(c(mapToUsers.data()[i].weight))
+            d3.select(province)
+                // .attr("fill",mapColor(mapToUsers.data()[i].weight))
+                .attr("fill",  mapColor(umap[mapToUsers.data()[i].target]))
+        };
+
+        // DRAW LEGEND  Color bar adapted from http://tributary.io/tributary/3650755/
+        var cw=10;
+        map.append("g")
+            .attr("class","caption")
+            .append("g")
+            .attr("class","color-bar")
+            .selectAll("rect")
+                .data(d3.range(d3.min(v), d3.max(v), (d3.max(v)-d3.min(v))/50.0))
+            .enter()
+            .append("rect")
+            .attr({width: cw,
+                  height: 5,
+                  y: function(d,i) { return mapY-cw-i*5 },
+                  x: vizWidth-50,
+                  fill: function(d,i) { return mapColor(d); } })
+        
+        map.select(".caption")
+            .append("g")
+            .attr("transform", "translate(" + (vizWidth-cw-30) + "," + (mapY-cw-5*49) + ")")
+            .call(d3.svg.axis()
+                   .scale(d3.scale.linear().domain(d3.extent(v)).range([5*50,0]))
+                    .orient("right"))
+            .attr("font-family", "sans-serif")
+            .attr("fill", "#ccc")
+            .attr("font-size", 10)
+                
+        viz.select('.caption')
+            .append("g")
+            .attr("class","units")
+            .attr("transform", "translate("+(vizWidth-cw)+","+(mapY/2-cw+100)+")")
+            // .attr("transform", "rotate(90 "+(map_width-cw)+","+(map_height/2-cw)+")")
+            .append("text")
+            .attr("dx", -5)          
+            .attr("dy", 2 )
+            .attr("text-anchor", "middle")  
+            .attr("font-family", "sans-serif")
+            .attr("fill", "#ccc")
+            .attr("font-size", 10)
+            .attr("transform", "rotate(-90)")//function(d){ console.log(d); return "rotate(90 "+d.x+","+d.y+")"})          
+            .text("Volume of tweets (x100)")
     }
 
     function drawMap() {
-
         drawMainland(error,mainland);
         drawTaiwan(error,taiwan);
-        // drawHkMacau(error,hkmacau);
+        drawHkMacau(error,hkmacau);
+        tickMap();
+    }
+
+    function drawTimeSerie() {
+        // Margins, timeWidth and timeHeight. 
+        var w=300,
+            h=300;
+
+        var margin = {top: 20, right: 20, bottom: 90, left: 30},
+            barTimeWidth = w,
+            timeWidth = barTimeWidth - margin.left - margin.right,
+            timeHeight = h - margin.top - margin.bottom;
+
+        // // Construct our SVG object.
+        // var svg = d3.select("#timeserie").append("svg")
+        //     .attr("width", timeWidth + margin.left + margin.right)
+        //     .attr("height", timeHeight + margin.top + margin.bottom)
+        //   .append("g")
+        //     .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+        // Build Scales.
+        var x = d3.time.scale().range([timeWidth/timeData.length/2, timeWidth-timeWidth/timeData.length/2]);
+        // var x = d3.scale.ordinal().rangeRoundBands([0, timeWidth], .05);
+        var y = d3.scale.linear().range([timeHeight, 0]);
+
+        // Date parsing.
+        // var parseDate = d3.time.format("%Y-%m-%d %H:%M:%S");
+
+        // X-axis.
+        var xAxis = d3.svg.axis()
+            .scale(x)
+            .orient("bottom")
+            // .ticks(d3.time.month, 1)
+            .tickFormat(d3.time.format("%d %B"));
+
+        var yAxis = d3.svg.axis()
+            .scale(y)
+            .orient("left")
+            .ticks(10);
+
+        timeData.forEach(function(d) {
+            d.date=new Date(d.timestamp*1000);
+            // console.log(dt);
+            // d.date = parseDate.parse(dtmp);
+            // console.log(d);
+        });
+
+        // Set scale domains. 
+        x.domain(d3.extent(timeData, function(d) { return d.date; }));
+        y.domain([0, d3.max(timeData, function(d) { return d.count; })]);
+
+        // Call x-axis. 
+        d3.select(".x.axis")
+            .transition().duration(1000)
+            .call(xAxis);
+
+        var timeseries= viz.append("g")
+            .attr("class","time bars series")
+            .attr("transform", "translate(" + (vizWidth-timeWidth-70) + "," +(vizHeight-timeHeight-100)  + ")")  
+
+
+        // Draw bars. 
+        var bars = timeseries.append("g")
+            .attr("class","bars")
+            .selectAll(".count")
+            .data(timeData, function(d) { return d.date; });
+
+        bars.exit().remove();
+            
+        bars.transition().duration(1000)
+            .attr("x", function(d) { return x(d.date) - timeWidth/timeData.length/2; })
+            .attr("width", timeWidth / timeData.length)
+            .attr("y", function(d) { return y(d.count); })
+            .attr("height", function(d) { return timeHeight - y(d.count);});
+            
+        bars.enter().append("rect")
+            .attr("class", "count")
+            .attr("width", timeWidth / timeData.length)
+            .attr("x", function(d) { return x(d.date) - (timeWidth/timeData.length)/2; })
+            .attr("y", timeHeight)
+            .attr("height", 0)
+            .transition().duration(1000)
+            .attr("y", function(d) { return y(d.count); })
+            .attr("height", function(d) { return timeHeight - y(d.count);});
+
+        timeseries.append("g")
+            .attr("class", "x axis")
+            .attr("transform", "translate(0," + timeHeight + ")")
+            .call(xAxis)
+            .selectAll("text")
+                .attr("font-family", "sans-serif")
+                .attr("fill", "#4B4B4B")
+                .attr("font-size", 10)
+                .style("text-anchor", "end")
+                .attr("dx", "-.8em")
+                .attr("dy", ".15em")
+                .attr("transform", function(d) {
+                    return "rotate(-65)" 
+                    })
+                // .attr("transform", "rotate(-90)" );
+
+        timeseries.append("g")
+            .attr("class", "y axis")
+            .attr("transform", "translate(0,0)")
+            .call(yAxis)
+            .selectAll("text")
+                .attr("font-family", "sans-serif")
+                .attr("fill", "#4B4B4B")
+                .attr("font-size", 10)
+        
+        timeseries.select(".y")
+            .append("text") // caption
+                .attr("transform", "rotate(-90)")
+                .attr("y", 6)
+                .attr("dy", ".71em")
+                .style("text-anchor", "end")
+                .attr("text-anchor", "middle")  
+                .attr("font-family", "sans-serif")
+                .attr("fill", "#4B4B4B")
+                // .style("text-decoration", "bold")  
+                .attr("font-size", 10)
+                .text("Qty per day (tweets)")
+
     }
 
 // INIT /////////////////////////////////////////////////////////
@@ -1118,6 +1351,7 @@ function drawD3Layers(graphFile,mapFile) {
         updateWordXY(); // sort data
 
         setupSVG();
+        // drawTimeSerie();
         
         drawWords();
         tickWords();
@@ -1131,8 +1365,8 @@ function drawD3Layers(graphFile,mapFile) {
 
         drawWordsToUsers()
 
-
-        // drawMap()
+        drawMap();
+        drawLegend();
         // drawMapToUsers()
     }
 
@@ -1154,33 +1388,52 @@ function drawD3Layers(graphFile,mapFile) {
       d.words=words;
     }
 
-
     function wrap(text, width) {
-      text.each(function() {
-        var text = d3.select(this),
-            words = text.text().split(/\s+/).reverse(),
-            word,
-            line = [],
-            lineNumber = 0,
-            lineHeight = 0.7, // ems
-            y = text.attr("y"),
-            dy = parseFloat(text.attr("dy")),
-            tspan = text.text(null).append("tspan").attr("x", 0).attr("y", y).attr("dy", dy );
-        while (word = words.pop()) {
-          line.push(word);
-          tspan.text(line.join(" "));
-          if (tspan.node().getComputedTextLength() > width) {
-            line.pop();
-            tspan.text(line.join(" "));
-            line = [word];
-            tspan = text.append("tspan").attr("x", 0).attr("y", y).attr("dy", ++lineNumber * lineHeight + dy ).text(word);
-          }
+        text.each(function() {
+            var text = d3.select(this),
+                words = text.text().split(/\s+/).reverse(),
+                word,
+                line = [],
+                lineNumber = 0,
+                lineHeight = 0.7, // ems
+                y = text.attr("y"),
+                dy = parseFloat(text.attr("dy")),
+                tspan = text.text(null).append("tspan").attr("x", 0).attr("y", y).attr("dy", dy );
+            while (word = words.pop()) {
+              line.push(word);
+              tspan.text(line.join(" "));
+              if (tspan.node().getComputedTextLength() > width) {
+                line.pop();
+                tspan.text(line.join(" "));
+                line = [word];
+                tspan = text.append("tspan").attr("x", 0).attr("y", y).attr("dy", ++lineNumber * lineHeight + dy ).text(word);
+              }
+            }
+          });
         }
-      });
     }
 
-    }
+}
 
+// TIME SERIES //////////////////////////////////////////////////////////
+function drawD3Time (timeFile) {
+ 
+    // Margins, timeWidth and timeHeight. 
+    // var w=300,
+    //     h=300;
+    // var margin = {top: 20, right: 20, bottom: 90, left: 30},
+    //     barTimeWidth = w,
+    //     timeWidth = barTimeWidth - margin.left - margin.right,
+    //     timeHeight = h - margin.top - margin.bottom;
+
+    // // Construct our SVG object.
+    // var svg = d3.select("#timeserie").append("svg")
+    //     .attr("width", timeWidth + margin.left + margin.right)
+    //     .attr("height", timeHeight + margin.top + margin.bottom)
+    //   .append("g")
+    //     .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+        
 }
 
 // BUTTONS //////////////////////////////////////////////////////////
@@ -1194,11 +1447,12 @@ $(".btn-wordforce").click(function(e){
 })
 
 $(".btn-centroids").click(function(e){
-    
+
+    $(".map").toggle();
     centroidsOnMap=(centroidsOnMap)?false:true;
     tickCentroids(); 
-    console.log(centroidsOnMap)
-    // $(".btn-wordforce").html( (wfStarted) ?  "Show map" : "Show list");
+    tickMapToUsers();
+    $(this).html((centroidsOnMap)?"Show cities":"Place on Map");
 })
 
 
@@ -1225,3 +1479,5 @@ $(".switchs button").each(function(e){
         $(this).addClass( ($("."+n).css('display') != 'none')? "active":"" );
     })
 })
+
+
