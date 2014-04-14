@@ -27,7 +27,7 @@ var updateCommunityXY,
     tickWords,
     drawCentroids;
 
-var selectedCommunity=11;
+var selectedCommunity=null;
 
 function drawD3Layers(graphFile,mapFile) {
 
@@ -262,8 +262,14 @@ function drawD3Layers(graphFile,mapFile) {
         var mapCentroids=[];
         var mapFeatures= [topojson.feature(mainland, mainland.objects.provinces).features,topojson.feature(taiwan, taiwan.objects.layer1).features.filter(function(d) { return d.properties.GU_A3 === 'TWN'; }),topojson.feature(hkmacau, hkmacau.objects.layer1).features]
         
+        var centroids={}
+
         function updateCentroidsXY() {
             
+            // console.log("updateCentroidsXY")
+
+            mapCentroids=[];
+            centroids={};
             var cnt=0,
                 margin=20,
                 rgx=d3.scale.linear().domain([0,30]).range([margin,vizWidth-margin]);
@@ -276,7 +282,6 @@ function drawD3Layers(graphFile,mapFile) {
                     var centroid = mapPath.centroid(d);
                     if (centroid.some(isNaN)) return;
 
-
                     centroid.x = centroid[0];
                     centroid.y = centroid[1];
                     centroid.cx = centroid[0];
@@ -284,7 +289,6 @@ function drawD3Layers(graphFile,mapFile) {
                     centroid.fixx = rgx(cnt); // fix display
                     centroid.fixy = vizHeight-50; // fix display
 
-                    
                     centroid.feature = d;
                     if (d.properties.name != undefined) centroid.name=d.properties.name
                     else if (d.properties.name==undefined && d.properties.NAME=="Taiwan") centroid.name='Taiwan';
@@ -296,22 +300,13 @@ function drawD3Layers(graphFile,mapFile) {
                     mapCentroids.push(centroid);
                 });
             };
-
-            var centroids={}
+            
             for (var i = 0; i < mapCentroids.length; i++) {
                 var c=mapCentroids[i];
                 centroids[c.name]=c;
             };
+            // console.log(centroids);
         }
-
-        updateCentroidsXY();
-
-        var centroids={}
-        for (var i = 0; i < mapCentroids.length; i++) {
-            var c=mapCentroids[i];
-            centroids[c.name]=c;
-        };
-
 
         // GEO COMMUNITIES        
         var mapUsersEdges=[];
@@ -339,6 +334,8 @@ function drawD3Layers(graphFile,mapFile) {
         charge=-1000,
         gravity=.4,
         linkDistance=150;
+
+
 
     function setupSVG() {
 
@@ -441,17 +438,14 @@ function drawD3Layers(graphFile,mapFile) {
             .selectAll(".centroid")
                 .data(mapCentroids.filter(function (d) { 
                     if(selectedCommunity!=null) {
+                        // console.log(d)
                         var com=communitiesIndex[selectedCommunity];
-
                         for (var i = 0; i < com.provinces.length; i++) {
-                            if(com.provinces[i].label==d.name) console.log((com.provinces[i].label,d.name));
+                            // if(com.provinces[i].label==d.name) console.log(d.name)
                             if(com.provinces[i].label==d.name) return true 
                         };
-
                 } else return true
-            }))
-          .enter().append("g")
-            .attr("class", "centroid")
+            }));
 
         mapToUsers = viz.append("g")
             .attr("class", "mapusers")
@@ -484,7 +478,6 @@ function drawD3Layers(graphFile,mapFile) {
             })) // if conditionfilter
     }
 
-    setupSVG();
 
 // DRAW FUNCTIONS ///////////////////////////////////////////////////////
 
@@ -574,11 +567,14 @@ function drawD3Layers(graphFile,mapFile) {
     }
 
     // CENTROIDS
-    drawCentroids=function drawCentroids() {
+    function drawCentroids() {
 
-        nodeCentroids.each(function (d, i) {
+        nodeCentroids.enter()
+          .append("g")
+          .attr("class", "centroid")
+          .each(function (d, i) {
             var self=d3.select(this);
-            // console.log(d);
+            console.log("draw");
 
             self.append("circle")
                 .attr("r", 2)
@@ -603,13 +599,10 @@ function drawD3Layers(graphFile,mapFile) {
 
     tickCentroids = function() {
 
-        updateCentroidsXY();
-
         nodeCentroids.each(function (d, i) {
 
             var x=(centroidsOnMap)? d.x :d.fixx;
             var y=(centroidsOnMap)? mapY+d.y : d.fixy;
-
 
             var self=d3.select(this);
             self.transition().attr("transform", "translate(" + x + "," + y + ")")
@@ -626,13 +619,6 @@ function drawD3Layers(graphFile,mapFile) {
                 var r=d.users.length,
                     x=communitiesX[d.id],
                     y=communitiesY[d.id];
-
-                // self.append("circle")
-                //     .attr("class",function(d) { return "community_"+d.id; })
-                //     .attr("class","community")
-
-                // console.log(d.provinces)
-                // console.log(pie)
 
                 var pie = d3.layout.pie()
                       .sort(null)
@@ -658,27 +644,18 @@ function drawD3Layers(graphFile,mapFile) {
 
                 // showInfo((d.children ==null)?{"type":"community","data":d}:null);
                 // toggleChildren(d);
-                // tickCommunity();
-                // console.log(d,wordsToCommunities);
-                // console.log(communitiesToWords[d.id]);
-                // toggle words
                 
                 if(selectedCommunity) selectedCommunity=null
                 else selectedCommunity=d.id
 
-                console.log(d);
-                // tickWords();
-                console.log(selectedCommunity)
-                // setupSVG()
+                initViz();
             })
+
             tickCommunity();
-            tickMapToUsers();
     }    
 
     // MAP TO USERS
-    tickMapToUsers=function() {
-        if(displayMapToUsers) console.log("tickMapToUsers");
-
+    function tickMapToUsers() {
         mapToUsers.each(function (d, i) {
             
             var self=d3.select(this);
@@ -701,7 +678,6 @@ function drawD3Layers(graphFile,mapFile) {
             
         })
     }
-
 
     // WORDS FORCE
     function tickWordPath() {
@@ -1000,21 +976,32 @@ function drawD3Layers(graphFile,mapFile) {
     }
 
 // INIT /////////////////////////////////////////////////////////
+      
+    function initViz() {
+
+        viz.selectAll("*").remove()
+
+        updateCentroidsXY();
+        updateWordXY(); // sort data
+
+        setupSVG();
     
-    drawWords();
-    updateWordXY(); // sort data
-    tickWords();
-    
-    drawCommunity();
-    drawUserArcs();
-    
-    updateCentroidsXY();
-    drawCentroids();
-    // console.log(centroids, mapCentroids)
-    // drawMap()
-    
-    drawWordsToUsers()
-    // drawMapToUsers()
+        drawWords();
+        tickWords();
+        
+        drawCommunity();
+        drawUserArcs();
+        
+        drawCentroids();
+        tickMapToUsers();
+
+        drawWordsToUsers()
+
+        // drawMap()
+        // drawMapToUsers()
+    }
+
+    initViz();
 
 // UTILS //////////////////////////////////////////////////////////
 

@@ -69,7 +69,7 @@ $(document).ready(function() {
     // console.log((meme.graphFile,meme.mapFile))
     drawD3Layers(meme.graphFile,meme.mapFile);
     drawD3Time(meme.timeFile);
-    drawD3Map(meme.mapFile)
+    // drawD3Map(meme.mapFile)
 
     // drawD3Words(meme.wordsFile);
   }
