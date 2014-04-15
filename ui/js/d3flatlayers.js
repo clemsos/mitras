@@ -30,11 +30,11 @@ var updateCommunityXY,
     drawCentroids,
     tickMapToUsers;
 
-var selectedCommunity=[] //null; //11
+var selectedCommunity=[]; //11
 
 function drawD3Layers(graphFile,mapFile,timeFile) {
 
-    var vizWidth=1200,
+    var vizWidth=1100,
         vizHeight=1100,
         vizMiddleY=500,
         mapY=500;
@@ -265,6 +265,14 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
         var mapPath = d3.geo.path()
             .projection(projection);
 
+        // projection for HK / Macau
+        var projection2 = d3.geo.mercator()
+            .center([126,17])
+            .scale(2000);
+
+        var path2 = d3.geo.path()
+            .projection(projection2);
+
         // CENTROIDS
         // Get provinces centroids
         var mapCentroids=[];
@@ -286,14 +294,23 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
                 mapFeatures[i].forEach(function(d, i) {
                     cnt++;
 
-                    // if (d.id === 2 || d.id === 15 || d.id === 72) return; // lower 48
-                    var centroid = mapPath.centroid(d);
+                    var centroid;
+                    if (d.properties.name==undefined && (d.properties.NAME=="Hong Kong" || d.properties.NAME=="Macao") ) {
+                        centroid = path2.centroid(d);
+                        centroid.x = centroid[0]+650;
+                        centroid.y = centroid[1]+400;
+                        centroid.cx = centroid[0]+650;
+                        centroid.cy = centroid[1]+400;
+                    } else {
+                        centroid = mapPath.centroid(d);
+                        centroid.x = centroid[0];
+                        centroid.y = centroid[1];
+                        centroid.cx = centroid[0];
+                        centroid.cy = centroid[1];
+                    }
+
                     if (centroid.some(isNaN)) return;
 
-                    centroid.x = centroid[0];
-                    centroid.y = centroid[1];
-                    centroid.cx = centroid[0];
-                    centroid.cy = centroid[1];
                     centroid.fixx = rgx(cnt); // fix display
                     centroid.fixy = mapY+200; // fix display
 
@@ -304,7 +321,7 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
                     else centroid.name='Xianggang';
 
                     centroid.type="province";
-                    // centroid.color="#ccc";    
+
                     mapCentroids.push(centroid);
                 });
             };
@@ -313,7 +330,6 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
                 var c=mapCentroids[i];
                 centroids[c.name]=c;
             };
-            // console.log(centroids);
         }
 
         // GEO COMMUNITIES        
@@ -335,6 +351,20 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
                     "target" : data[1],
                     "weight" : tmpUE[a] })
         }
+
+        var provinceToUsers={};
+        
+        for (var i = 0; i < mapUsersEdges.length; i++) {
+            var d=mapUsersEdges[i];
+            if(provinceToUsers[d.target]==undefined) provinceToUsers[d.target]=[]
+            provinceToUsers[d.target].push(d.source);
+        };
+
+        // console.log(provinceToUsers);
+
+        //     .map(function(d){
+
+        // })
 
         // var mapUserScale=d3.extent(mapUsersEdges.map(function(d){ return d.weight }))
         // console.log(mapUserScale);
@@ -374,24 +404,25 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
             .nodes(wordNodes.filter(function (d) {
 
                 if(selectedCommunity.length!=0) {
-
-                    for (var i = 0; i < selectedCommunity.length; i++) {
-                        var com=communitiesIndex[selectedCommunity[i]];
-                        for (var i = 0; i < com.words.length; i++) if(com.words[i].word == d.name) d.visible=true;
+                    for (var j = 0; j < selectedCommunity.length; j++) {
+                        var com=communitiesIndex[selectedCommunity[j]];
+                        if(com.words !=undefined) for (var i = 0; i < com.words.length; i++) if(com.words[i].word == d.name) d.visible=true;
                     };
                 } else return true
 
             }))
             .links(wordEdges.filter(function (d) { 
                 if(selectedCommunity.length!=0) {
-                    for (var i = 0; i < selectedCommunity.length; i++) {
-                        var com=communitiesIndex[selectedCommunity[i]];
-                        var sourceIn=false, targetIn=false;
-                        for (var i = 0; i < com.words.length; i++) {
-                            if(com.words[i].word==d.source.name) sourceIn=true;
-                            if(com.words[i].word==d.target.name) targetIn=true;
+                    for (var j = 0; j < selectedCommunity.length; j++) {
+                        var com=communitiesIndex[selectedCommunity[j]];
+                        if(com.words !=undefined) {
+                            var sourceIn=false, targetIn=false;
+                            for (var i = 0; i < com.words.length; i++) {
+                                if(com.words[i].word==d.source.name) sourceIn=true;
+                                if(com.words[i].word==d.target.name) targetIn=true;
+                            }
+                            if(sourceIn && targetIn)  return true
                         }
-                        if(sourceIn && targetIn)  return true// d.visible=false;                
                     }
                 } else return true
 
@@ -408,11 +439,13 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
             .selectAll("path")
             .data(wordsToCommunities.filter(function (d) { 
                 if(selectedCommunity.length!=0) {
-                    for (var i = 0; i < selectedCommunity.length; i++) {
-                        var com=communitiesIndex[selectedCommunity[i]];
-                        for (var i = 0; i < com.words.length; i++) {
-                            if(com.id == d.target.name && com.words[i].word == d.source.name) return true 
-                        };
+                    for (var j = 0; j < selectedCommunity.length; j++) {
+                        var com=communitiesIndex[selectedCommunity[j]];
+                        if(com.words !=undefined) {
+                            for (var i = 0; i < com.words.length; i++) {
+                                if(com.id == d.target.name && com.words[i].word == d.source.name) return true 
+                            };
+                        }
                     }
                 } else return true
             }))
@@ -440,9 +473,11 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
                 if(selectedCommunity.length!=0) {
                     for (var j = 0; j < selectedCommunity.length; j++) {
                         var com=communitiesIndex[selectedCommunity[j]];
-                        for (var i = 0; i < com.words.length; i++) {
-                            if(com.words[i].word == d.name) return true 
-                        };
+                        if(com.words != undefined) {
+                            for (var i = 0; i < com.words.length; i++) {
+                                if(com.words[i].word == d.name) return true 
+                            };
+                        }
                     }
             } else return true
             }))
@@ -468,7 +503,7 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
                     for (var j = 0; j < selectedCommunity.length; j++) {
                         var com=communitiesIndex[selectedCommunity[j]];
                         for (var i = 0; i < com.provinces.length; i++) {
-                            console.log(i)
+                            // console.log(i)
                             if(com.id==d.source && com.provinces[i].label==d.target) return true 
                         };
                 }
@@ -514,12 +549,13 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
 
     function drawLegend() {
 
+
         var legendWidth=150,
-            legendHeight=50,
+            legendHeight=180,
             legendMargin=3;
 
-        var legend= viz
-            .append("g")
+        var legend= d3.select("#legend")
+            .append("svg")
             .attr("class","legend")
             .attr("width", legendWidth)
             .attr("height", legendHeight)
@@ -532,7 +568,7 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
         
         legendCommunities=legend.append("g")
             .attr("class","legend-communities")
-            .attr("transform","translate("+(vizWidth-150)+"," + (mapY-30) + ")")
+            // .attr("transform","translate("+(vizWidth-150)+"," + (mapY-30) + ")")
             .append("g")
                 .attr("class","legend-size")
             .selectAll("circle")
@@ -726,8 +762,9 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
                 .style("fill-opacity", "0.8" )
                 .style("font-size", 11 )
                 .text(d.name);
-
-        })
+        }).on("click",function(d){
+            if(provinceToUsers[d.name]!=undefined) updateSelection(provinceToUsers[d.name]);
+        });;
 
         tickCentroids();
     }
@@ -1073,9 +1110,14 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
             // .attr("fill", function(d) { return mapColor(umap[d.properties.name]); })
             // .attr("fill", function(d) { return colorMap(d.properties.name); })
             .attr("stroke", "#ccc")
-            .attr("stroke-width", "0.35");
+            .attr("stroke-width", "0.35")
+            .on("click",function(d){
+                
+                // update users mentioned
+                if(provinceToUsers[d.properties.name]!=undefined) updateSelection(provinceToUsers[d.properties.name]);
 
-            // .text(function(d) {return "hha"});
+                
+            });
     }
 
     // Taiwan
@@ -1094,25 +1136,26 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
             .attr("fill", "#000")
             // .attr("fill", function(d) { return mapColor(umap["Taiwan"]); })
             .attr("stroke", "#ccc")
-            .attr("stroke-width", "0.35");
+            .attr("stroke-width", "0.35")
+            .on("click",function(d){
+                
+                console.log("haha")
+                // update users mentioned
+                if(provinceToUsers["Taiwan"]!=undefined) updateSelection(provinceToUsers["Taiwan"]);
+
+                
+            });
     }
 
     // HK and Macau
     function drawHkMacau(error, cn) {
         // console.log(error)
         // console.log(topojson.feature(cn, cn.objects.layer1).features.filter(function(d) { return d.properties.GU_A3 === "HKG" }))
-
-        var projection2 = d3.geo.mercator()
-            .center([126,17])
-            .scale(2000);
-
-        var path2 = d3.geo.path()
-            .projection(projection2);
       
         viz.select('.map')
             .append("g")
             .attr("class", "hk")
-            .attr("transform", "translate(50,"+350+")")
+            .attr("transform", "translate("+650+","+400+")")
             .selectAll("path")
             .data(topojson.feature(cn, cn.objects.layer1).features)
             .enter()
@@ -1133,23 +1176,23 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
             .attr("font-family", "sans-serif")
             .attr("fill", "#aaaaaa")
             .attr("font-size", 10)
-            .text("Hong Kong & Macau")
+            .text("Hong Kong & Macau");
 
         // add demarcation
         viz.select(".hk")
            .append("svg:line")
-             .attr("x1", 30)
-             .attr("y1", -10)
-             .attr("x2", 130)
-             .attr("y2", 20)
+             .attr("x1", 130)
+             .attr("y1", 5)
+             .attr("x2", 0)
+             .attr("y2", 10)
              .style("stroke", "#cccccc")
              .style("stroke-width", 1);
         
         viz.select(".hk")
             .append("svg:line")
-             .attr("x1", 130)
-             .attr("y1", 20)
-             .attr("x2", 170)
+             .attr("x1", 0)
+             .attr("y1", 10)
+             .attr("x2", -10)
              .attr("y2", 60)
              .style("stroke", "#cccccc")
              .style("stroke-width", 1);
@@ -1171,7 +1214,8 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
         };
 
         // DRAW LEGEND  Color bar adapted from http://tributary.io/tributary/3650755/
-        var cw=10;
+        var cw=10,
+            ch=2.5;
         map.append("g")
             .attr("class","caption")
             .append("g")
@@ -1182,24 +1226,24 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
             .append("rect")
             .attr({width: cw,
                   height: 5,
-                  y: function(d,i) { return mapY-cw-i*5 },
-                  x: vizWidth-50,
+                  y: function(d,i) { return mapY-cw-i*ch },
+                  x: vizWidth-200,
                   fill: function(d,i) { return mapColor(d); } })
         
         map.select(".caption")
             .append("g")
-            .attr("transform", "translate(" + (vizWidth-cw-30) + "," + (mapY-cw-5*49) + ")")
+            .attr("transform", "translate(" + (vizWidth-cw-180) + "," + (mapY-cw-ch*49) + ")")
             .call(d3.svg.axis()
-                   .scale(d3.scale.linear().domain(d3.extent(v)).range([5*50,0]))
+                   .scale(d3.scale.linear().domain(d3.extent(v)).range([ch*50,0]))
                     .orient("right"))
             .attr("font-family", "sans-serif")
             .attr("fill", "#ccc")
             .attr("font-size", 10)
                 
-        viz.select('.caption')
+        map.select('.caption')
             .append("g")
             .attr("class","units")
-            .attr("transform", "translate("+(vizWidth-cw)+","+(mapY/2-cw+100)+")")
+            .attr("transform", "translate("+(vizWidth-cw-200)+","+(mapY/2-cw+180)+")")
             // .attr("transform", "rotate(90 "+(map_width-cw)+","+(map_height/2-cw)+")")
             .append("text")
             .attr("dx", -5)          
@@ -1342,8 +1386,18 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
     }
 
 // INIT /////////////////////////////////////////////////////////
-      
-    initViz=function initViz() {
+    
+    updateSelection=function (selection){
+        selectedCommunity=selection;
+        initViz();
+    }
+
+    updateLegend=function(){
+        d3.select("#legend").selectAll("*").remove() //clear precedent version
+        drawLegend();
+    }
+
+    initViz=function() {
 
         viz.selectAll("*").remove()
 
@@ -1366,12 +1420,12 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
         drawWordsToUsers()
 
         drawMap();
-        drawLegend();
+        updateLegend();
         // drawMapToUsers()
     }
 
     initViz();
-    drawLegend();
+    
 
 // UTILS //////////////////////////////////////////////////////////
 
@@ -1464,8 +1518,7 @@ $(".btn-userlayout").click(function(e){
 })
 
 $(".btn-showall").click(function(e){
-    selectedCommunity=null;
-    initViz();
+    updateSelection([]); // init selection with an empty array
 })
 
 $(".switchs button").each(function(e){
