@@ -1,15 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-'''
-
-TODO 
-
-* add numbers into stopwords
-
-
-'''
-
 import os, csv, json
 from time import time 
 import datetime
@@ -22,7 +13,21 @@ from lib.nlp import NLPMiner
 import locale
 
 results_path="/home/clemsos/Dev/mitras/results/"
-meme_names=["biaoge"]
+# meme_names=["biaoge"]
+# meme_names=[ meme for meme in os.listdir(results_path) if meme[-3:] != "csv"]
+meme_names=[
+ 'biaoge',
+ 'thevoice',
+ 'moyan',
+ 'hougong',
+ 'gangnam',
+ 'sextape',
+ 'dufu',
+ 'ccp',
+ 'yuanfang',
+ 'qiegao']
+
+
 print meme_names
 
 
@@ -173,14 +178,40 @@ def analyze_meme(meme_name):
     jsondata["communities"]["modularity"]=modularity
     jsondata["communities"]["number_of_communities"]=len(set(best_partition.values()))
 
-    # write best partition graph to GraphML file
-    # G_ok=community.induced_graph(best_partition,G.to_undirected())
-    # nx.write_graphml(G_ok, meme_path+"/"+meme_name+"_best_partition.graphml")
 
     for node in best_partition:
         d3nodes[node]["community"]=best_partition[node]
 
-    
+
+    # CENTRALITIES 
+    # http://toreopsahl.com/tnet/weighted-networks/node-centrality/
+    #################################
+    # Betweeness centrality
+    # betweeness_centrality={}
+    # Create ordered tuple of centrality data
+    print "computing betweeness_centrality... (this may take some time)"
+    cent_dict=nx.betweenness_centrality (G.to_undirected())
+    cent_items=[(b,a) for (a,b) in cent_dict.iteritems()]
+    # add value to nodes
+    for node in cent_dict: d3nodes[node]["btw_cent"]=cent_dict[node]
+    # Sort in descending order 
+    cent_items.sort() 
+    cent_items.reverse() 
+
+    '''
+    # Highest centrality 
+    jsondata["betweeness_centrality"]["top"]=[]
+    for j,c in enumerate(cent_items[0:5]):
+        print "Highest betweeness centrality :%.3f"%c[0]
+        jsondata["betweeness_centrality"]["top"].append({"index": j, "value" :"%.3f"%c[0], "id" : c[1] })
+
+    # Collect discretized distribution of centralities
+    btw_cent_dist=[{"value":c[0],"count" :c[1] } for c in Counter(["%.3f"%c[0] for c in cent_items]).most_common()]
+
+    jsondata["betweeness_centrality"]["distribution"]=btw_cent_dist
+    jsondata["graph"]["average_betweeness_centrality"]=sum([c[0] for c in cent_items])/len(cent_items)
+    '''
+
     # CREATE WORDS GRAPH
     ################################
 
@@ -222,6 +253,7 @@ def analyze_meme(meme_name):
 
     data_words["nodes"]=[{"name" : node, "count": words_map[node]} for node in unique_nodes]
 
+    
     # OUTPUT D3 GRAPH
     ################################
 
