@@ -23,6 +23,8 @@ var displayWordForce=false,
 
 var updateCommunityXY,
     communityLayout="XAxis", //default layout : "YAxis", "XAxis"
+    communitySort=null,
+    communitySort="btwCent",
     tickCommunity,
     drawMapToUsers,
     updateWordXY,
@@ -39,7 +41,7 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
         vizMiddleY=500,
         mapY=500;
 
-    var viz = d3.select("#viz").append("svg")
+    var viz=d3.select("#viz").append("svg")
             .attr("width", vizWidth)
             .attr("height", vizHeight)
             .attr("preserveAspectRatio", "xMidYMid")
@@ -84,11 +86,18 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
         for (var c in myUserCommunities){
             var myUsers=myUserCommunities[c];
             var provinces_count={}
+            var btwCentTotal=0;
+
             for (var i = 0; i < myUsers.length; i++) {
                 var num=myUsers[i].province;
                 provinces_count[num] = provinces_count[num] ? provinces_count[num]+1 : 1;
+                btwCentTotal+=myUsers[i].btw_cent;
             };
-              
+            
+            // console.log(btwCentTotal)
+            // console.log(btwCentAvg)
+            var btwCentAvg=btwCentTotal/myUsers.length;
+
             // Create Provinces Data
             var userProvinces=[];
             for( key in provinces_count ) userProvinces.push({"label":key,"value":provinces_count[key]});
@@ -99,7 +108,7 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
                     "words":null, 
                     "children" : null, 
                     "provinces": userProvinces,
-                    "btw_cent" : Math.random()
+                    "avgBtwCent" : btwCentAvg
                 }
                 );
         }
@@ -155,24 +164,39 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
         updateCommunityXY=function communityPos() {
 
             var xprev=0,yprev=0,rprev=0;
+
+            if(communitySort=="btwCent") {
+                console.log("sort by avg")
+                userCommunities.sort(function(a,b){
+                    // console.log(a,b)
+                    if(a.avgBtwCent < b.avgBtwCent) return b,a
+                    else return a,b
+                })
+
+            } else if (communitySort = "maxBtwCent") {
+                console.log("sort by max btw cent")
+                userCommunities.sort(function(a,b){
+                    // console.log(a,b)
+                    var maxA=Math.max.apply(Math, a.users.map(function(d){ return d.btw_cent }));
+                    var maxB=Math.max.apply(Math, b.users.map(function(d){ return d.btw_cent }));
+                    // console.log((maxA,maxB));
+                    if(maxA<maxB) return b,a
+                    else return a,b
+                })
+
+
+            }
         
             for (var i = 0; i < userCommunities.length; i++) {
                 var r,x,y;
                 if(communityLayout=="YAxis") {
-
                     r=userCommunities[i].users.length,
-                    x=vizWidth-50,
+                    x=100,
                     y=yprev+r*2+rprev-2;
-
                 } else if (communityLayout=="XAxis") {
-
                     r=userCommunities[i].users.length,
                     x=xprev+r*2+rprev-2,
                     y=vizMiddleY+Math.random()*50;
-                    
-                    // x=i*5*2,
-                    // x=vizWidth-50,
-                    // y=yprev+r*2+rprev-2;
                 }
 
                 communitiesX[userCommunities[i].id]=x;
@@ -219,9 +243,10 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
 
         updateWordXY= function updateWordXY() {
             // console.log("updateWordXY")
-            var margin=50,
+            var margin=30,
                 rgx=d3.scale.linear().domain([0,wordNodes.length]).range([margin,vizWidth-margin-200]),
-                s=d3.shuffle(wordNodes);
+                s=d3.shuffle(wordNodes),
+                rgy=d3.scale.linear().domain(fontScale).range([margin,vizMiddleY-150]);
             // var rgy=d3.scale.linear().domain([0,wordNodes.length]).range([0,vizHeight])
 
             for (var i = 0; i < wordNodes.length; i++) {
@@ -229,7 +254,7 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
 
                 // console.log(wordScaleFont(d.count))
                 wordsX[d.name]=rgx(i);
-                wordsY[d.name]=wordScaleFont(d.count)*8;
+                wordsY[d.name]=rgy(wordScaleFont(d.count));
 
             };
             // console.log("wordsXY",wordsX,wordsY);
@@ -549,6 +574,7 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
 
     function drawLegend() {
 
+        d3.select("#legend").selectAll("*").remove() //clear precedent version
 
         var legendWidth=150,
             legendHeight=180,
@@ -662,9 +688,14 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
 
     
     // colors
-        var wordScaleFont=d3.scale.linear().domain([100, 3000]).range([15, 80]);
-        var userPathColor = d3.scale.category20b();
-        var mapColor;
+        var fontScale=[15,60],
+            wordScale=wordNodes.map(function(d){return d.count}),
+            maxMinWordScale=[Math.min.apply(Math,wordScale), Math.max.apply(Math,wordScale)],
+            wordScaleFont=d3.scale.linear().domain(maxMinWordScale).range(fontScale),
+            userPathColor = d3.scale.category20b(),
+            mapColor;
+        
+
 
         var btwPieColor=d3.scale.linear().domain([1,5]).range(["#ffffd4","#993404"]) //.interpolate(d3.interpolateHcl);
         
@@ -989,7 +1020,7 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
         }).on('mouseover', function (d) {
                 var self = d3.select(this);
                 self.select("path")
-                    .style("stroke","#000")
+                    // .style("stroke","#000")
                     .style("opacity","1")
             })
             .on('mouseout', function (d) {
@@ -1264,6 +1295,8 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
     }
 
     function drawTimeSerie() {
+        
+        d3.select("#timeserie").selectAll("*").remove() //clear precedent version
         // Margins, timeWidth and timeHeight. 
         var w=300,
             h=300;
@@ -1274,11 +1307,11 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
             timeHeight = h - margin.top - margin.bottom;
 
         // // Construct our SVG object.
-        // var svg = d3.select("#timeserie").append("svg")
-        //     .attr("width", timeWidth + margin.left + margin.right)
-        //     .attr("height", timeHeight + margin.top + margin.bottom)
-        //   .append("g")
-        //     .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+        var svg = d3.select("#timeserie").append("svg")
+            .attr("width", timeWidth + margin.left + margin.right)
+            .attr("height", timeHeight + margin.top + margin.bottom)
+          .append("g")
+            .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
         // Build Scales.
         var x = d3.time.scale().range([timeWidth/timeData.length/2, timeWidth-timeWidth/timeData.length/2]);
@@ -1316,9 +1349,9 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
             .transition().duration(1000)
             .call(xAxis);
 
-        var timeseries= viz.append("g")
+        var timeseries= svg.append("g")
             .attr("class","time bars series")
-            .attr("transform", "translate(" + (vizWidth-timeWidth-70) + "," +(vizHeight-timeHeight-100)  + ")")  
+            // .attr("transform", "translate(" + (vizWidth-timeWidth-70) + "," +(vizHeight-timeHeight-100)  + ")")  
 
 
         // Draw bars. 
@@ -1392,10 +1425,6 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
         initViz();
     }
 
-    updateLegend=function(){
-        d3.select("#legend").selectAll("*").remove() //clear precedent version
-        drawLegend();
-    }
 
     initViz=function() {
 
@@ -1405,7 +1434,7 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
         updateWordXY(); // sort data
 
         setupSVG();
-        // drawTimeSerie();
+        drawTimeSerie();
         
         drawWords();
         tickWords();
@@ -1420,7 +1449,7 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
         drawWordsToUsers()
 
         drawMap();
-        updateLegend();
+        drawLegend();
         // drawMapToUsers()
     }
 
@@ -1520,6 +1549,15 @@ $(".btn-userlayout").click(function(e){
 $(".btn-showall").click(function(e){
     updateSelection([]); // init selection with an empty array
 })
+
+$(".btn-btwcent").click(function(e){
+    communitySort=(communitySort == "btwCent")? "maxBtwCent":"btwCent";
+    console.log("btwCent",communitySort);
+    updateCommunityXY();
+    tickCommunity();
+    // $(this).html((communitySort == "btwCent")? "maxBtwCent":"btwCent");
+})
+
 
 $(".switchs button").each(function(e){
     var n=$(this).attr("class").split(" ")[$(this).attr("class").split(" ").length-1].slice(4);
