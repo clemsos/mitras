@@ -14,7 +14,8 @@
       display: none;
     }
   body {
-    padding-bottom: 100px;
+    padding :0;
+    padding-top: 50px;
     background: #000
   }
 /*
@@ -26,38 +27,82 @@
 
 <nav class="navbar-tools navbar-default navbar-tools navbar-fixed-top navbar-inverse" role="navigation">
     <div class="container-fluid">
-      <div class="btn-group dropdown">
-        <button type="button" class="btn btn-info dropdown-toggle" data-toggle="dropdown">
-          Meme
-          <span class="caret"></span>
+      <!-- Brand and toggle get grouped for better mobile display -->
+      <div class="navbar-header">
+        <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
+          <span class="sr-only">Toggle navigation</span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
         </button>
-
-        <ul class="dropdown-menu memelist"></ul>
-    
+        <a class="navbar-brand" href="#">Memes</a>
       </div>
 
-      <button type="button" class="btn btn-sm btn-alert btn-showall">Show all</button>
+      <ul class="nav navbar-nav">
+        <li>
+          <a data-toggle="collapse" data-target="#memes">
+            Select a meme
+            <span class="caret"></span>
+          </a>
+        </li>
+        <li>
+          <a data-toggle="collapse" data-target="#controls">
+            Display options
+            <span class="caret"></span>
+          </a>
+        </li>
+      </ul>
 
-      <div class="btn-group">
-        <button type="button" class="btn btn-sm btn-default btn-userlayout">Layout</button>
-        <button type="button" class="btn btn-sm btn-default btn-wordforce">Start Words</button>
-        <button type="button" class="btn btn-sm btn-default btn-centroids">Show Cities</button>
-        <button type="button" class="btn btn-sm btn-default btn-btwcent">Order Users</button>  
-      </div>
-
-      <div class="btn-group switchs">
-        <button type="button" class="btn btn-xs btn-default btn-arcs">Arcs</button>
-        <!-- <button type="button" class="btn btn-xs btn-default btn-communities">Communities</button> -->
-        <button type="button" class="btn btn-xs btn-default btn-map">Map</button>
-        <!-- <button type="button" class="btn btn-xs btn-default btn-centroids">Centroids</button> -->
-        <!-- <button type="button" class="btn btn-xs btn-default btn-words">Words</button> -->
-        <!-- <button type="button" class="btn btn-xs btn-default btn-wordgraph">Words Graph</button> -->
-        <!-- <button type="button" class="btn btn-default Provinces">User Provinces</button> -->
-        <button type="button" class="btn btn-xs btn-default btn-wordusers">Words Users</button>
-        <button type="button" class="btn btn-xs btn-default btn-mapusers">Map Users</button>    
-      </div>
+      <ul class="nav navbar-nav navbar-right">
+        <li><a data-toggle="collapse" data-target="#help">Help</a></li>
+        <li><a data-toggle="collapse" data-target="#about">About</a></li>
+      </ul>
     </div>
-  </nav>
+
+    <div class="container-fluid">
+
+      <div id="memes" class="panel-collapse collapse">
+        <div class="memelist row panel-body">
+        </div>
+      </div>
+
+      <div id="about" class="panel-collapse collapse">
+        <div class="panel-body ">
+          <h4 class="panel-title">About</h4>
+          blabla
+        </div>
+      </div>
+
+      <div id="controls" class="panel-collapse collapse">
+        <button type="button" class="btn btn-sm btn-alert btn-showall">Show all</button>
+
+          <div class="btn-group">
+            <button type="button" class="btn btn-sm btn-default btn-userlayout">Layout</button>
+            <button type="button" class="btn btn-sm btn-default btn-wordforce">Start Words</button>
+            <button type="button" class="btn btn-sm btn-default btn-centroids">Show Cities</button>
+            <button type="button" class="btn btn-sm btn-default btn-btwcent">Order Users</button>  
+          </div>
+
+          <div class="btn-group switchs">
+            <button type="button" class="btn btn-xs btn-default btn-arcs">Arcs</button>
+            <button type="button" class="btn btn-xs btn-default btn-map">Map</button>
+            <button type="button" class="btn btn-xs btn-default btn-wordusers">Words Users</button>
+            <button type="button" class="btn btn-xs btn-default btn-mapusers">Map Users</button>    
+          </div>
+        </div>
+      </div>
+
+      <div id="help" class="panel-collapse collapse">
+        <div class="panel-heading">
+          <h4 class="panel-title">Help</h4>
+        </div>
+        <div class="panel-body">
+          blabla
+        </div>
+      </div>
+
+</nav>
+
 <div class="container-fluid">
     <h1 class="page-header">Meme Name</h1>
     
@@ -69,7 +114,7 @@
 
       <div class="col-xs-3 col-sm-3">
         <h4>Infos <small class="text-muted">About this meme</small></h4>
-        <div id="info"></div>
+        <ul id="info"></ul>
       
         <ul class="nodeinfo"></ul>
 
@@ -87,23 +132,17 @@
     
 </div>
 
+
 <script type="text/javascript" src="libs/jquery.min.js"></script>
 <script type="text/javascript" src="libs/bootstrap.min.js"></script>
 <script type="text/javascript" src="libs/d3.v3.min.js"></script>
 <script type="text/javascript" src="libs/jquery.csv.min.js"></script>
-<!-- <script type="text/javascript" src="js/d3graph_click.js"></script> -->
-<!-- <script type="text/javascript" src="js/d3multilayer.js"></script> -->
 <script type="text/javascript" src="libs/queue.v1.min.js"></script>
 <script src="http://d3js.org/colorbrewer.v1.min.js"></script>
 <script type="text/javascript" src="libs/topojson.v1.min.js"></script>    
 <script type="text/javascript" src="js/d3flatlayers.js"></script>
-<!-- <script type="text/javascript" src="js/d3time.js"></script> -->
-<!-- <script type="text/javascript" src="js/d3words.js"></script> -->
 <script type="text/javascript" src="js/main.js"></script>
-<!-- <script type="text/javascript" src="js/d3map.js"></script> -->
 
 <script>
-  
-    
-
+//   $(".memethumb")*10;
 </script>

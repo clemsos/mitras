@@ -42,7 +42,7 @@ nlp=NLPMiner()
 stoplist=[i.strip() for i in open("lib/stopwords/zh-stopwords","r")]
 stoplist+=[i.strip() for i in open("lib/stopwords/stopwords.txt","r")]
 stoplist+=["转发","微博","说 ","一个","【 ","年 ","转 ","请","＂ ","问题","知道","中 ","已经","现在","说","【",'＂',"年","中","今天","应该","真的","月","希望","想","日","这是","太","转","支持"]
-stoplist+=["事儿","中国"]
+# stoplist+=["事儿","中国"]
 
 
 api=UserAPI()
@@ -190,15 +190,18 @@ def analyze_meme(meme_name):
     # betweeness_centrality={}
     # Create ordered tuple of centrality data
     print "computing betweeness_centrality... (this may take some time)"
-    cent_dict=nx.betweenness_centrality (G.to_undirected())
+
+    if(N>10000) :cent_dict=nx.betweenness_centrality (G.to_undirected(),k=200)
+    else : cent_dict=nx.betweenness_centrality (G.to_undirected())
+
     cent_items=[(b,a) for (a,b) in cent_dict.iteritems()]
     # add value to nodes
     for node in cent_dict: d3nodes[node]["btw_cent"]=cent_dict[node]
+    '''
     # Sort in descending order 
     cent_items.sort() 
     cent_items.reverse() 
 
-    '''
     # Highest centrality 
     jsondata["betweeness_centrality"]["top"]=[]
     for j,c in enumerate(cent_items[0:5]):

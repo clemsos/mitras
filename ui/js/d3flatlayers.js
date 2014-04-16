@@ -1,19 +1,7 @@
-var wordForce,
-    arcs,
-    wordForce,
-    wordsToUsers,
-    wordPath,
-    words,
-    communities,
-    map,
-    nodeCentroids,
-    mapToUsers,
-    colorScale,
-    markers;
-
 // Layout
-var wfStarted=false,
-    centroidsOnMap=true,
+var wordForceStarted=false,
+    communitiesForceStarted=true,
+    centroidsOnMap=false,
     initViz;
 
 // hide/show things
@@ -24,13 +12,13 @@ var displayWordForce=false,
 var updateCommunityXY,
     communityLayout="XAxis", //default layout : "YAxis", "XAxis"
     communitySort=null,
-    communitySort="btwCent",
+    communitySort="random",
     tickCommunity,
     drawMapToUsers,
     updateWordXY,
     tickWords,
     drawCentroids,
-    tickMapToUsers;
+    tickMapToCommunities;
 
 var selectedCommunity=[]; //11
 
@@ -38,8 +26,8 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
 
     var vizWidth=1100,
         vizHeight=1100,
-        vizMiddleY=500,
-        mapY=500;
+        vizMiddleY=350,
+        mapY=600;
 
     var viz=d3.select("#viz").append("svg")
             .attr("width", vizWidth)
@@ -64,7 +52,7 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
         var userNodes=graphData.users.nodes;
         var userEdges=graphData.users.edges;
         var userCommunities = [];
-        
+
         var usersX={}
         var communitiesX={}
         var communitiesY={}
@@ -127,17 +115,135 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
             myCommunitiesEdges={};
 
         for (var i = 0; i < userEdges.length; i++) {
-            var u1=userEdges[i].source, u2=userEdges[i].target;
+            
+            var u1=userEdges[i].source, 
+                u2=userEdges[i].target;
+            
             
             // skip users in the same community
             if(u1.community!=u2.community) {
-                communitiesEdges.push(userEdges[i]);
+
                 if(myCommunitiesEdges[u1.community]==undefined) myCommunitiesEdges[u1.community]=[]
                 myCommunitiesEdges[u1.community].push({"name": u2.community, "direction" :"to", "weight": userEdges[i].weight})
+
                 if(myCommunitiesEdges[u2.community]==undefined) myCommunitiesEdges[u2.community]=[]
                 myCommunitiesEdges[u2.community].push({"name": u1.community, "direction" :"from", "weight": userEdges[i].weight})
+
+                
+                // communitiesEdges.push(userEdges[i]);
+
             }
         }
+
+        // console.log(myCommunitiesEdges)
+
+        for (com in myCommunitiesEdges) {
+            for (var i = 0; i < myCommunitiesEdges[com].length; i++) {
+                var e=myCommunitiesEdges[com][i];
+                if(e.direction == "from") communitiesEdges.push({"source": Number(com), "target" : e.name, "weight":e.weight})
+                else communitiesEdges.push({"source": e.name, "target" : Number(com), "weight":e.weight})
+
+            };
+        }
+        
+        var myCommunities={}
+
+        for (var i = 0; i < userCommunities.length; i++) {
+            var u=userCommunities[i];
+            myCommunities[u.id]=u;
+        };
+
+        communitiesEdges.forEach(function(link) {
+            link.source = myCommunities[link.source] || 
+                (myCommunities[link.source] = {name: link.source});
+            link.target = myCommunities[link.target] || 
+                (myCommunities[link.target] = {name: link.target});
+            link.value = +link.weight;
+        });
+
+
+        // user nodes scale
+        var userDisplayScale=[5,25],
+            userScale=userCommunities.map(function(d){return Number(d.users.length)}),
+            maxMinUserScale=[Math.min.apply(Math,userScale), Math.max.apply(Math,userScale)],
+            userScaleSize=d3.scale.linear().domain(maxMinUserScale).range(userDisplayScale),
+            mapCommunitesScaleSize=d3.scale.linear().domain(maxMinUserScale).range([1,5]);
+
+              
+        userScale.sort(function(a,b){return b-a});
+
+        var topUsersStart=8,
+            iTopUsersStart=1,
+            maxTopUsersX=0;
+
+            for (var i = 0; i < userScale.length; i++) {
+                // console.log(userScaleSize(userScale[i]))
+                iTopUsersStart=i;
+                maxTopUsersX+=userScaleSize(userScale[i])*2;
+                if(userScaleSize(userScale[i])<topUsersStart) break
+            };
+
+        // console.log(iTopUsersStart,maxTopUsersX)
+            
+        var scaleTopUsersWidth=d3.scale.linear().domain([0,iTopUsersStart]).range([(vizWidth/2)-50-300,(vizWidth/2)+150-300])
+        // ,
+        //     scaleSmallUsersWidth=d3.scale.linear().domain([0,userScale.length]).range([0,vizWidth-300])
+
+        var scaleUsersWidth=d3.scale.linear().domain([0,userScale.length]).range([0,vizWidth-300])
+
+        // calculate communities coordinates
+        updateCommunityXY=function communityPos() {
+
+            var xprev=0,yprev=0,rprev=0;
+
+            if(communitySort=="btwCent") {
+                // console.log("sort by avg")
+                userCommunities.sort(function(a,b){
+                    // console.log(a,b)
+                    if(a.avgBtwCent < b.avgBtwCent) return b,a
+                    else return a,b
+                })
+            } else if (communitySort = "maxBtwCent") {
+                // console.log("sort by max btw cent")
+                userCommunities.sort(function(a,b){
+                    // console.log(a,b)
+                    var maxA=Math.max.apply(Math, a.users.map(function(d){ return d.btw_cent }));
+                    var maxB=Math.max.apply(Math, b.users.map(function(d){ return d.btw_cent }));
+                    // console.log((maxA,maxB));
+                    if(maxA<maxB) return b,a
+                    else return a,b
+                })
+            } if (communitySort =="random") {
+
+            }
+        
+            for (var i = 0; i < userCommunities.length; i++) {
+                var r,x,y;
+                r=userScaleSize(userCommunities[i].users.length);
+                if(communityLayout=="YAxis") {
+                    x=100,
+                    y=yprev+r*2+rprev-2;
+                } else if (communityLayout=="XAxis") {
+                    
+                    // x=scaleUsersWidth(i);
+
+                    // if(i<=iTopUsersStart) x=xprev+r*2+rprev-2;
+                    if(i<=iTopUsersStart) x=scaleTopUsersWidth(i)
+                    else x=scaleUsersWidth(i);
+
+                    y=vizMiddleY+Math.random()*200;
+
+                }
+
+                communitiesX[userCommunities[i].id]=x;
+                communitiesY[userCommunities[i].id]=y;
+                xprev=x;
+                yprev=y;
+                rprev=r;
+            }
+        }
+
+        updateCommunityXY()
 
         // WORD nodes
         var wordNodes=graphData.words.nodes;
@@ -160,56 +266,8 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
             link.value = +link.weight;
         });
 
-        // calculate communities coordinates
-        updateCommunityXY=function communityPos() {
-
-            var xprev=0,yprev=0,rprev=0;
-
-            if(communitySort=="btwCent") {
-                console.log("sort by avg")
-                userCommunities.sort(function(a,b){
-                    // console.log(a,b)
-                    if(a.avgBtwCent < b.avgBtwCent) return b,a
-                    else return a,b
-                })
-
-            } else if (communitySort = "maxBtwCent") {
-                console.log("sort by max btw cent")
-                userCommunities.sort(function(a,b){
-                    // console.log(a,b)
-                    var maxA=Math.max.apply(Math, a.users.map(function(d){ return d.btw_cent }));
-                    var maxB=Math.max.apply(Math, b.users.map(function(d){ return d.btw_cent }));
-                    // console.log((maxA,maxB));
-                    if(maxA<maxB) return b,a
-                    else return a,b
-                })
-
-
-            }
-        
-            for (var i = 0; i < userCommunities.length; i++) {
-                var r,x,y;
-                if(communityLayout=="YAxis") {
-                    r=userCommunities[i].users.length,
-                    x=100,
-                    y=yprev+r*2+rprev-2;
-                } else if (communityLayout=="XAxis") {
-                    r=userCommunities[i].users.length,
-                    x=xprev+r*2+rprev-2,
-                    y=vizMiddleY+Math.random()*50;
-                }
-
-                communitiesX[userCommunities[i].id]=x;
-                communitiesY[userCommunities[i].id]=y;
-                xprev=x;
-                yprev=y;
-                rprev=r;
-            }
-        }
-
-        updateCommunityXY()
-
         // WORD TO COMMUNITIES EDGES
+
         var wordsUsersPath=graphData.words_user;    
         var tmp={};
         wordsToCommunities=[];
@@ -312,8 +370,7 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
             mapCentroids=[];
             centroids={};
             var cnt=0,
-                margin=20,
-                rgx=d3.scale.linear().domain([0,30]).range([margin,vizWidth-margin]);
+                rgx=d3.scale.linear().domain([0,30]).range([20,vizWidth-300]);
 
             for (var i = 0; i < mapFeatures.length; i++) {
                 mapFeatures[i].forEach(function(d, i) {
@@ -385,45 +442,29 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
             provinceToUsers[d.target].push(d.source);
         };
 
-        // console.log(provinceToUsers);
-
-        //     .map(function(d){
-
-        // })
-
-        // var mapUserScale=d3.extent(mapUsersEdges.map(function(d){ return d.weight }))
-        // console.log(mapUserScale);
-
 // SVG SETUP //////////////////////////////////////////////////////////
 
-    var maxRadius=100,
-        charge=-1000,
-        gravity=.4,
-        linkDistance=150;
+    var wordForce,
+        arcs,
+        words,
+        wordsToUsers,
+        wordPath,
+        communities,
+        communitiesForce,
+        markers,
+        map,
+        nodeCentroids,
+        mapToUsers,
+        mapCommunities,
+        colorScale,
+        userForce,
+        users,
+        usersPath;
+
+    var maxRadius=100;   
 
     function setupSVG() {
 
-        arcs=viz.append("g").attr("class","arcs")
-            .selectAll('.arc')
-            .data(userEdges.filter(function (d) { 
-                // console.log(d)
-                if(selectedCommunity.length!=0) {
-                    for (var i = 0; i < selectedCommunity.length; i++) {
-                        if(d.source.community == selectedCommunity[i]) return true 
-                        else if(d.target.community == selectedCommunity[i]) return true 
-                    };
-                } else return true
-            })) // if conditionfilter
-            .enter()
-            .append('g')
-            .attr('class', 'arc')
-            .attr("marker-end", "url(#end)")
-
-        markers=viz.append("defs")
-          .selectAll("marker")
-            .data(["end"])
-          .enter()
-            .append("svg:marker")
 
         wordForce= d3.layout.force()
             .nodes(wordNodes.filter(function (d) {
@@ -434,7 +475,6 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
                         if(com.words !=undefined) for (var i = 0; i < com.words.length; i++) if(com.words[i].word == d.name) d.visible=true;
                     };
                 } else return true
-
             }))
             .links(wordEdges.filter(function (d) { 
                 if(selectedCommunity.length!=0) {
@@ -450,12 +490,11 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
                         }
                     }
                 } else return true
-
             }))
             .size([vizWidth, vizMiddleY-30])
-            .linkDistance(linkDistance)
-            .charge(charge)
-            .gravity(gravity)
+            .linkDistance(150)
+            .charge(-1000)
+            .gravity(.4)
             .on("tick", tickWord);
             // .start();
 
@@ -475,7 +514,7 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
                 } else return true
             }))
             .enter()
-            .append("line")
+            .append("path")
             .attr("class", "word-link")
 
         // Word Graph links 
@@ -515,15 +554,12 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
             .attr("class", "map")
             .attr("transform", function(d) { return "translate(0,"+ mapY +")";})
 
-        // var usermap = d3.select().append("g")
-        //     .attr("class", "usermap")
-        //     .attr("transform", function(d) { return "translate(0,"+ mapY +")";})
-
         // Draw centroids
         mapToUsers = viz.append("g")
             .attr("class", "mapusers")
             .selectAll("path")
             .data(mapUsersEdges.filter(function (d) { 
+                // console.log(d);
                 if(selectedCommunity.length!=0) {
                     for (var j = 0; j < selectedCommunity.length; j++) {
                         var com=communitiesIndex[selectedCommunity[j]];
@@ -535,7 +571,7 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
             } else return true
             }))
             .enter()
-            .append("line")
+            .append("path")
             .attr("class", "map-user")
 
         nodeCentroids = viz.append("g")
@@ -553,10 +589,8 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
                     } else return true
             }));
 
-        communities = viz.append("g").attr("class","communities")
-            .selectAll('.community')
-            .data(userCommunities.filter(function (d) { 
-                // console.log(d);
+        communitiesForce=d3.layout.force()
+            .nodes(userCommunities.filter(function (d) { 
                     if(selectedCommunity.length!=0) {
 
                         for (var j= 0; j<selectedCommunity.length; j++) {
@@ -569,6 +603,65 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
                         }
                     } else return true
             }))
+            .links(communitiesEdges.filter(function (d) { 
+                // console.log(d)
+                if(selectedCommunity.length!=0) {
+                    for (var i = 0; i < selectedCommunity.length; i++) {
+                        if(d.source.community == selectedCommunity[i]) return true 
+                        else if(d.target.community == selectedCommunity[i]) return true 
+                    };
+                } else return true;
+            }))
+            .size([vizWidth,vizHeight-vizMiddleY-30])
+            .linkDistance(150)
+            .charge(-1300)
+            .gravity(.3)
+            .on("tick", tickCommunity);
+            // .start();
+        
+        // console.log(communitiesForce)
+        arcs=viz.append("g").attr("class","arcs")
+            .selectAll('.arc')
+                .data(communitiesForce.links()) // if conditionfilter
+            .enter()
+            .append('g')
+            .attr('class', 'arc')
+            .attr("marker-end", "url(#end)")
+
+        markers=viz.append("defs")
+          .selectAll("marker")
+            .data(["end"])
+          .enter()
+            .append("svg:marker")
+
+        communities = viz.append("g").attr("class","communities")
+            .selectAll('.community')
+            .data(communitiesForce.nodes());
+
+        mapCommunities = viz.append("g").attr("class","map-communities")
+            .selectAll('.mapCommunity')
+            .data(communitiesForce.nodes());
+        
+        userForce=d3.layout.force()
+            .nodes(userNodes)
+            .links(userEdges)
+            .size([vizWidth-300,vizHeight])
+            .linkDistance(60)
+            .charge(-300)
+            .gravity(.6)
+            .on("tick", tickUsers)
+            // .start();
+
+        users = viz.append("g").attr("class","users")
+            .selectAll('.user')
+            .data(userForce.nodes())
+            .call(userForce.drag);
+        
+        usersPath = viz.append("g").attr("class","userslinks")
+            .selectAll('.userlink')
+            .data(userForce.links())
+            .call(userForce.drag);
+
         
     }
 
@@ -589,6 +682,7 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
             // .attr("viewBox", "0 0 " + vizWidth + " " + vizHeight);
 
         var communitiesLength=d3.extent(communities.data().map(function(d){ return d.users.length }))
+
         communitiesLength.push(Math.round((communitiesLength[0]+communitiesLength[1])/2))
         if(communitiesLength[0]<5) communitiesLength[0]=5;
         
@@ -607,8 +701,8 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
         legendCommunities
             .enter()
             .append("circle")
-            .attr("r", function(d,i){  return d*2 })
-            .attr("cy", function(d,i){ return d*2})
+            .attr("r", function(d,i){  return userScaleSize(d)*2 })
+            .attr("cy", function(d,i){ return userScaleSize(d)*2})
             .attr("cx", 50)
             .style("fill","transparent")
             .style("stroke","#ccc")
@@ -686,16 +780,14 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
 
 // DRAW FUNCTIONS ///////////////////////////////////////////////////////
 
-    
+
     // colors
         var fontScale=[15,60],
             wordScale=wordNodes.map(function(d){return d.count}),
             maxMinWordScale=[Math.min.apply(Math,wordScale), Math.max.apply(Math,wordScale)],
             wordScaleFont=d3.scale.linear().domain(maxMinWordScale).range(fontScale),
-            userPathColor = d3.scale.category20b(),
+            userPathColor=d3.scale.category20b(),
             mapColor;
-        
-
 
         var btwPieColor=d3.scale.linear().domain([1,5]).range(["#ffffd4","#993404"]) //.interpolate(d3.interpolateHcl);
         
@@ -707,420 +799,532 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
         // colorProvinces = function(key){ return (key==undefined)? "#cccccc" : greens(key) };
         colorProvinces= function(key){ return "#000" }//c(pro[key])}
 
-    // WORDS
-    function drawWords() {
-
-        words.each(function (d, i) {
-
-            var self = d3.select(this);
-            
-            // var ext;
-            // if(selectedCommunity) ext=communitiesIndex[selectedCommunity].words.map(function(d) {return d.weight})
-            // else  
-            var ext=words.data().map(function(d){ return d.count })
-            // console.log(d3.extent(ext))
-            var wordScaleSize=d3.scale.linear().domain(d3.extent(ext)).range([15, 35]);
-            var wordScaleOpacity=d3.scale.linear().domain(d3.extent(ext)).range([.8,1]);
-            var wordColor = d3.scale.linear().domain(d3.extent(ext)).range(["#006d2c","#edf8e9"]);
-            self.append("rect")
-                .attr("width", function(d) { return wordScaleSize(d.count) })
-                .attr("height", function(d) { return 20 })
-                .style("fill", function(d) {  return "transparent"; })
-                .style("stroke", function(d) { return "transparent" });
-
-            self.append("text")
-                .attr("dx", 12)
-                .attr("dy", 8)
-                .style("font-size", function(d) { return wordScaleSize(d.count) })//scale_size(d.btw_cent) })
-                .style("fill", function(d) {  return wordColor(d.count) })
-                .style("fill-opacity", function(d) {  return wordScaleOpacity(d.count) })
-                .attr("text-anchor", "middle") // text-align: right
-                .text(function(d) { return d.name });
-
-            var x=i*20;
-            var y=80;
-
-            wordsX[d.name]=x;
-            wordsY[d.name]=y;
-            // self.attr("transform", function(d) { return "translate(" + x + "," + y + ")"; });
-
-        })
-    }
-
-    function tickWord() {
+    // USERS
         
-        // remove transition for force
-        var ww = (wfStarted)? words : words.transition();
-
-        ww.attr("transform", function(d) { 
-            
-            // console.log(d.count)
-            var r=wordScaleFont(d.count),
-                w=vizWidth-200,
-                h=vizMiddleY-30,
-                x=(d.x==undefined || !wfStarted)? wordsX[d.name] : Math.max(r, Math.min(w - r, d.x)),
-                y=(d.y==undefined || !wfStarted)? wordsY[d.name] : Math.max(r, Math.min(h - r, d.y));
-
-            // console.log(d.x,x,d.y,y,r,w,h);
-            wordsX[d.name]=x;
-            wordsY[d.name]=y;
-
-            return "translate(" + x + "," + y + ")"; 
-
-        });
-
-        if(displayWordForce) tickWordPath();
-        if(displayWordToUsers) drawWordsToUsers();
-    }
-
-    // CENTROIDS
-    function drawCentroids() {
-
-        nodeCentroids.enter()
-          .append("g")
-          .attr("class", "centroid")
-          .each(function (d, i) {
-            var self=d3.select(this);
-
-            self.append("circle")
-                .attr("r", 2)
-                .style("fill", function(d) {return "green"});
-
-            self.append("text")
-                .attr("dx", 2)
-                .attr("dy", "0.35em")
-                .style("fill", "#ccc" )
-                .style("fill-opacity", "0.8" )
-                .style("font-size", 11 )
-                .text(d.name);
-        }).on("click",function(d){
-            if(provinceToUsers[d.name]!=undefined) updateSelection(provinceToUsers[d.name]);
-        });;
-
-        tickCentroids();
-    }
-
-    tickCentroids = function() {
-
-        nodeCentroids.each(function (d, i) {
-
-            var x=(centroidsOnMap)? d.x :d.fixx;
-            var y=(centroidsOnMap)? mapY+d.y : d.fixy;
-
-            var self=d3.select(this);
-            self.transition().attr("transform", "translate(" + x + "," + y + ")")
-
-            if (!centroidsOnMap) 
-                self.select("text")
-                    .attr("transform", "rotate(60)")
-                    .attr("dy","0.45em")
-            else
-                self.select("text")
-                    .attr("transform", "rotate(0)")
-
-
-        })
-    }
-
-    // COMMUNITY 
-    function drawCommunity() {
-        
-        var scaleBtwCent=d3.scale.linear().domain([0,1]).range([1,5])
-        
-        communities.enter()
-            .append("g")
-            .attr("class","community")
-            .each(function (d, i) {
-                var self = d3.select(this);
-                var r=d.users.length,
-                    x=communitiesX[d.id],
-                    y=communitiesY[d.id];
-
-                d.selected=false; // init state
-
-                var pie = d3.layout.pie()
-                      .sort(null)
-                      .value(function(d) { return d.value });
-
-                // round to int and scale
-                var mapBtw=d.users.map(function(d){ 
-                    return Math.round(scaleBtwCent(d.btw_cent));
-                });
-                
-                // count occurences
-                var userBtw={}
-                mapBtw.map(function(d){ 
-                    if(userBtw[d]==undefined) userBtw[d]=0
-                    userBtw[d]+=1
+        function drawUsers(){
+            users.enter()
+                .append("g")
+                .attr("class","user")
+                .append("circle")
+                .attr("r",5)
+                .style("fill", function(d){return userPathColor(d.community)})
+                .each(function (d, i) {
+                    // sth
                 })
+        }
 
-                mapBtw=[] // init with rioght values
-                for(u in userBtw) mapBtw.push({"label":u, "value":userBtw[u]})
-
-                var g = self.append("g").attr("class","pie")
-                    .selectAll(".piece")
-                      // .data(pie(d.provinces))
-                      .data(pie(mapBtw))
-                    .enter().append("g")
-                      .attr("class", "piece")
-                      .style("stroke","transparent")
-                      .style("stroke-width",0)
-                      .attr("transform", function(d) { 
-                        return "translate(" + x + "," + y + ")"; });
-
-                var arc = d3.svg.arc()
-                  .outerRadius(r*2 - 10)
-                  .innerRadius(0);
-
-                var dis=d;
-                g.append("path")
-                  .attr("d", arc)
-                  .style("stroke","transparent")
-                  .style("stroke-width",0)
-                  .style("fill", function(d) { return btwPieColor(Number(d.data.label)); })
-                  .style("fill-opacity", function(e) { 
-                    for (var i = 0; i < selectedCommunity.length; i++) 
-                         if(Number(dis.id)== selectedCommunity[i]) return 1
-                    return .5
-                });
-
-            }).on('click', function (d) {
-                                
-                // select / remove node on click
-                var isSelected=selectedCommunity.indexOf(d.id)
-                if (isSelected == -1)selectedCommunity.push(d.id);
-                else selectedCommunity.splice(isSelected,1)
-
-                // infobox
-                showInfo((d.children ==null)?{"type":"community","data":d}:null);
-                
-                initViz();
-            })
-
-            tickCommunity();
-    }    
-
-    // MAP TO USERS
-    tickMapToUsers=function tickMapToUsers() {
-
-        var extent=mapToUsers.data().map(function(d){return d.weight})
-        var weightScale=d3.scale.linear().domain(d3.extent(extent)).range([.1,1]);
-
-        mapToUsers.each(function (d, i) {
+        function drawUserPath() {
             
-            var self=d3.select(this);
+            usersPath.enter()
+                .append("svg:path")
+                .attr("class", "userlink")
+                .style("fill", "none")
+                .style("stroke", function(d){return userPathColor(d.source.community)})
+                .style("stroke-width",2)
+        }
 
-            var x1=communitiesX[d.source],
-                y1=communitiesY[d.source],
-                x2=(!centroidsOnMap)? centroids[d.target].fixx : centroids[d.target].x,
-                y2=(!centroidsOnMap)? centroids[d.target].fixy : mapY+centroids[d.target].y;
+        function tickUsers() {
 
-            if(!isNaN(x1) && !isNaN(y1) && !isNaN(x2) && !isNaN(y2)) {
-                self.transition()
-                    .attr("x1", x1)
-                    .attr("y1", y1)
-                    .attr("x2", x2)
-                    .attr("y2", y2)
-                    .style("stroke", function(d) { return "#ccc" })
-                    .style("stroke-opacity", function(d) { return weightScale(d.weight) })
-                    .style("stroke-width", function(d) {  return 1 });
-            }
-            
-        })
-    }
+            usersPath.attr("d", function(d) {
+                var dx = d.target.x - d.source.x,
+                    dy = d.target.y - d.source.y,
+                    dr = Math.sqrt(dx * dx + dy * dy);
 
-    // build the arrows
-    function tickArrows() {
-        markers
-            .attr("id", String)
-            .attr("viewBox", "0 -5 10 10")
-            .attr("refX", 15)
-            .attr("refY", -1.5)
-            // .attr("markerWidth",50)
-            // .attr("markerHeight",50)
-            .attr("markergraph_Width", 10)
-            .attr("markergraph_Height", 10)
-            .attr("orient", "auto")
-          .append("svg:path")
-            .attr("d", "M0,-5L10,0L0,5");  
-    }
+                var r=5,
+                    w=vizWidth-100,
+                    h=vizHeight,
+                    x1=Math.max(r, Math.min(w - r, d.source.x)),
+                    y1=Math.max(r, Math.min(h - r, d.source.y)),
+                    x2=Math.max(r, Math.min(w - r, d.target.x)),
+                    y2=Math.max(r, Math.min(h - r, d.target.y));
 
-    // WORDS FORCE
-    function tickWordPath() {
-
-        wordPath.each(function (d, i) {
-            
-            var self=d3.select(this);
-
-            self.attr("x1", function(d){
-                var r=wordScaleFont(d.source.count),
-                    w=wordForce.size()[0],
-                    x=Math.max(r, Math.min(w, d.source.x));
-                    // console.log(x>w)
-                    return d.source.x=x;
-                })
-                .attr("y1", function(d){
-                    var r=wordScaleFont(d.source.count),
-                        h=wordForce.size()[1],
-                        y=Math.max(r, Math.min(h, d.source.y));
-                        // console.log(r,h)
-                        return d.source.y=y;
-                    })
-                .attr("x2", function(d) { 
-                    
-                    var r=wordScaleFont(d.target.count),
-                        w=wordForce.size()[0],
-                        x=Math.max(r, Math.min(w, d.target.x));
-                        // console.log(x>w)
-                        return d.target.x=x;
-                         })
-                .attr("y2", function(d) { 
-                    var r=wordScaleFont(d.target.count),
-                        h=wordForce.size()[1],
-                        y=Math.max(r, Math.min(h, d.target.y));
-                        // console.log(r,h)
-                        return d.target.y=y;
-                });
+                return "M" + 
+                    x1 + "," + 
+                    y1 + "A" + 
+                    dr + "," + dr + " 0 0,1 " + 
+                    x2 + "," + 
+                    y2;
             });
-    }
 
-    // WORDS TO USERS
-    function drawWordsToUsers() {
+            users
+                .attr("transform", function(d) { 
+                    
+                    var r=5,
+                        w=vizWidth-100,
+                        h=vizHeight,
+                        x=Math.max(r, Math.min(w - r, d.x)),
+                        y=Math.max(r, Math.min(h - r, d.y));
 
-        if(displayWordToUsers){
-            wordsToUsers.each(function (d, i) {                
+                    return "translate(" + x + "," + y + ")"; 
+                });
+        }
+        
+
+    // WORDS
+        function drawWords() {
+
+            words.each(function (d, i) {
+
+                var self = d3.select(this);
                 
-                var self=d3.select(this);
-                var x1=wordsX[d.source.name],
-                    y1=wordsY[d.source.name],
-                    x2=communitiesX[d.target.name],
-                    y2=communitiesY[d.target.name];
+                // var ext;
+                // if(selectedCommunity) ext=communitiesIndex[selectedCommunity].words.map(function(d) {return d.weight})
+                // else  
+                var ext=words.data().map(function(d){ return d.count })
+                // console.log(d3.extent(ext))
+                var wordScaleSize=d3.scale.linear().domain(d3.extent(ext)).range([15, 35]);
+                var wordScaleOpacity=d3.scale.linear().domain(d3.extent(ext)).range([.8,1]);
+                var wordColor = d3.scale.linear().domain(d3.extent(ext)).range(["#006d2c","#edf8e9"]);
+                self.append("rect")
+                    .attr("width", function(d) { return wordScaleSize(d.count) })
+                    .attr("height", function(d) { return 20 })
+                    .style("fill", function(d) {  return "transparent"; })
+                    .style("stroke", function(d) { return "transparent" });
 
-                if(!isNaN(x1) && !isNaN(y1) && !isNaN(x2) && !isNaN(y2)) {
-                    self.style("stroke", function(d) { return "#aaa" })
-                        .style("stroke-opacity", function(d) { return (d.weight > 50)? d.weight*0.002:0 })
-                        .style("stroke-width", function(d) {  return 2 })
-                        .transition()
-                        .attr("x1", x1)
-                        .attr("y1", y1)
-                        .attr("x2", x2)
-                        .attr("y2", y2)
-                }
+                self.append("text")
+                    .attr("dx", 12)
+                    .attr("dy", 8)
+                    .style("font-size", function(d) { return wordScaleSize(d.count) })//scale_size(d.btw_cent) })
+                    .style("fill", function(d) {  return wordColor(d.count) })
+                    .style("fill-opacity", function(d) {  return wordScaleOpacity(d.count) })
+                    .attr("text-anchor", "middle") // text-align: right
+                    .text(function(d) { return d.name });
+
+                var x=i*20;
+                var y=80;
+
+                wordsX[d.name]=x;
+                wordsY[d.name]=y;
+                // self.attr("transform", function(d) { return "translate(" + x + "," + y + ")"; });
+
             })
         }
-    }
 
-    // ARCS 
-    function drawUserArcs() {
+        function tickWord() {
             
-        arcs.each(function (d, i) {
-            var self = d3.select(this);
-            self.append("path")
-                .style("stroke-width",function(d) { return d.weight;})
-        }).on('mouseover', function (d) {
-                var self = d3.select(this);
-                self.select("path")
-                    // .style("stroke","#000")
-                    .style("opacity","1")
-            })
-            .on('mouseout', function (d) {
-                var self = d3.select(this);
-                self.select("path")
-                    .style("stroke",function(d) { return  userPathColor(d.weight);})
-                    .style("opacity",".5");
-            })
-        tickArcs()
-    }
+            // remove transition for force
+            var ww = (wordForceStarted)? words : words.transition();
 
-    function tickArcs() {
-        arcs.each(function (d, i) {
-            
-                var self = d3.select(this);
+            ww.attr("transform", function(d) { 
+                
+                // console.log(d.count)
+                var r=wordScaleFont(d.count),
+                    w=vizWidth-200,
+                    h=vizMiddleY-30,
+                    x=(d.x==undefined || !wordForceStarted)? wordsX[d.name] : Math.max(r, Math.min(w - r, d.x)),
+                    y=(d.y==undefined || !wordForceStarted)? wordsY[d.name] : Math.max(r, Math.min(h - r, d.y));
 
-                var startx=communitiesX[d.source.community],
-                    starty=communitiesY[d.source.community],
-                    endx=communitiesX[d.target.community],
-                    endy=communitiesY[d.target.community];
+                // console.log(d.x,x,d.y,y,r,w,h);
+                wordsX[d.name]=x;
+                wordsY[d.name]=y;
 
+                return "translate(" + x + "," + y + ")"; 
 
-                var path;
-                var toItself=false;
-                if(communityLayout=="XAxis") {
-                    if(endx==startx) toItself=true;
-                    var r = (endx - startx) * 0.51,
-                        ry = Math.min(r, 490);
-                    path = 'M ' + startx + ','+starty+' A ' + r + ',' + ry + ' 0 0,1 ' + endx + ','+endy ;
+            });
 
-                } else if(communityLayout=="YAxis") {
-                    // if(endy!=starty) console.log(Math.min(endy-starty*0.51, 490))
-                    if(endx==startx) toItself=true;
-                    var r = (endy - starty) * 0.51,
-                        rx = Math.min(r,490);
-                    path = 'M ' + startx + ','+starty+' A ' + r + ',' + rx + ' 0 0,1 ' + endx + ','+endy ;
-                }
+            if(displayWordForce) tickWordPath();
+            if(displayWordToUsers) drawWordsToUsers();
+        }
 
-                if (path != undefined) {
-                    self.select('path')
-                        .transition()
-                        .attr('d', path)
-                        .style("fill","transparent")
-                        .style('opacity', .5)
-                        .style('stroke', function (start, end) { return  userPathColor(d.weight);}(startx, endx));
-                }
-            })
-    }
+        function tickWordPath() {
 
-    // API
-    tickCommunity=function () {
-        // var userColor = d3.scale.category20b();
-        // console.log("tickCommunity");
+            wordPath.each(function (d, i) {
 
-        communities.each(function (d, i) {
-                var self = d3.select(this);
-                var r=d.users.length,
-                    x=communitiesX[d.id],
-                    y=communitiesY[d.id];
+                var self=d3.select(this);
 
-                self.select(".pie")
-                    // .enter()
-                    .selectAll(".piece")
-                    .transition()
-                    .attr("transform", function(d) {return "translate(" + x + "," + y + ")"; });
-                    // .attr("r",r)
-                    // .style("fill", function(d) { return (!d.children)? userColor(d.id) : "#000"; })
-                    // .attr("r", 5)
-                    // .style("fill", "#000")
-
-                // Draw users
-                if(d.children) {
-                    var childrenNodes=[]
-                    d.children.forEach( function(node) {
-
-                        // draw users
-
-                        //     x=self.attr("x")+10;
-                        //     y=self.attr("y")+10;
-
-                        //     console.log(self,d,x,y);
-
-                        //     self.append("circle")
-                        //         .attr("class",function(d) { return "community_"+d.id; })
-                        //         .attr("r",3)
-                        //         .style("fill", function(d) { return userColor(d.id);})
-                        //         .attr("transform", function(d) { 
-                        //             return "translate(" + x + "," + y + ")"; });
+                self.attr("x1", function(d){
+                    var r=wordScaleFont(d.source.count),
+                        w=wordForce.size()[0],
+                        x=Math.max(r, Math.min(w, d.source.x));
+                        // console.log(x>w)
+                        return d.source.x=x;
                     })
-                }
-            })
-        tickArcs();
-    }
+                    .attr("y1", function(d){
+                        var r=wordScaleFont(d.source.count),
+                            h=wordForce.size()[1],
+                            y=Math.max(r, Math.min(h, d.source.y));
+                            // console.log(r,h)
+                            return d.source.y=y;
+                        })
+                    .attr("x2", function(d) { 
+                        
+                        var r=wordScaleFont(d.target.count),
+                            w=wordForce.size()[0],
+                            x=Math.max(r, Math.min(w, d.target.x));
+                            // console.log(x>w)
+                            return d.target.x=x;
+                             })
+                    .attr("y2", function(d) { 
+                        var r=wordScaleFont(d.target.count),
+                            h=wordForce.size()[1],
+                            y=Math.max(r, Math.min(h, d.target.y));
+                            // console.log(r,h)
+                            return d.target.y=y;
+                    });
+                });
+        }
 
-    tickWords=function(){ 
-        (wfStarted)? wordForce.start():wordForce.stop();
-        if(!wfStarted) updateWordXY();
-        // showWordPath=!wfStarted;
-        tickWord();
-    };
+        tickWords=function(){ 
+            (wordForceStarted)? wordForce.start():wordForce.stop();
+            if(!wordForceStarted) updateWordXY();
+            // showWordPath=!wordForceStarted;
+            tickWord();
+        };
+
+    // COMMUNITY 
+        function drawCommunity() {
+            
+            var scaleBtwCent=d3.scale.linear().domain([0,1]).range([1,5])
+            
+            communities.enter()
+                .append("g")
+                .attr("class","community")
+                .each(function (d, i) {
+
+
+                    var self = d3.select(this);
+                    var r=userScaleSize(d.users.length),
+                        x=communitiesX[d.id],
+                        y=communitiesY[d.id];
+                        
+
+                    d.selected=false; // init state
+
+                    var pie = d3.layout.pie()
+                          .sort(null)
+                          .value(function(d) { return d.value });
+
+                    // round to int and scale
+                    var mapBtw=d.users.map(function(d){ 
+                        return Math.round(scaleBtwCent(d.btw_cent));
+                    });
+                    
+                    // count occurences
+                    var userBtw={}
+                    mapBtw.map(function(d){ 
+                        if(userBtw[d]==undefined) userBtw[d]=0
+                        userBtw[d]+=1
+                    })
+
+                    mapBtw=[] // init with rioght values
+                    for(u in userBtw) mapBtw.push({"label":u, "value":userBtw[u]})
+
+                    var g = self.append("g").attr("class","pie")
+                        .selectAll(".piece")
+                          // .data(pie(d.provinces))
+                          .data(pie(mapBtw))
+                        .enter().append("g")
+                          .attr("class", "piece")
+                          .style("stroke","transparent")
+                          .style("stroke-width",0)
+                          .attr("transform", function(d) { 
+                            return "translate(" + x + "," + y + ")"; });
+
+                    var arc = d3.svg.arc()
+                      .outerRadius(r*2 - 10)
+                      .innerRadius(0);
+
+                    var dis=d;
+                    g.append("path")
+                      .attr("d", arc)
+                      .style("stroke","transparent")
+                      .style("stroke-width",0)
+                      .style("fill", function(d) { return btwPieColor(Number(d.data.label)); })
+                      .style("fill-opacity", function(e) { 
+                        for (var i = 0; i < selectedCommunity.length; i++) 
+                             if(Number(dis.id)== selectedCommunity[i]) return 1
+                        return .5
+                    });
+                })
+
+                tickCommunity();
+        }
+
+        tickCommunity=function () {
+            // var userColor = d3.scale.category20b();
+            // console.log("tickCommunity");
+
+            communities.each(function (d, i) {
+                    var self = d3.select(this);
+                    var r=d.users.length,
+                        // x=communitiesX[d.id],
+                        // y=communitiesY[d.id];
+                        w=vizWidth-200,
+                        h=vizHeight-30,
+                        x=(d.x==undefined || !communitiesForceStarted)? communitiesX[d.name] : Math.max(r, Math.min(w - r, d.x)),
+                        y=(d.y==undefined || !communitiesForceStarted)? communitiesY[d.name] : Math.max(r, Math.min(h - r, d.y));
+
+
+                    self.select(".pie")
+                        // .enter()
+                        .selectAll(".piece")
+                        .transition()
+                        .attr("transform", function(d) {return "translate(" + x + "," + y + ")"; });
+                        // .attr("r",r)
+                        // .style("fill", function(d) { return (!d.children)? userColor(d.id) : "#000"; })
+                        // .attr("r", 5)
+                        // .style("fill", "#000")
+
+                    // Draw users
+                    if(d.children) {
+                        var childrenNodes=[]
+                        d.children.forEach( function(node) {
+
+                            // draw users
+
+                            //     x=self.attr("x")+10;
+                            //     y=self.attr("y")+10;
+
+                            //     console.log(self,d,x,y);
+
+                            //     self.append("circle")
+                            //         .attr("class",function(d) { return "community_"+d.id; })
+                            //         .attr("r",3)
+                            //         .style("fill", function(d) { return userColor(d.id);})
+                            //         .attr("transform", function(d) { 
+                            //             return "translate(" + x + "," + y + ")"; });
+                        })
+                    }
+
+                    d.x=x;
+                    d.y=y;
+                    return d;
+                
+                })
+            tickCommunityPath();
+        }
+
+        function drawCommunityPath() {
+                
+            arcs.each(function (d, i) {
+                var self = d3.select(this);
+                self.append("path")
+                    .style("stroke-width",function(d) { return 2;})
+                    .style("stroke",function(d) { return  userPathColor(200*d.weight);})
+            }).on('mouseover', function (d) {
+                    var self = d3.select(this);
+                    self.select("path")
+                        // .style("stroke","#000")
+                        .style("opacity","1")
+                })
+                .on('mouseout', function (d) {
+                    var self = d3.select(this);
+                    self.select("path")
+                        .style("opacity",".5");
+                })
+                
+        }
+
+        function tickCommunityPath() {
+
+            arcs.each(function (d, i) {
+
+                    var self = d3.select(this);
+                    
+                    var x1,y1,x2,y2,
+                        path,
+                        toItself=false;
+
+                    if (communitiesForceStarted) {
+                    
+                        var r1=d.source.users.length,
+                            r2=d.target.users.length,
+                            w=vizWidth-200,
+                            h=vizHeight-30,
+                            x1=Math.max(r1, Math.min(w - r1,d.source.x)),
+                            y1=Math.max(r1, Math.min(h - r1,d.source.y))
+                            x2=Math.max(r2, Math.min(w - r2,d.target.x)),
+                            y2=Math.max(r2, Math.min(h - r2,d.target.y));
+                        
+                        if(x2==x1) return; // avoid  toItself
+
+                        var dx = d.target.x - d.source.x,
+                            dy = d.target.y - d.source.y,
+                            dr = Math.sqrt(dx * dx + dy * dy);
+
+                        path = 'M ' + x1 + ','+y1+' A ' + dr + ',' + dr + ' 0 0,1 ' + x2 + ','+y2 ;
+
+                    } else {
+
+                        x1=communitiesX[d.source.community],
+                        y1=communitiesY[d.source.community],
+                        x2=communitiesX[d.target.community],
+                        y2=communitiesY[d.target.community];
+
+                        if(d.source.community==d.target.community) return
+                    
+                        if(communityLayout=="XAxis") {
+                            var r = (x2 - x1) * 0.51,
+                                ry = Math.min(r, 490);
+                            path = 'M ' + x1 + ','+y1+' A ' + r + ',' + ry + ' 0 0,1 ' + x2 + ','+y2 ;
+
+                        } else if(communityLayout=="YAxis") {
+                            // if(y2!=y1) console.log(Math.min(y2-y1*0.51, 490))
+                            var r = (y2 - y1) * 0.51,
+                                rx = Math.min(r,490);
+                            path = 'M ' + x1 + ','+y1+' A ' + r + ',' + rx + ' 0 0,1 ' + x2 + ','+y2 ;
+                        }
+                    }
+
+                    var select=(communitiesForceStarted)? self.select('path'):self.select('path').transition();
+
+                    if (path != undefined) {
+                            select
+                            .attr('d', path)
+                            .style("fill","transparent")
+                            .style('opacity', .5)
+                            .style('stroke', function (start, end) { return  userPathColor(d.weight);}(x1, x2));
+                    }
+
+                })
+        }
+
+    // CENTROIDS
+        function drawCentroids() {
+
+            nodeCentroids.enter()
+              .append("g")
+              .attr("class", "centroid")
+              .each(function (d, i) {
+                var self=d3.select(this);
+
+                self.append("circle")
+                    .attr("r", 2)
+                    .style("fill", function(d) {return "green"});
+
+                self.append("text")
+                    .attr("dx", 2)
+                    .attr("dy", "0.35em")
+                    .style("fill", "#ccc" )
+                    .style("fill-opacity", "0.8" )
+                    .style("font-size", 11 )
+                    .text(d.name);
+            }).on("click",function(d){
+                if(provinceToUsers[d.name]!=undefined) updateSelection(provinceToUsers[d.name]);
+            });;
+
+            tickCentroids();
+        }
+
+        tickCentroids = function() {
+
+            nodeCentroids.each(function (d, i) {
+
+                var x=(centroidsOnMap)? d.x :d.fixx;
+                var y=(centroidsOnMap)? mapY+d.y : d.fixy;
+
+                var self=d3.select(this);
+                self.transition().attr("transform", "translate(" + x + "," + y + ")")
+
+                if (!centroidsOnMap) 
+                    self.select("text")
+                        .attr("transform", "rotate(60)")
+                        .attr("dy","0.45em")
+                else
+                    self.select("text")
+                        .attr("transform", "rotate(0)")
+
+
+            })
+        }
+
+    // MAP TO USERS
+        tickMapToCommunities=function () {
+
+            var extent=mapToUsers.data().map(function(d){return d.weight})
+            var weightScale=d3.scale.linear().domain(d3.extent(extent)).range([.01,1]);
+
+            mapToUsers.each(function (d, i) {
+                
+                var self=d3.select(this);
+
+                var x1=communitiesX[d.source],
+                    y1=communitiesY[d.source],
+                    x2=(!centroidsOnMap)? centroids[d.target].fixx : centroids[d.target].x,
+                    y2=(!centroidsOnMap)? centroids[d.target].fixy : mapY+centroids[d.target].y;
+
+
+                if(!isNaN(x1) && !isNaN(y1) && !isNaN(x2) && !isNaN(y2)) {
+
+                    var dx = x1 - x2,
+                        dy = y1 - y2,
+                        dr = Math.sqrt(dx * dx + dy * dy);
+
+                    path = 'M ' + x1 + ','+y1+' A ' + dr + ',' + dr + ' 0 0,1 ' + x2 + ','+y2 ;
+                    // console.log(path);
+
+                    self.transition()
+                        .attr("d", path)
+                        .style("fill","none")
+                        .style("stroke", function(d) { return "#ccc" })
+                        .style("stroke-opacity", function(d) { return weightScale(d.weight) })
+                        .style("stroke-width", function(d) {  return 1 });
+                }
+                
+            })
+        }
+
+        function drawMapCommunities () {
+            
+            communities.enter()
+                .append("g")
+                .attr("class","community")
+                .each(function (d, i) {
+
+                    var self = d3.select(this);
+                    var r=mapCommunitesScaleSize(d.users.length),
+                        x=communitiesX[d.id],
+                        y=communitiesY[d.id];
+
+                    self.append("circle")
+                        .attr("r",r)
+                        .attr("fill", "#fff")
+                        .attr("cx",x)
+                        .attr("cy",y)
+                })
+        }
+
+        // build the arrows
+        function tickArrows() {
+            markers
+                .attr("id", String)
+                .attr("viewBox", "0 -5 10 10")
+                .attr("refX", 15)
+                .attr("refY", -1.5)
+                // .attr("markerWidth",50)
+                // .attr("markerHeight",50)
+                .attr("markergraph_Width", 10)
+                .attr("markergraph_Height", 10)
+                .attr("orient", "auto")
+              .append("svg:path")
+                .attr("d", "M0,-5L10,0L0,5");  
+        }
+    
+    // WORDS TO USERS
+        function drawWordsToUsers() {
+
+            if(displayWordToUsers){
+                wordsToUsers.each(function (d, i) {                
+                    
+                    var self=d3.select(this);
+                    var x1=wordsX[d.source.name],
+                        y1=wordsY[d.source.name],
+                        x2=communitiesX[d.target.name],
+                        y2=communitiesY[d.target.name];
+
+                    if(!isNaN(x1) && !isNaN(y1) && !isNaN(x2) && !isNaN(y2)) {
+                        self.style("stroke", function(d) { return "#aaa" })
+                            .style("stroke-opacity", function(d) { return (d.weight > 50)? d.weight*0.002:0 })
+                            .style("stroke-width", function(d) {  return 2 })
+                            .transition()
+                            .attr("x1", x1)
+                            .attr("y1", y1)
+                            .attr("x2", x2)
+                            .attr("y2", y2)
+                    }
+                })
+            }
+        }
 
     // MAP
     // Mainland provinces
@@ -1420,6 +1624,33 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
 
 // INIT /////////////////////////////////////////////////////////
     
+    communitiesDisplay=function() {
+
+        if(communitiesForceStarted) {
+
+            communities.call(communitiesForce.drag)
+            communitiesForce.start();
+
+        } else {
+
+            communities.on('click', function (d) {
+
+                    // select / remove node on click
+                    var isSelected=selectedCommunity.indexOf(d.id)
+                    if (isSelected == -1)selectedCommunity.push(d.id);
+                    else selectedCommunity.splice(isSelected,1)
+
+                    // infobox
+                    showInfo((d.children ==null)?{"type":"community","data":d}:null);
+                    
+                    initViz();
+            })
+            
+            updateCommunityXY();
+            tickCommunity()
+        }
+    }
+
     updateSelection=function (selection){
         selectedCommunity=selection;
         initViz();
@@ -1438,18 +1669,25 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
         
         drawWords();
         tickWords();
+
+        // drawWordPath();
+        // drawUsers();
         
-        drawCommunity();
-        drawUserArcs();
-        tickArrows();
+        // drawCommunity();
+        // drawCommunityPath();
+        // tickArrows();
+        // communitiesDisplay();
         
+        drawMapCommunities();
         drawCentroids();
-        tickMapToUsers();
+        tickMapToCommunities();
 
         drawWordsToUsers()
 
-        drawMap();
-        drawLegend();
+        if (centroidsOnMap) {
+            drawMap();
+            drawLegend();
+        }
         // drawMapToUsers()
     }
 
@@ -1524,25 +1762,26 @@ function drawD3Time (timeFile) {
 
 $(".btn-wordforce").click(function(e){
     
-    wfStarted=(wfStarted)?false:true;
+    wordForceStarted=(wordForceStarted)?false:true;
     tickWords();  
-    $(".btn-wordforce").html( (wfStarted) ?  "Stop Words" : "Start Words");
+    $(".btn-wordforce").html( (wordForceStarted) ?  "Stop Words" : "Start Words");
 })
 
 $(".btn-centroids").click(function(e){
 
     $(".map").toggle();
-    centroidsOnMap=(centroidsOnMap)?false:true;
+    centroidsOnMap=(centroidsOnMap)? false:true;
     tickCentroids(); 
-    tickMapToUsers();
+    tickMapToCommunities();
     $(this).html((centroidsOnMap)?"Show cities":"Place on Map");
 })
 
 
 $(".btn-userlayout").click(function(e){
-    communityLayout=(communityLayout == "YAxis")? "XAxis":"YAxis";
-    updateCommunityXY();
-    tickCommunity();
+    // communityLayout=(communityLayout == "YAxis")? "XAxis":"YAxis";
+    // updateCommunityXY();
+    // tickCommunity();
+    communitiesDisplay()
     $(".btn-userlayout").html(communityLayout)
 })
 
@@ -1570,5 +1809,4 @@ $(".switchs button").each(function(e){
         $(this).addClass( ($("."+n).css('display') != 'none')? "active":"" );
     })
 })
-
 

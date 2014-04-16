@@ -1,37 +1,49 @@
 var memes_list="data/2012_sina-weibo-memes_list.csv",
-      memes={},
-      loadmeme,
-      showInfo,
-      safename="biaoge";
+    memes={},
+    loadmeme,
+    showInfo;
 
 $(document).ready(function() {
 
+  var url=getLocation(document.URL); // default
+  var safename=url.hash.slice(1,url.hash.length);
+  console.log(url);
+
   // DATA : load the list of memes from csv
   $.get(memes_list, function(memes_list_data) {                  
+
       var memesdata=$.csv.toObjects(memes_list_data);
-      console.log(memes)
       
-      // memes=memes_list_data.data;
       memesdata.forEach(function(meme) {
-        add_meme(meme);
+
+        // exclude some memes from the list
+        if (meme.safename == "diaosi" || meme.safename == "iphone5" || meme.safename == "tuhao" || meme.safename == "cgc")return 
+        if (meme.rank > 2) return
+        if (meme.name == "") return
+
+        addMemeMenuItem(meme);
         memes[meme.safename]=meme;
       })
-      // console.log(current_meme)
-      loadmeme("biaoge")
+
+      loadmeme(safename);
   });
 
   // parse data and add menu item
-  function add_meme(meme) {
+  function addMemeMenuItem(meme) {
+ 
+    // create thumbnail 
+    var memeDiv="<div class='col-sm-2 col-md-2 memethumb'><div class='thumbnail'><div class='.caption'><p>";
+    memeDiv+="<small>"+meme.type+"</small><br /> ";
+    memeDiv+='<a  onClick="loadmeme('+"'"+meme.safename+"'"+')" href="#'+meme.safename+'">';
+    memeDiv+="<strong>"+meme.name+"</strong> "
+    memeDiv+='</a>';
+    memeDiv+="<br /><small>Keywords: <em>"+meme.keywords+"</em></small>";
+    memeDiv+="</p></div></div>";
 
-    // skip memes 
-    if(meme.safename == "diaosi" || meme.safename == "diaosi" || meme.safename == "tuhao")return
+    // add thumb to memes list
+    $(".memelist").append(memeDiv);
 
-    // console.log(meme.safename);
-    var li='<li><a class="meme" onClick="loadmeme('+"'"+meme.safename+"'"+')" href="#'+meme.safename+'">'+meme.safename+'</a></li>';
-    // console.log(li)
-    
-    $(".memelist").append(li);
-
+    // parse data
     meme.graphFile="data/"+meme.safename+"/"+meme.safename+"_d3graph.json";
     meme.mapFile="data/"+meme.safename+"/"+meme.safename+"_usermap.json";
     meme.timeFile="data/"+meme.safename+"/"+meme.safename+"_time_series.json";
@@ -42,28 +54,35 @@ $(document).ready(function() {
 
     reset_display()
 
-    console.log("meme_name:"+meme_name);
     var meme = memes[meme_name];
     console.log(meme);
 
-    // console.log(meme);
+    // change page title
     var title= meme.safename+' <small>'+meme.name+'<small>'
     $("h1.page-header").html(title);
 
     // var baidu
+
     var text={};
+
     // text.name="<p>Name : "+meme.name+"</p>";
     // text.safename="<p>"++"</p>"
-    text.keywords="<p>Keywords : "+meme.keywords+"</p>";
-    text.start="<p> Date start :"+meme.start+"</p>";
+
+    text.keywords="<li>Keywords : "+meme.keywords+"</li>";
+    text.start="<li> Date start :"+meme.start+"</li>";
     // text.type="<p>Type :"+meme.type+"</p>";
     // text.link2="<p><a href='"+meme.link2+" '>Read More</a></p>";
-    text.links="<p>Links : <a href='"+meme.wikipedia+" '>Wikipedia</a>, <a href='"+meme.baidu+" '>Baidu</a>, <a href='"+meme.link1+" '>Read More</a></p>";
-    text.dataset="<p>Dataset : xxx tweets"
 
+    text.links="<li>Read more : ";
+    if(meme.wikipedia != "") text.links+= "<a href='"+meme.wikipedia+" '>Wikipedia</a> ";
+    if(meme.baidu != "") text.links+= "<a href='"+meme.baidu+" '>Baidu</a> ";
+    if(meme.link1 != "") text.links+= "- <a href='"+meme.link1+" '>Link</a> ";
+    text.links+="</li>"
+
+    // text.dataset="<p>Dataset : xxx tweets"
     for (var i = 0; i < Object.keys(text).length; i++) {
       $("#info").append(text[Object.keys(text)[i]]);
-      console.log();
+      // console.log();
     };
 
     // drawD3Map(meme.mapFile)
@@ -81,6 +100,8 @@ $(document).ready(function() {
       $("#timeserie").html("");
       $("#map").html("");
       $("#viz").html("");
+
+      if($('#memes').attr("class").split(" ").indexOf("in") != -1) $('#memes').collapse("hide");
     }
   
   showInfo = function showInfo(info) {
@@ -113,7 +134,6 @@ $(document).ready(function() {
     }
 
     infodiv+="</div>";
-    console.log(infodiv)
     $(".infobox").html(infodiv)
 
   }
@@ -124,18 +144,18 @@ $(document).ready(function() {
   // console.log(url.pathname.split('#')+url.hash)
 });
 
-// function getLocation(href) {
-//   var match = href.match(/^(https?\:)\/\/(([^:\/?#]*)(?:\:([0-9]+))?)(\/[^?#]*)(\?[^#]*|)(#.*|)$/);
-//   return match && {
-//       protocol: match[1],
-//       host: match[2],
-//       hostname: match[3],
-//       port: match[4],
-//       pathname: match[5],
-//       search: match[6],
-//       hash: match[7]
-//   }
-// }
+function getLocation(href) {
+  var match = href.match(/^(https?\:)\/\/(([^:\/?#]*)(?:\:([0-9]+))?)(\/[^?#]*)(\?[^#]*|)(#.*|)$/);
+  return match && {
+      protocol: match[1],
+      host: match[2],
+      hostname: match[3],
+      port: match[4],
+      pathname: match[5],
+      search: match[6],
+      hash: match[7]
+  }
+}
 /*
 function drawPie(self, data) {
 
