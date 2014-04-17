@@ -18,6 +18,12 @@
     padding-top: 50px;
     background: #000
   }
+
+  #viz {
+    padding :0;
+    padding-top: 30px;
+    background: #000
+  }
 /*
   .navbar-tools {
     height : 100px;
@@ -79,7 +85,9 @@
           <div class="btn-group">
             <button type="button" class="btn btn-sm btn-default btn-userlayout">Layout</button>
             <button type="button" class="btn btn-sm btn-default btn-wordforce">Start Words</button>
+            <button type="button" class="btn btn-sm btn-default btn-comforce">Start Communities</button>
             <button type="button" class="btn btn-sm btn-default btn-centroids">Show Cities</button>
+            <button type="button" class="btn btn-sm btn-default btn-sortCentroids">Sort provinces</button>  
             <button type="button" class="btn btn-sm btn-default btn-btwcent">Order Users</button>  
           </div>
 
@@ -104,15 +112,17 @@
 </nav>
 
 <div class="container-fluid">
-    <h1 class="page-header">Meme Name</h1>
+    
     
     <div class="row">
 
-    <div class="col-xs-9 col-sm-9">
-      <div id="viz"></div>
-    </div>
+      <div class="col-xs-9 col-sm-9">
+        <div id="viz"></div>
+      </div>
 
       <div class="col-xs-3 col-sm-3">
+        <h1 class="page-header">Meme Name</h1>
+
         <h4>Infos <small class="text-muted">About this meme</small></h4>
         <ul id="info"></ul>
       

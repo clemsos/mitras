@@ -5,22 +5,28 @@ var wordForceStarted=false,
     initViz;
 
 // hide/show things
-var displayWordForce=false,
+var displayWordForce=true,
     displayWordToUsers=false,
-    displayMapToUsers=true;
-
-var updateCommunityXY,
+    displayMapToUsers=true,
     communityLayout="XAxis", //default layout : "YAxis", "XAxis"
     communitySort=null,
     communitySort="random",
+    centroidsSort= "population", //"gdp",
+    communityUsersLayout="pack", // "pie"
+    selectedCommunity=[]; //11
+
+// public functions
+var centroidsDisplay;
+
+
+// TODO : should be private
+var  updateCommunityXY,
     tickCommunity,
     drawMapToUsers,
     updateWordXY,
     tickWords,
-    drawCentroids,
-    tickMapToCommunities;
 
-var selectedCommunity=[]; //11
+    tickMapToCommunities;
 
 function drawD3Layers(graphFile,mapFile,timeFile) {
 
@@ -40,285 +46,277 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
         .defer(d3.json, "maps/zh-mainland-provinces.topo.json") // mainland
         .defer(d3.json, "maps/zh-chn-twn.topo.json") // taiwan 
         .defer(d3.json, "maps/zh-hkg-mac.topo.json") // hk and macau
+        .defer(d3.json, "data/ChineseProvincesInfo.json") // additional data
         .defer(d3.json, mapFile) // hk and macau
         .defer(d3.json, graphFile)
         .defer(d3.json, timeFile) 
         .await(draw); // function that uses files
 
 // PARSE DATA /////////////////////////////////////////////////////////////
-    function draw(error,mainland,taiwan,hkmacau,mapData,graphData,timeData) {
+    function draw(error,mainland,taiwan,hkmacau,provincesInfoData,mapData,graphData,timeData) {
 
         // USER COMMUNITIES
-        var userNodes=graphData.users.nodes;
-        var userEdges=graphData.users.edges;
-        var userCommunities = [];
+            var userNodes=graphData.users.nodes;
+            var userEdges=graphData.users.edges;
+            var userCommunities = [];
 
-        var usersX={}
-        var communitiesX={}
-        var communitiesY={}
+            var usersX={}
+            var communitiesX={}
+            var communitiesY={}
 
-        // Parse user nodes into Community
-        var myUserNodes = {};
-        var myUserCommunities = {};
-        for (var i = 0; i < userNodes.length; i++) {
-             
-            myUserNodes[userNodes[i]["name"]] =userNodes[i]
-            
-            if(myUserCommunities[userNodes[i]["community"]] == undefined) myUserCommunities[userNodes[i]["community"]]=[]
-            userNodes[i].btw_cent=Math.random() // TODO :btw cent
-            myUserCommunities[userNodes[i]["community"]].push(userNodes[i])        
+            // Parse user nodes into Community
+            var myUserNodes = {};
+            var myUserCommunities = {};
+            for (var i = 0; i < userNodes.length; i++) {
+                 
+                myUserNodes[userNodes[i]["name"]] =userNodes[i]
+                
+                if(myUserCommunities[userNodes[i]["community"]] == undefined) myUserCommunities[userNodes[i]["community"]]=[]
+                userNodes[i].btw_cent=Math.random() // TODO :btw cent
+                myUserCommunities[userNodes[i]["community"]].push(userNodes[i])        
 
-        };
-
-        // INIT COMMUNITIES NODES {Id, Users, Province}
-        for (var c in myUserCommunities){
-            var myUsers=myUserCommunities[c];
-            var provinces_count={}
-            var btwCentTotal=0;
-
-            for (var i = 0; i < myUsers.length; i++) {
-                var num=myUsers[i].province;
-                provinces_count[num] = provinces_count[num] ? provinces_count[num]+1 : 1;
-                btwCentTotal+=myUsers[i].btw_cent;
             };
-            
-            // console.log(btwCentTotal)
-            // console.log(btwCentAvg)
-            var btwCentAvg=btwCentTotal/myUsers.length;
 
-            // Create Provinces Data
-            var userProvinces=[];
-            for( key in provinces_count ) userProvinces.push({"label":key,"value":provinces_count[key]});
-            
-            userCommunities.push( 
-                {   "id": c, 
-                    "users": myUsers, 
-                    "words":null, 
-                    "children" : null, 
-                    "provinces": userProvinces,
-                    "avgBtwCent" : btwCentAvg
-                }
-                );
-        }
+            // INIT COMMUNITIES NODES {Id, Users, Province}
+            for (var c in myUserCommunities){
+                var myUsers=myUserCommunities[c];
+                var provinces_count={}
+                var btwCentTotal=0;
+
+                for (var i = 0; i < myUsers.length; i++) {
+                    var num=myUsers[i].province;
+                    provinces_count[num] = provinces_count[num] ? provinces_count[num]+1 : 1;
+                    btwCentTotal+=myUsers[i].btw_cent;
+                };
+                
+                // console.log(btwCentTotal)
+                // console.log(btwCentAvg)
+                var btwCentAvg=btwCentTotal/myUsers.length;
+
+                // Create Provinces Data
+                var userProvinces=[];
+                for( key in provinces_count ) userProvinces.push({"label":key,"value":provinces_count[key]});
+                
+                userCommunities.push( 
+                    {   "id": c, 
+                        "users": myUsers, 
+                        "words":null, 
+                        "children" : null, 
+                        "provinces": userProvinces,
+                        "avgBtwCent" : btwCentAvg
+                    }
+                    );
+            }
 
         // ARCS (Links between communities)
-        userEdges.forEach(function(link) {
-            link.source = myUserNodes[link.source] || 
-                (nodes[link.source] = {name: link.source});
-            link.target = myUserNodes[link.target] || 
-                (myUserNodes[link.target] = {name: link.target});
-            link.value = +link.weight;            
-        });
+            userEdges.forEach(function(link) {
+                link.source = myUserNodes[link.source] || 
+                    (nodes[link.source] = {name: link.source});
+                link.target = myUserNodes[link.target] || 
+                    (myUserNodes[link.target] = {name: link.target});
+                link.value = +link.weight;            
+            });
 
-        // Create edges between communities
-        var communitiesEdges = [],
-            myCommunitiesEdges={};
+            // Create edges between communities
+            var communitiesEdges = [],
+                myCommunitiesEdges={};
 
-        for (var i = 0; i < userEdges.length; i++) {
-            
-            var u1=userEdges[i].source, 
-                u2=userEdges[i].target;
-            
-            
-            // skip users in the same community
-            if(u1.community!=u2.community) {
-
-                if(myCommunitiesEdges[u1.community]==undefined) myCommunitiesEdges[u1.community]=[]
-                myCommunitiesEdges[u1.community].push({"name": u2.community, "direction" :"to", "weight": userEdges[i].weight})
-
-                if(myCommunitiesEdges[u2.community]==undefined) myCommunitiesEdges[u2.community]=[]
-                myCommunitiesEdges[u2.community].push({"name": u1.community, "direction" :"from", "weight": userEdges[i].weight})
-
+            for (var i = 0; i < userEdges.length; i++) {
                 
-                // communitiesEdges.push(userEdges[i]);
+                var u1=userEdges[i].source, 
+                    u2=userEdges[i].target;
+                
+                
+                // skip users in the same community
+                if(u1.community!=u2.community) {
 
-            }
-        }
+                    if(myCommunitiesEdges[u1.community]==undefined) myCommunitiesEdges[u1.community]=[]
+                    myCommunitiesEdges[u1.community].push({"name": u2.community, "direction" :"to", "weight": userEdges[i].weight})
 
-        // console.log(myCommunitiesEdges)
+                    if(myCommunitiesEdges[u2.community]==undefined) myCommunitiesEdges[u2.community]=[]
+                    myCommunitiesEdges[u2.community].push({"name": u1.community, "direction" :"from", "weight": userEdges[i].weight})
 
-        for (com in myCommunitiesEdges) {
-            for (var i = 0; i < myCommunitiesEdges[com].length; i++) {
-                var e=myCommunitiesEdges[com][i];
-                if(e.direction == "from") communitiesEdges.push({"source": Number(com), "target" : e.name, "weight":e.weight})
-                else communitiesEdges.push({"source": e.name, "target" : Number(com), "weight":e.weight})
-
-            };
-        }
-        
-        var myCommunities={}
-
-        for (var i = 0; i < userCommunities.length; i++) {
-            var u=userCommunities[i];
-            myCommunities[u.id]=u;
-        };
-
-        communitiesEdges.forEach(function(link) {
-            link.source = myCommunities[link.source] || 
-                (myCommunities[link.source] = {name: link.source});
-            link.target = myCommunities[link.target] || 
-                (myCommunities[link.target] = {name: link.target});
-            link.value = +link.weight;
-        });
-
-
-        // user nodes scale
-        var userDisplayScale=[5,25],
-            userScale=userCommunities.map(function(d){return Number(d.users.length)}),
-            maxMinUserScale=[Math.min.apply(Math,userScale), Math.max.apply(Math,userScale)],
-            userScaleSize=d3.scale.linear().domain(maxMinUserScale).range(userDisplayScale),
-            mapCommunitesScaleSize=d3.scale.linear().domain(maxMinUserScale).range([1,5]);
-
-              
-        userScale.sort(function(a,b){return b-a});
-
-        var topUsersStart=8,
-            iTopUsersStart=1,
-            maxTopUsersX=0;
-
-            for (var i = 0; i < userScale.length; i++) {
-                // console.log(userScaleSize(userScale[i]))
-                iTopUsersStart=i;
-                maxTopUsersX+=userScaleSize(userScale[i])*2;
-                if(userScaleSize(userScale[i])<topUsersStart) break
-            };
-
-        // console.log(iTopUsersStart,maxTopUsersX)
-            
-        var scaleTopUsersWidth=d3.scale.linear().domain([0,iTopUsersStart]).range([(vizWidth/2)-50-300,(vizWidth/2)+150-300])
-        // ,
-        //     scaleSmallUsersWidth=d3.scale.linear().domain([0,userScale.length]).range([0,vizWidth-300])
-
-        var scaleUsersWidth=d3.scale.linear().domain([0,userScale.length]).range([0,vizWidth-300])
-
-        // calculate communities coordinates
-        updateCommunityXY=function communityPos() {
-
-            var xprev=0,yprev=0,rprev=0;
-
-            if(communitySort=="btwCent") {
-                // console.log("sort by avg")
-                userCommunities.sort(function(a,b){
-                    // console.log(a,b)
-                    if(a.avgBtwCent < b.avgBtwCent) return b,a
-                    else return a,b
-                })
-            } else if (communitySort = "maxBtwCent") {
-                // console.log("sort by max btw cent")
-                userCommunities.sort(function(a,b){
-                    // console.log(a,b)
-                    var maxA=Math.max.apply(Math, a.users.map(function(d){ return d.btw_cent }));
-                    var maxB=Math.max.apply(Math, b.users.map(function(d){ return d.btw_cent }));
-                    // console.log((maxA,maxB));
-                    if(maxA<maxB) return b,a
-                    else return a,b
-                })
-            } if (communitySort =="random") {
-
-            }
-        
-            for (var i = 0; i < userCommunities.length; i++) {
-                var r,x,y;
-                r=userScaleSize(userCommunities[i].users.length);
-                if(communityLayout=="YAxis") {
-                    x=100,
-                    y=yprev+r*2+rprev-2;
-                } else if (communityLayout=="XAxis") {
                     
-                    // x=scaleUsersWidth(i);
-
-                    // if(i<=iTopUsersStart) x=xprev+r*2+rprev-2;
-                    if(i<=iTopUsersStart) x=scaleTopUsersWidth(i)
-                    else x=scaleUsersWidth(i);
-
-                    y=vizMiddleY+Math.random()*200;
+                    // communitiesEdges.push(userEdges[i]);
 
                 }
-
-                communitiesX[userCommunities[i].id]=x;
-                communitiesY[userCommunities[i].id]=y;
-                xprev=x;
-                yprev=y;
-                rprev=r;
             }
-        }
 
-        updateCommunityXY()
+            // console.log(myCommunitiesEdges)
+
+            for (com in myCommunitiesEdges) {
+                for (var i = 0; i < myCommunitiesEdges[com].length; i++) {
+                    var e=myCommunitiesEdges[com][i];
+                    if(e.direction == "from") communitiesEdges.push({"source": Number(com), "target" : e.name, "weight":e.weight})
+                    else communitiesEdges.push({"source": e.name, "target" : Number(com), "weight":e.weight})
+
+                };
+            }
+            
+            var myCommunities={}
+
+            for (var i = 0; i < userCommunities.length; i++) {
+                var u=userCommunities[i];
+                myCommunities[u.id]=u;
+            };
+
+            communitiesEdges.forEach(function(link) {
+                link.source = myCommunities[link.source] || 
+                    (myCommunities[link.source] = {name: link.source});
+                link.target = myCommunities[link.target] || 
+                    (myCommunities[link.target] = {name: link.target});
+                link.value = +link.weight;
+            });
+
+        // COMMUNITIES XY
+            // nodes scale
+            var userDisplayScale=[5,25],
+                userScale=userCommunities.map(function(d){return Number(d.users.length)}),
+                maxMinUserScale=[Math.min.apply(Math,userScale), Math.max.apply(Math,userScale)],
+                userScaleSize=d3.scale.linear().domain(maxMinUserScale).range(userDisplayScale),
+                mapCommunitesScaleSize=d3.scale.linear().domain(maxMinUserScale).range([1,5]);                  
+            userScale.sort(function(a,b){return b-a});
+
+            var topUsersStart=8,
+                iTopUsersStart=1,
+                maxTopUsersX=0;
+
+                for (var i = 0; i < userScale.length; i++) {
+                    // console.log(userScaleSize(userScale[i]))
+                    iTopUsersStart=i;
+                    maxTopUsersX+=userScaleSize(userScale[i])*2;
+                    if(userScaleSize(userScale[i])<topUsersStart) break
+                };
+    
+            var scaleTopUsersWidth=d3.scale.linear().domain([0,iTopUsersStart]).range([(vizWidth/2)-50-300,(vizWidth/2)+150-300]),
+            scaleUsersWidth=d3.scale.linear().domain([0,userScale.length]).range([0,vizWidth-300])
+
+            // calculate communities coordinates
+            updateCommunityXY=function communityPos() {
+
+                var xprev=0,yprev=0,rprev=0;
+
+                if(communitySort=="btwCent") {
+                    // console.log("sort by avg")
+                    userCommunities.sort(function(a,b){
+                        // console.log(a,b)
+                        if(a.avgBtwCent < b.avgBtwCent) return b,a
+                        else return a,b
+                    })
+                } else if (communitySort = "maxBtwCent") {
+                    // console.log("sort by max btw cent")
+                    userCommunities.sort(function(a,b){
+                        // console.log(a,b)
+                        var maxA=Math.max.apply(Math, a.users.map(function(d){ return d.btw_cent }));
+                        var maxB=Math.max.apply(Math, b.users.map(function(d){ return d.btw_cent }));
+
+                        if(maxA<maxB) return b,a
+                        else return a,b
+                    })
+                } if (communitySort =="random") {
+                }
+            
+                for (var i = 0; i < userCommunities.length; i++) {
+                    var r,x,y;
+                    r=userScaleSize(userCommunities[i].users.length);
+                    if(communityLayout=="YAxis") {
+                        x=100,
+                        y=yprev+r*2+rprev-2;
+                    } else if (communityLayout=="XAxis") {
+                        
+                        // x=scaleUsersWidth(i);
+
+                        // if(i<=iTopUsersStart) x=xprev+r*2+rprev-2;
+                        if(i<=iTopUsersStart) x=scaleTopUsersWidth(i)
+                        else x=scaleUsersWidth(i);
+                        y=vizMiddleY-200+Math.random()*200;
+
+                    }
+
+                    communitiesX[userCommunities[i].id]=x;
+                    communitiesY[userCommunities[i].id]=y;
+                    xprev=x;
+                    yprev=y;
+                    rprev=r;
+                }
+            }
+
+            updateCommunityXY()
 
         // WORD nodes
-        var wordNodes=graphData.words.nodes;
-        var myWordNodes={},
-            wordsX={},
-            wordsY={};
+            var wordNodes=graphData.words.nodes;
+            var myWordNodes={},
+                wordsX={},
+                wordsY={};
 
-        for (var i = 0; i < wordNodes.length; i++) {
-            myWordNodes[wordNodes[i]["name"]] =wordNodes[i];
-            wordNodes[i].words=null;
-        };
+            for (var i = 0; i < wordNodes.length; i++) {
+                myWordNodes[wordNodes[i]["name"]] =wordNodes[i];
+                wordNodes[i].words=null;
+            };
 
-        // Compute edges for words force
-        var wordEdges=graphData.words.edges;
-        wordEdges.forEach(function(link) {            
-            link.source = myWordNodes[link.source] || 
-                (myWordNodes[link.source] = {name: link.source});
-            link.target = myWordNodes[link.target] || 
-                (myWordNodes[link.target] = {name: link.target});
-            link.value = +link.weight;
-        });
+            // Compute edges for words force
+            var wordEdges=graphData.words.edges;
+            wordEdges.forEach(function(link) {            
+                link.source = myWordNodes[link.source] || 
+                    (myWordNodes[link.source] = {name: link.source});
+                link.target = myWordNodes[link.target] || 
+                    (myWordNodes[link.target] = {name: link.target});
+                link.value = +link.weight;
+            });
 
         // WORD TO COMMUNITIES EDGES
 
-        var wordsUsersPath=graphData.words_user;    
-        var tmp={};
-        wordsToCommunities=[];
-        var communitiesToWords={};
+            var wordsUsersPath=graphData.words_user;    
+            var tmp={};
+            wordsToCommunities=[];
+            var communitiesToWords={};
 
-        // clean data to match communities instead of users
-        wordsUsersPath.forEach(function(word){
-            var p=word.source+"_"+word.community; 
-            if (!tmp[p]) tmp[p]=0;
-            tmp[p]+=word.weight;
-        })
-        
-        for(var word in  tmp) {
-            var data= word.split("_")
-            if( !isNaN(communitiesX[data[1]]) ) { 
-                wordsToCommunities.push({"source": data[0], "target" : data[1], "weight": tmp[word]})
-                
-                // init word
-                if(communitiesToWords[data[1]]== undefined) communitiesToWords[data[1]]=[]
-                communitiesToWords[data[1]].push({"word": data[0], "weight": tmp[word]})
+            // clean data to match communities instead of users
+            wordsUsersPath.forEach(function(word){
+                var p=word.source+"_"+word.community; 
+                if (!tmp[p]) tmp[p]=0;
+                tmp[p]+=word.weight;
+            })
+            
+            for(var word in  tmp) {
+                var data= word.split("_")
+                if( !isNaN(communitiesX[data[1]]) ) { 
+                    wordsToCommunities.push({"source": data[0], "target" : data[1], "weight": tmp[word]})
+                    
+                    // init word
+                    if(communitiesToWords[data[1]]== undefined) communitiesToWords[data[1]]=[]
+                    communitiesToWords[data[1]].push({"word": data[0], "weight": tmp[word]})
+                }
             }
-        }
-        
-        wordsToCommunities.forEach(function(link) {            
-            link.source = myWordNodes[link.source] || 
-                (myWordNodes[link.source] = {name: link.source});
-            link.target = myWordNodes[link.target] || 
-                (myWordNodes[link.target] = {name: link.target});
-            link.value = +link.weight;
-        });
+            
+            wordsToCommunities.forEach(function(link) {            
+                link.source = myWordNodes[link.source] || 
+                    (myWordNodes[link.source] = {name: link.source});
+                link.target = myWordNodes[link.target] || 
+                    (myWordNodes[link.target] = {name: link.target});
+                link.value = +link.weight;
+            });
 
-        updateWordXY= function updateWordXY() {
-            // console.log("updateWordXY")
-            var margin=30,
-                rgx=d3.scale.linear().domain([0,wordNodes.length]).range([margin,vizWidth-margin-200]),
-                s=d3.shuffle(wordNodes),
-                rgy=d3.scale.linear().domain(fontScale).range([margin,vizMiddleY-150]);
-            // var rgy=d3.scale.linear().domain([0,wordNodes.length]).range([0,vizHeight])
+            updateWordXY= function updateWordXY() {
+                // console.log("updateWordXY")
+                var margin=30,
+                    rgx=d3.scale.linear().domain([0,wordNodes.length]).range([margin,vizWidth-margin-200]),
+                    s=d3.shuffle(wordNodes),
+                    rgy=d3.scale.linear().domain(fontScale).range([margin,vizMiddleY-150]);
+                // var rgy=d3.scale.linear().domain([0,wordNodes.length]).range([0,vizHeight])
 
-            for (var i = 0; i < wordNodes.length; i++) {
-                var d=s[i];
+                for (var i = 0; i < wordNodes.length; i++) {
+                    var d=s[i];
 
-                // console.log(wordScaleFont(d.count))
-                wordsX[d.name]=rgx(i);
-                wordsY[d.name]=rgy(wordScaleFont(d.count));
+                    // console.log(wordScaleFont(d.count))
+                    wordsX[d.name]=rgx(i);
+                    wordsY[d.name]=rgy(wordScaleFont(d.count));
 
-            };
-            // console.log("wordsXY",wordsX,wordsY);
-        }
+                };
+                // console.log("wordsXY",wordsX,wordsY);
+            }
 
-        // COMMUNITIES NODES - PUSH DATA
+        // COMMUNITIES NODES - PUSH MORE DATA
         communitiesIndex={}
 
         userCommunities.forEach(function(community){
@@ -329,118 +327,172 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
 
             communitiesIndex[community.id]=community;
         })
-        // console.log(communitiesToWords);
-
-
+        
         // MAP : parse data properly
-        var umap=[];
-        // sort provinces 
-        mapData.provinces.map(function(d) { umap[d.name]=d.count });
-        delete(umap[null]); // remove useless elements
-        delete(umap[0]);
 
-        var v = Object.keys(umap).map(function(k){return umap[k]})
+            var provincesInfo={};
+            for (var i = 0; i < provincesInfoData.length; i++) {
+                provincesInfo[provincesInfoData[i].name]=provincesInfoData[i];
+            };
+            console.log(provincesInfo);
 
-        var projection = d3.geo.mercator()
-            .center([116,39]) // china long lat 
-            .scale(vizWidth/2);
+            var umap=[];
+            // sort provinces 
+            mapData.provinces.map(function(d) { umap[d.name]=d.count });
+            delete(umap[null]); // remove useless elements
+            delete(umap[0]);
 
-        var mapPath = d3.geo.path()
-            .projection(projection);
+            var v = Object.keys(umap).map(function(k){return umap[k]})
 
-        // projection for HK / Macau
-        var projection2 = d3.geo.mercator()
-            .center([126,17])
-            .scale(2000);
+            var projection = d3.geo.mercator()
+                .center([116,39]) // china long lat 
+                .scale(vizWidth/2);
 
-        var path2 = d3.geo.path()
-            .projection(projection2);
+            var mapPath = d3.geo.path()
+                .projection(projection);
+
+            // projection for HK / Macau
+            var projection2 = d3.geo.mercator()
+                .center([126,17])
+                .scale(2000);
+
+            var path2 = d3.geo.path()
+                .projection(projection2);
 
         // CENTROIDS
-        // Get provinces centroids
-        var mapCentroids=[];
-        var mapFeatures= [topojson.feature(mainland, mainland.objects.provinces).features,topojson.feature(taiwan, taiwan.objects.layer1).features.filter(function(d) { return d.properties.GU_A3 === 'TWN'; }),topojson.feature(hkmacau, hkmacau.objects.layer1).features]
-        
-        var centroids={}
-
-        function updateCentroidsXY() {
+            // Get provinces centroids
+            var mapCentroids=[];
+            var mapFeatures= [topojson.feature(mainland, mainland.objects.provinces).features,topojson.feature(taiwan, taiwan.objects.layer1).features.filter(function(d) { return d.properties.GU_A3 === 'TWN'; }),topojson.feature(hkmacau, hkmacau.objects.layer1).features]
             
-            // console.log("updateCentroidsXY")
+            var centroids={}
 
-            mapCentroids=[];
-            centroids={};
-            var cnt=0,
-                rgx=d3.scale.linear().domain([0,30]).range([20,vizWidth-300]);
+            function updateCentroidsXY() {                
+                mapCentroids=[];
+                centroids={};
+                var cnt=0,
+                    rgx=d3.scale.linear().domain([0,30]).range([20,vizWidth-300]);
 
-            for (var i = 0; i < mapFeatures.length; i++) {
-                mapFeatures[i].forEach(function(d, i) {
-                    cnt++;
+                for (var i = 0; i < mapFeatures.length; i++) {
+                    mapFeatures[i].forEach(function(d, i) {
+                        cnt++;
+                        var centroid;
+                        if (d.properties.name==undefined && (d.properties.NAME=="Hong Kong" || d.properties.NAME=="Macao") ) {
+                            centroid = path2.centroid(d);
+                            centroid.x = centroid[0]+650;
+                            centroid.y = centroid[1]+400;
+                            centroid.cx = centroid[0]+650;
+                            centroid.cy = centroid[1]+400;
+                        } else {
+                            centroid = mapPath.centroid(d);
+                            centroid.x = centroid[0];
+                            centroid.y = centroid[1];
+                            centroid.cx = centroid[0];
+                            centroid.cy = centroid[1];
+                        }
 
-                    var centroid;
-                    if (d.properties.name==undefined && (d.properties.NAME=="Hong Kong" || d.properties.NAME=="Macao") ) {
-                        centroid = path2.centroid(d);
-                        centroid.x = centroid[0]+650;
-                        centroid.y = centroid[1]+400;
-                        centroid.cx = centroid[0]+650;
-                        centroid.cy = centroid[1]+400;
-                    } else {
-                        centroid = mapPath.centroid(d);
-                        centroid.x = centroid[0];
-                        centroid.y = centroid[1];
-                        centroid.cx = centroid[0];
-                        centroid.cy = centroid[1];
-                    }
+                        if (centroid.some(isNaN)) return;
 
-                    if (centroid.some(isNaN)) return;
+                        centroid.feature = d;
+                        if (d.properties.name != undefined) centroid.name=d.properties.name
+                        else if (d.properties.name==undefined && d.properties.NAME=="Taiwan") centroid.name='Taiwan';
+                        else if (d.properties.name==undefined && d.properties.NAME=="Macao") centroid.name='Aomen';
+                        else centroid.name='Xianggang';
 
-                    centroid.fixx = rgx(cnt); // fix display
-                    centroid.fixy = mapY+200; // fix display
+                        centroid.type="province";
+                        centroid.cleanName=provincesInfo[centroid.name].clean_name
+                        centroid.gdp=provincesInfo[centroid.name].gdp
+                        centroid.population=provincesInfo[centroid.name].population
 
-                    centroid.feature = d;
-                    if (d.properties.name != undefined) centroid.name=d.properties.name
-                    else if (d.properties.name==undefined && d.properties.NAME=="Taiwan") centroid.name='Taiwan';
-                    else if (d.properties.name==undefined && d.properties.NAME=="Macao") centroid.name='Aomen';
-                    else centroid.name='Xianggang';
+                        mapCentroids.push(centroid);
+                    });
+                };
 
-                    centroid.type="province";
+                // sort according to selected value
+                if (centroidsSort=="gdp") mapCentroids.sort(function(a,b){ return b.gdp-a.gdp;})
+                else if (centroidsSort=="population") mapCentroids.sort(function(a,b){ return b.population-a.population;})
 
-                    mapCentroids.push(centroid);
-                });
-            };
-            
-            for (var i = 0; i < mapCentroids.length; i++) {
-                var c=mapCentroids[i];
-                centroids[c.name]=c;
-            };
-        }
+                for (var i = 0; i < mapCentroids.length; i++) {
+                    var c=mapCentroids[i];
+                    
+                    mapCentroids[i].absx= rgx(i)-rgx(i-1);
+                    mapCentroids[i].fixx = rgx(i); // fix display
+                    mapCentroids[i].fixy = mapY+50; // fix display
 
-        // GEO COMMUNITIES        
-        var mapUsersEdges=[];
-        var tmpUE={}
-
-        for (var i = 0; i < userNodes.length; i++) {
-            var o=userNodes[i];
-            if( o.province!="0" && o.province != "Qita" && o.province != "Haiwai") {
-                if(tmpUE[o.community+"_"+o.province] == undefined ) tmpUE[o.community+"_"+o.province]=0;
-                tmpUE[o.community+"_"+o.province]+=1;
+                    centroids[c.name]=c;
+                };
             }
-        };
 
-        for (a in tmpUE) {
-            var data=a.split("_");
-            mapUsersEdges.push({
-                    "source" : data[0],
-                    "target" : data[1],
-                    "weight" : tmpUE[a] })
-        }
-
-        var provinceToUsers={};
+            updateCentroidsXY()
         
-        for (var i = 0; i < mapUsersEdges.length; i++) {
-            var d=mapUsersEdges[i];
-            if(provinceToUsers[d.target]==undefined) provinceToUsers[d.target]=[]
-            provinceToUsers[d.target].push(d.source);
-        };
+        // MAP TO COMMUNITIES        
+            var mapUsersEdges=[];
+            var tmpUE={}
+
+            for (var i = 0; i < userNodes.length; i++) {
+                var o=userNodes[i];
+                if( o.province!="0" && o.province != "Qita" && o.province != "Haiwai") {
+                    if(tmpUE[o.community+"_"+o.province] == undefined ) tmpUE[o.community+"_"+o.province]=0;
+                    tmpUE[o.community+"_"+o.province]+=1;
+                }
+            };
+
+            for (a in tmpUE) {
+                var data=a.split("_");
+                mapUsersEdges.push({
+                        "source" : data[0],
+                        "target" : data[1],
+                        "weight" : tmpUE[a] })
+            }
+
+            var provinceToUsers={},
+                usersToProvinces={};
+            
+            for (var i = 0; i < mapUsersEdges.length; i++) {
+                var d=mapUsersEdges[i];
+                
+                if(provinceToUsers[d.target]==undefined) provinceToUsers[d.target]=[]
+                provinceToUsers[d.target].push(d.source);
+
+                if(usersToProvinces[d.source]==undefined) usersToProvinces[d.source]=[]
+                usersToProvinces[d.source].push( {"province" : d.target, "weight" : d.weight} );
+
+            };
+            
+            // console.log(usersToProvinces);
+            var mapCommunitiesX={},
+                mapCommunitiesY={};
+
+            var mapCommunitiesXY=function() {
+
+                console.log("mapCommunitiesXY");
+
+                var centroidsMapCom={};
+
+                // weights by province for each community
+                for (uid in usersToProvinces){
+                    
+                    // vector
+                    var p=usersToProvinces[uid],
+                        w=0,
+                        tmpX=20,
+                        o=0;
+                    
+                    // sort by weight
+                    p.sort(function(a,b) { return b.weight -a.weight  })
+
+                    for (var i = 0; i < p.length; i++) {
+                        if(i==0) o=centroids[p[i].province].fixx
+                        tmpX+=centroids[p[i].province].absx*p[i].weight;
+                        w+=p[i].weight;
+                    };
+                    mapCommunitiesX[uid]=tmpX/w+o;
+                    mapCommunitiesY[uid]=mapY-200+Math.random()*200;
+
+                }
+
+            }
+            mapCommunitiesXY()
+            // console.log(mapCommunitiesX);
 
 // SVG SETUP //////////////////////////////////////////////////////////
 
@@ -465,6 +517,8 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
 
     function setupSVG() {
 
+        // WORDS
+        divWords=viz.append("g").attr("class","text")
 
         wordForce= d3.layout.force()
             .nodes(wordNodes.filter(function (d) {
@@ -498,39 +552,15 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
             .on("tick", tickWord);
             // .start();
 
-        wordsToUsers = viz.append("g")
-            .attr("class", "wordusers")
+        wordPath = divWords.append("g")
+            .attr("class", "wordgraph")
             .selectAll("path")
-            .data(wordsToCommunities.filter(function (d) { 
-                if(selectedCommunity.length!=0) {
-                    for (var j = 0; j < selectedCommunity.length; j++) {
-                        var com=communitiesIndex[selectedCommunity[j]];
-                        if(com.words !=undefined) {
-                            for (var i = 0; i < com.words.length; i++) {
-                                if(com.id == d.target.name && com.words[i].word == d.source.name) return true 
-                            };
-                        }
-                    }
-                } else return true
-            }))
-            .enter()
-            .append("path")
-            .attr("class", "word-link")
-
-        // Word Graph links 
-        wordPath = viz.append("g")
-           .attr("class", "wordgraph")
-           .selectAll("path")
-            .data(wordForce.links())
-          .enter() //.append("svg:path")
+                .data(wordForce.links())
+            .enter() //.append("svg:path")
             .append("line")
             .attr("class", "word-link")
-            .style("stroke", function(d) { return "red" })
-            .style("stroke-opacity", function(d) { return 0.3 })
-            .style("stroke-width", function(d) {  return 1 });
 
-        // console.log(wordNodes)
-        words = viz.append("g")
+        words = divWords.append("g")
             .attr("class", "words")
             .selectAll("path")
             .data(wordNodes.filter(function (d) { 
@@ -550,45 +580,28 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
             .attr("class", "word")
             .call(wordForce.drag);
 
-        map = viz.append("g")
-            .attr("class", "map")
-            .attr("transform", function(d) { return "translate(0,"+ mapY +")";})
-
-        // Draw centroids
-        mapToUsers = viz.append("g")
-            .attr("class", "mapusers")
+        wordsToUsers = divWords.append("g")
+            .attr("class", "wordusers")
             .selectAll("path")
-            .data(mapUsersEdges.filter(function (d) { 
-                // console.log(d);
+            .data(wordsToCommunities.filter(function (d) { 
                 if(selectedCommunity.length!=0) {
                     for (var j = 0; j < selectedCommunity.length; j++) {
                         var com=communitiesIndex[selectedCommunity[j]];
-                        for (var i = 0; i < com.provinces.length; i++) {
-                            // console.log(i)
-                            if(com.id==d.source && com.provinces[i].label==d.target) return true 
-                        };
-                }
-            } else return true
-            }))
-            .enter()
-            .append("path")
-            .attr("class", "map-user")
-
-        nodeCentroids = viz.append("g")
-            .attr("class", "centroids")
-            .selectAll(".centroid")
-                .data(mapCentroids.filter(function (d) { 
-
-                    if(selectedCommunity.length!=0) {
-                        for (var j = 0; j < selectedCommunity.length; j++) {
-                            var com=communitiesIndex[selectedCommunity[j]];
-                            for (var i = 0; i < com.provinces.length; i++) {
-                                if(com.provinces[i].label==d.name) return true 
+                        if(com.words !=undefined) {
+                            for (var i = 0; i < com.words.length; i++) {
+                                if(com.id == d.target.name && com.words[i].word == d.source.name) return true 
                             };
                         }
-                    } else return true
-            }));
+                    }
+                } else return true
+            }))
+            .enter()
+            .append("line")
+            .attr("class", "word-link")
 
+        if(displayWordForce) wordForce.start()
+
+        // COMMUNITIES
         communitiesForce=d3.layout.force()
             .nodes(userCommunities.filter(function (d) { 
                     if(selectedCommunity.length!=0) {
@@ -612,15 +625,18 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
                     };
                 } else return true;
             }))
-            .size([vizWidth,vizHeight-vizMiddleY-30])
+            .size([vizWidth-200,300])
             .linkDistance(150)
             .charge(-1300)
             .gravity(.3)
             .on("tick", tickCommunity);
             // .start();
         
-        // console.log(communitiesForce)
-        arcs=viz.append("g").attr("class","arcs")
+        divCommunities=viz.append("g")
+            .attr("class","force")
+            .attr("transform","translate(30,"+(vizMiddleY-20)+")")
+
+        arcs=divCommunities.append("g").attr("class","arcs")
             .selectAll('.arc')
                 .data(communitiesForce.links()) // if conditionfilter
             .enter()
@@ -628,20 +644,66 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
             .attr('class', 'arc')
             .attr("marker-end", "url(#end)")
 
-        markers=viz.append("defs")
+        markers=divCommunities.append("defs")
           .selectAll("marker")
             .data(["end"])
           .enter()
             .append("svg:marker")
 
-        communities = viz.append("g").attr("class","communities")
+        communities=divCommunities.append("g").attr("class","communities")
             .selectAll('.community')
             .data(communitiesForce.nodes());
 
-        mapCommunities = viz.append("g").attr("class","map-communities")
+        // GEO 
+        divGeo=viz.append("g").attr("class","geo")
+            .attr("transform","translate(0,300)") 
+
+        mapCommunities=divGeo.append("g").attr("class","map-communities")
             .selectAll('.mapCommunity')
             .data(communitiesForce.nodes());
         
+        map=divGeo.append("g")
+            .attr("class", "map")
+            .attr("transform", function(d) { return "translate(0,"+ mapY +")";})
+
+        // Draw centroids
+        mapToUsers=divGeo.append("g")
+            .attr("class", "mapusers")
+            .selectAll("path")
+            .data(mapUsersEdges.filter(function (d) { 
+                // console.log(d);
+                if(selectedCommunity.length!=0) {
+                    for (var j = 0; j < selectedCommunity.length; j++) {
+                        var com=communitiesIndex[selectedCommunity[j]];
+                        for (var i = 0; i < com.provinces.length; i++) {
+                            // console.log(i)
+                            if(com.id==d.source && com.provinces[i].label==d.target) return true 
+                        };
+                }
+            } else return true
+            }))
+            .enter()
+            .append("path")
+            .attr("class", "map-user")
+
+        nodeCentroids=divGeo.append("g")
+            .attr("class", "centroids")
+            .selectAll(".centroid")
+                .data(mapCentroids.filter(function (d) { 
+
+                    if(selectedCommunity.length!=0) {
+                        for (var j = 0; j < selectedCommunity.length; j++) {
+                            var com=communitiesIndex[selectedCommunity[j]];
+                            for (var i = 0; i < com.provinces.length; i++) {
+                                if(com.provinces[i].label==d.name) return true 
+                            };
+                        }
+                    } else return true
+            }));
+
+        // users
+        divUsers=viz.append("g").attr("class","users")
+
         userForce=d3.layout.force()
             .nodes(userNodes)
             .links(userEdges)
@@ -652,17 +714,15 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
             .on("tick", tickUsers)
             // .start();
 
-        users = viz.append("g").attr("class","users")
+        users = divUsers.append("g").attr("class","usersnodes")
             .selectAll('.user')
             .data(userForce.nodes())
             .call(userForce.drag);
         
-        usersPath = viz.append("g").attr("class","userslinks")
+        usersPath = divUsers.append("g").attr("class","userslinks")
             .selectAll('.userlink')
             .data(userForce.links())
-            .call(userForce.drag);
-
-        
+            .call(userForce.drag);        
     }
 
     function drawLegend() {
@@ -780,7 +840,6 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
 
 // DRAW FUNCTIONS ///////////////////////////////////////////////////////
 
-
     // colors
         var fontScale=[15,60],
             wordScale=wordNodes.map(function(d){return d.count}),
@@ -789,7 +848,7 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
             userPathColor=d3.scale.category20b(),
             mapColor;
 
-        var btwPieColor=d3.scale.linear().domain([1,5]).range(["#ffffd4","#993404"]) //.interpolate(d3.interpolateHcl);
+        var btwPieColor=d3.scale.linear().domain([1,5]).range(["#ffffb2","#a50f15"]) //.interpolate(d3.interpolateHcl);
         
         // province color scale
         var pro={}, i=0, val=[];
@@ -859,7 +918,6 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
                 });
         }
         
-
     // WORDS
         function drawWords() {
 
@@ -923,16 +981,21 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
             });
 
             if(displayWordForce) tickWordPath();
-            if(displayWordToUsers) drawWordsToUsers();
+            if(displayWordToUsers) tickWordsToUsers();
         }
 
         function tickWordPath() {
+            
 
             wordPath.each(function (d, i) {
 
                 var self=d3.select(this);
 
+                if(!wordForceStarted) self.style("stroke-opacity", function(d) { return 0 })
+                else self.style("stroke-opacity", function(d) { return 0.3 })
+
                 self.attr("x1", function(d){
+                    // console.log(d.source);
                     var r=wordScaleFont(d.source.count),
                         w=wordForce.size()[0],
                         x=Math.max(r, Math.min(w, d.source.x));
@@ -964,77 +1027,160 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
                 });
         }
 
+        function drawWordPath() {
+
+            wordPath.each(function (d, i) {
+                var self = d3.select(this);
+                
+                self.style("stroke", function(d) { return "red" })
+                    .style("stroke-width", function(d) {  return 1 });
+
+                if(!wordForceStarted) self.style("stroke-opacity", function(d) { return 0 })
+                else self.style("stroke-opacity", function(d) { return 0.3 })
+            })
+        }
+
         tickWords=function(){ 
             (wordForceStarted)? wordForce.start():wordForce.stop();
             if(!wordForceStarted) updateWordXY();
-            // showWordPath=!wordForceStarted;
             tickWord();
         };
 
     // COMMUNITY 
         function drawCommunity() {
             
+            d3.select(".communities").selectAll("*").remove()
+
             var scaleBtwCent=d3.scale.linear().domain([0,1]).range([1,5])
+
+            // get max and min values of users length
+            var ul=communitiesForce.nodes().map(function(d){
+                return d.users.length;
+            }).sort(function(a,b){
+                return b-a;
+            });
             
+            
+            var maxU=ul[0];
+                minU=ul[ul.length-1];
+            
+            var maxArea=Math.PI*Math.pow(userScaleSize(maxU),2);
+                maxAreaPerUser=Math.sqrt(maxArea/maxU)/Math.PI;
+            
+            var scaleUsers=d3.scale.linear().domain([0,1]).range([.5,Math.round(maxAreaPerUser)])
+
+
+            // console.log((r/2)/d.users.length);
             communities.enter()
                 .append("g")
                 .attr("class","community")
                 .each(function (d, i) {
 
+                    d.layout="pack" // default
 
                     var self = d3.select(this);
                     var r=userScaleSize(d.users.length),
                         x=communitiesX[d.id],
                         y=communitiesY[d.id];
-                        
 
                     d.selected=false; // init state
 
-                    var pie = d3.layout.pie()
-                          .sort(null)
-                          .value(function(d) { return d.value });
-
                     // round to int and scale
-                    var mapBtw=d.users.map(function(d){ 
+                    var usersMapBtw=d.users.map(function(d){ 
                         return Math.round(scaleBtwCent(d.btw_cent));
                     });
+
                     
                     // count occurences
                     var userBtw={}
-                    mapBtw.map(function(d){ 
+                    usersMapBtw.map(function(d){ 
                         if(userBtw[d]==undefined) userBtw[d]=0
                         userBtw[d]+=1
                     })
 
-                    mapBtw=[] // init with rioght values
-                    for(u in userBtw) mapBtw.push({"label":u, "value":userBtw[u]})
 
-                    var g = self.append("g").attr("class","pie")
-                        .selectAll(".piece")
-                          // .data(pie(d.provinces))
-                          .data(pie(mapBtw))
-                        .enter().append("g")
-                          .attr("class", "piece")
+                    var mapBtw=[] // init with rioght values
+                    for(u in userBtw) mapBtw.push({"label":u, "value":userBtw[u]});
+
+                    if (d.layout=="pie") {
+
+                        var pie = d3.layout.pie()
+                              .sort(null)
+                              .value(function(d) { return d.value });
+
+                        var g = self.append("g").attr("class","node")
+                            .selectAll(".node")
+                              // .data(pie(d.provinces))
+                              .data(pie(mapBtw))
+                            .enter().append("g")
+                              .attr("class", "piece")
+                              .style("stroke","transparent")
+                              .style("stroke-width",0)
+                              .attr("transform", function(d) { 
+                                return "translate(" + x + "," + y + ")"; });
+
+                        var arc = d3.svg.arc()
+                          .outerRadius(r*2 - 10)
+                          .innerRadius(0);
+
+                        var dis=d;
+                        g.append("path")
+                          .attr("d", arc)
                           .style("stroke","transparent")
                           .style("stroke-width",0)
-                          .attr("transform", function(d) { 
-                            return "translate(" + x + "," + y + ")"; });
+                          .style("fill", function(d) { return btwPieColor(Number(d.data.label)); })
+                          .style("fill-opacity", function(e) { 
+                            for (var i = 0; i < selectedCommunity.length; i++) 
+                                 if(Number(dis.id)== selectedCommunity[i]) return 1
+                            return .5
+                        });
+                    } else if (d.layout=="pack") {
 
-                    var arc = d3.svg.arc()
-                      .outerRadius(r*2 - 10)
-                      .innerRadius(0);
+                        // var packData=d.users;
+                        d.children=d.users.sort(function(a,b) { return b.btw_cent-a.btw_cent });
+                        // packData.push(d)
 
-                    var dis=d;
-                    g.append("path")
-                      .attr("d", arc)
-                      .style("stroke","transparent")
-                      .style("stroke-width",0)
-                      .style("fill", function(d) { return btwPieColor(Number(d.data.label)); })
-                      .style("fill-opacity", function(e) { 
-                        for (var i = 0; i < selectedCommunity.length; i++) 
-                             if(Number(dis.id)== selectedCommunity[i]) return 1
-                        return .5
-                    });
+                        // console.log(d);
+                        var pack = d3.layout.pack()
+                            .value(function(d) { return d.users? d.users.length : 1 })
+                            .size([r*2, r*2]);
+
+                        var node = self.append("g").attr("class","node")
+                            .selectAll(".node")
+                              .data(pack.nodes(d))
+                            .enter().append("g")
+                              .attr("transform", function(d) {  return d.users? "translate(" + 0 + "," + 0 + ")" : "translate(" + (0+d.x-r) + "," + (0+d.y-r) + ")"; });
+                        
+
+                        node.append("circle")
+                            .attr("r", function(d) { return d.users? r : scaleUsers(d.btw_cent) })
+                            .style("stroke",function(d) { return d.users? "#aaa" : "none" })
+                            .style("stroke-width", 1)
+                            .style("fill", function(d) { return d.users? "#000" : btwPieColor(scaleBtwCent(d.btw_cent)) })
+                            
+
+                            // .attr("r", d.users? r : d.btw_cent*5)
+                    } else {
+
+                        var node = self.append("g").attr("class","node")
+                              .attr("transform", "translate(" + x + "," + y + ")" );
+                        
+                        var btw=0
+                        for (var i = 0; i < usersMapBtw.length; i++) {
+                            btw+=usersMapBtw[i];
+                        };
+                        console.log(btw,btw/d.users.length);
+
+                        node.append("circle")
+                            .attr("r", r)
+                            .style("stroke","none")
+                            .style("stroke-width", 1)
+                            .style("fill", btwPieColor(btw/d.users.length) )
+                    }
+                }).on("mouseenter", function(d){
+                    d.layout="pack";
+
+                    // drawCommunity();
                 })
 
                 tickCommunity();
@@ -1045,53 +1191,25 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
             // console.log("tickCommunity");
 
             communities.each(function (d, i) {
-                    var self = d3.select(this);
-                    var r=d.users.length,
-                        // x=communitiesX[d.id],
-                        // y=communitiesY[d.id];
-                        w=vizWidth-200,
-                        h=vizHeight-30,
-                        x=(d.x==undefined || !communitiesForceStarted)? communitiesX[d.name] : Math.max(r, Math.min(w - r, d.x)),
-                        y=(d.y==undefined || !communitiesForceStarted)? communitiesY[d.name] : Math.max(r, Math.min(h - r, d.y));
+                // console.log(d.id);
+                var self = d3.select(this);
+                var r=d.users.length,
+                    w=communitiesForce.size()[0],
+                    h=communitiesForce.size()[1],
+                    x=(d.x==undefined || !communitiesForceStarted)? communitiesX[d.id] : Math.max(r, Math.min(w - r, d.x)),
+                    y=(d.y==undefined || !communitiesForceStarted)? communitiesY[d.id] : Math.max(r, Math.min(h - r, d.y));
 
+                self.selectAll(".node")
+                    .transition()
+                    .attr("transform", function(d) {return "translate(" + x + "," + y + ")"; });
 
-                    self.select(".pie")
-                        // .enter()
-                        .selectAll(".piece")
-                        .transition()
-                        .attr("transform", function(d) {return "translate(" + x + "," + y + ")"; });
-                        // .attr("r",r)
-                        // .style("fill", function(d) { return (!d.children)? userColor(d.id) : "#000"; })
-                        // .attr("r", 5)
-                        // .style("fill", "#000")
-
-                    // Draw users
-                    if(d.children) {
-                        var childrenNodes=[]
-                        d.children.forEach( function(node) {
-
-                            // draw users
-
-                            //     x=self.attr("x")+10;
-                            //     y=self.attr("y")+10;
-
-                            //     console.log(self,d,x,y);
-
-                            //     self.append("circle")
-                            //         .attr("class",function(d) { return "community_"+d.id; })
-                            //         .attr("r",3)
-                            //         .style("fill", function(d) { return userColor(d.id);})
-                            //         .attr("transform", function(d) { 
-                            //             return "translate(" + x + "," + y + ")"; });
-                        })
-                    }
-
-                    d.x=x;
-                    d.y=y;
-                    return d;
-                
-                })
+                d.x=x;
+                d.y=y;
+                return d;
+            })
+            
             tickCommunityPath();
+            if(displayWordToUsers) tickWordsToUsers();
         }
 
         function drawCommunityPath() {
@@ -1112,7 +1230,6 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
                     self.select("path")
                         .style("opacity",".5");
                 })
-                
         }
 
         function tickCommunityPath() {
@@ -1140,10 +1257,10 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
 
                         var dx = d.target.x - d.source.x,
                             dy = d.target.y - d.source.y,
-                            dr = Math.sqrt(dx * dx + dy * dy);
+                            // dr = Math.sqrt(dx * dx + dy * dy);
+                            dr =0;
 
                         path = 'M ' + x1 + ','+y1+' A ' + dr + ',' + dr + ' 0 0,1 ' + x2 + ','+y2 ;
-
                     } else {
 
                         x1=communitiesX[d.source.community],
@@ -1172,8 +1289,9 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
                             select
                             .attr('d', path)
                             .style("fill","transparent")
-                            .style('opacity', .5)
-                            .style('stroke', function (start, end) { return  userPathColor(d.weight);}(x1, x2));
+                            .style('opacity', .9)
+                            .style('stroke-width', .5)
+                            .style('stroke', userPathColor(d.weight) );
                     }
 
                 })
@@ -1198,7 +1316,7 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
                     .style("fill", "#ccc" )
                     .style("fill-opacity", "0.8" )
                     .style("font-size", 11 )
-                    .text(d.name);
+                    .text(d.cleanName);
             }).on("click",function(d){
                 if(provinceToUsers[d.name]!=undefined) updateSelection(provinceToUsers[d.name]);
             });;
@@ -1209,9 +1327,8 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
         tickCentroids = function() {
 
             nodeCentroids.each(function (d, i) {
-
-                var x=(centroidsOnMap)? d.x :d.fixx;
-                var y=(centroidsOnMap)? mapY+d.y : d.fixy;
+                var x=(centroidsOnMap)? d.x :centroids[d.name].fixx;
+                var y=(centroidsOnMap)? mapY+d.y :centroids[d.name].fixy;
 
                 var self=d3.select(this);
                 self.transition().attr("transform", "translate(" + x + "," + y + ")")
@@ -1223,8 +1340,6 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
                 else
                     self.select("text")
                         .attr("transform", "rotate(0)")
-
-
             })
         }
 
@@ -1232,14 +1347,14 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
         tickMapToCommunities=function () {
 
             var extent=mapToUsers.data().map(function(d){return d.weight})
-            var weightScale=d3.scale.linear().domain(d3.extent(extent)).range([.01,1]);
+            var weightScale=d3.scale.linear().domain(d3.extent(extent)).range([.05,1]);
 
             mapToUsers.each(function (d, i) {
                 
                 var self=d3.select(this);
 
-                var x1=communitiesX[d.source],
-                    y1=communitiesY[d.source],
+                var x1=mapCommunitiesX[d.source],
+                    y1=mapCommunitiesY[d.source],
                     x2=(!centroidsOnMap)? centroids[d.target].fixx : centroids[d.target].x,
                     y2=(!centroidsOnMap)? centroids[d.target].fixy : mapY+centroids[d.target].y;
 
@@ -1247,8 +1362,8 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
                 if(!isNaN(x1) && !isNaN(y1) && !isNaN(x2) && !isNaN(y2)) {
 
                     var dx = x1 - x2,
-                        dy = y1 - y2,
-                        dr = Math.sqrt(dx * dx + dy * dy);
+                        dy = y1 -y2,
+                        dr = Math.sqrt(10*(dx*dx)+(dy*dy));
 
                     path = 'M ' + x1 + ','+y1+' A ' + dr + ',' + dr + ' 0 0,1 ' + x2 + ','+y2 ;
                     // console.log(path);
@@ -1262,18 +1377,38 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
                 }
                 
             })
+
+            mapCommunities.each(function (d, i) {                
+                var self=d3.select(this);
+                var r=mapCommunitesScaleSize(d.users.length),
+                        x=mapCommunitiesX[d.id],
+                        y=mapCommunitiesY[d.id];
+
+                    self.transition()
+                        .select("circle")
+                        .attr("cx",x)
+                        .attr("cy",y);
+                        // .attr("transform", "translate(" + x + "," + y + ")")
+            })
+
         }
 
         function drawMapCommunities () {
             
-            communities.enter()
+            mapCommunities.enter()
                 .append("g")
                 .attr("class","community")
                 .each(function (d, i) {
 
                     var self = d3.select(this);
+
+                    // for (var i = 0; i < usersToProvinces[d.id].length; i++) {
+                    //     var p=usersToProvinces[d.id][i];
+                    //     console.log(d.id,p.province,p.weight);
+                    // };
+
                     var r=mapCommunitesScaleSize(d.users.length),
-                        x=communitiesX[d.id],
+                        x=mapCommunitiesX[d.id],
                         y=communitiesY[d.id];
 
                     self.append("circle")
@@ -1281,6 +1416,7 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
                         .attr("fill", "#fff")
                         .attr("cx",x)
                         .attr("cy",y)
+
                 })
         }
 
@@ -1301,338 +1437,339 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
         }
     
     // WORDS TO USERS
-        function drawWordsToUsers() {
+        function tickWordsToUsers() {
+            console.log("displayWordToUsers");
+            wordsToUsers.each(function (d, i) {                
 
-            if(displayWordToUsers){
-                wordsToUsers.each(function (d, i) {                
-                    
-                    var self=d3.select(this);
-                    var x1=wordsX[d.source.name],
-                        y1=wordsY[d.source.name],
-                        x2=communitiesX[d.target.name],
-                        y2=communitiesY[d.target.name];
+                var self=d3.select(this);
+                var x1=wordsX[d.source.name],
+                    y1=wordsY[d.source.name],
+                    x2=communitiesX[d.target.name],
+                    y2=communitiesY[d.target.name];
 
-                    if(!isNaN(x1) && !isNaN(y1) && !isNaN(x2) && !isNaN(y2)) {
-                        self.style("stroke", function(d) { return "#aaa" })
-                            .style("stroke-opacity", function(d) { return (d.weight > 50)? d.weight*0.002:0 })
-                            .style("stroke-width", function(d) {  return 2 })
-                            .transition()
-                            .attr("x1", x1)
-                            .attr("y1", y1)
-                            .attr("x2", x2)
-                            .attr("y2", y2)
-                    }
-                })
-            }
+                if(!isNaN(x1) && !isNaN(y1) && !isNaN(x2) && !isNaN(y2)) {
+                    self.style("stroke", function(d) { return "#fff" })
+                        .style("stroke-opacity", function(d) { return (d.weight > 50)? d.weight*0.002:0 })
+                        .style("stroke-width", function(d) {  return 2 })
+                        .transition()
+                        .attr("x1", x1)
+                        .attr("y1", y1)
+                        .attr("x2", x2)
+                        .attr("y2", y2)
+                }
+            })
         }
 
     // MAP
-    // Mainland provinces
-    function drawMainland(error, cn) {
-        map.append("g")
-            .attr("class", "mainland")
-            .selectAll("path")
-            .data(topojson.feature(cn, cn.objects.provinces).features)
-            .enter()
-            .append("g")
-            .attr("class", "province")
-            .append("path")
-            .attr("d", mapPath)
-            // .attr("id", function(d) { return d.id; })
-            .attr("class", "province")
-            .attr("class", function(d){ return d.properties.name })
-            .attr("fill", "#000")
-            // .attr("fill", function(d) { return mapColor(umap[d.properties.name]); })
-            // .attr("fill", function(d) { return colorMap(d.properties.name); })
-            .attr("stroke", "#ccc")
-            .attr("stroke-width", "0.35")
-            .on("click",function(d){
-                
-                // update users mentioned
-                if(provinceToUsers[d.properties.name]!=undefined) updateSelection(provinceToUsers[d.properties.name]);
+        // Mainland provinces
+        function drawMainland(error, cn) {
+            map.append("g")
+                .attr("class", "mainland")
+                .selectAll("path")
+                .data(topojson.feature(cn, cn.objects.provinces).features)
+                .enter()
+                .append("g")
+                .attr("class", "province")
+                .append("path")
+                .attr("d", mapPath)
+                // .attr("id", function(d) { return d.id; })
+                .attr("class", "province")
+                .attr("class", function(d){ return d.properties.name })
+                .attr("fill", "#000")
+                // .attr("fill", function(d) { return mapColor(umap[d.properties.name]); })
+                // .attr("fill", function(d) { return colorMap(d.properties.name); })
+                .attr("stroke", "#ccc")
+                .attr("stroke-width", "0.35")
+                .on("click",function(d){
+                    
+                    // update users mentioned
+                    if(provinceToUsers[d.properties.name]!=undefined) updateSelection(provinceToUsers[d.properties.name]);
 
-                
-            });
-    }
+                    
+                });
+        }
 
-    // Taiwan
-    function drawTaiwan(error, cn) {
+        // Taiwan
+        function drawTaiwan(error, cn) {
 
-        map.append('g')
-            .attr("class", "taiwan province")
-            .selectAll("path")
-            .data(topojson.feature(cn, cn.objects.layer1).features.filter(function(d) { return d.properties.GU_A3 === 'TWN'; }))
-            .enter()
-            .append("path")
-            .attr("d", mapPath)
-            .attr("id", function(d) { return d.id; })
-            .attr("class", "province")
-            .attr("class", function(d){ return "Taiwan" })
-            .attr("fill", "#000")
-            // .attr("fill", function(d) { return mapColor(umap["Taiwan"]); })
-            .attr("stroke", "#ccc")
-            .attr("stroke-width", "0.35")
-            .on("click",function(d){
-                
-                console.log("haha")
-                // update users mentioned
-                if(provinceToUsers["Taiwan"]!=undefined) updateSelection(provinceToUsers["Taiwan"]);
+            map.append('g')
+                .attr("class", "taiwan province")
+                .selectAll("path")
+                .data(topojson.feature(cn, cn.objects.layer1).features.filter(function(d) { return d.properties.GU_A3 === 'TWN'; }))
+                .enter()
+                .append("path")
+                .attr("d", mapPath)
+                .attr("id", function(d) { return d.id; })
+                .attr("class", "province")
+                .attr("class", function(d){ return "Taiwan" })
+                .attr("fill", "#000")
+                // .attr("fill", function(d) { return mapColor(umap["Taiwan"]); })
+                .attr("stroke", "#ccc")
+                .attr("stroke-width", "0.35")
+                .on("click",function(d){
+                    
+                    // update users mentioned
+                    if(provinceToUsers["Taiwan"]!=undefined) updateSelection(provinceToUsers["Taiwan"]);
 
-                
-            });
-    }
+                    
+                });
+        }
 
-    // HK and Macau
-    function drawHkMacau(error, cn) {
-        // console.log(error)
-        // console.log(topojson.feature(cn, cn.objects.layer1).features.filter(function(d) { return d.properties.GU_A3 === "HKG" }))
-      
-        viz.select('.map')
-            .append("g")
-            .attr("class", "hk")
-            .attr("transform", "translate("+650+","+400+")")
-            .selectAll("path")
-            .data(topojson.feature(cn, cn.objects.layer1).features)
-            .enter()
-            .append("path")
-            .attr("d", path2)
-            // .attr("id", function(d) { return d.id; })
-            .attr("class", "province")
-            .attr("class", "Xianggang")
-            .attr("fill", "#000")
-            // .attr("fill", function(d) { return mapColor(umap["Xianggang"]); })
-            .attr("stroke", "#ccc")
-            .attr("stroke-width", "0.35");
+        // HK and Macau
+        function drawHkMacau(error, cn) {
+            // console.log(error)
+            // console.log(topojson.feature(cn, cn.objects.layer1).features.filter(function(d) { return d.properties.GU_A3 === "HKG" }))
+          
+            viz.select('.map')
+                .append("g")
+                .attr("class", "hk")
+                .attr("transform", "translate("+650+","+400+")")
+                .selectAll("path")
+                .data(topojson.feature(cn, cn.objects.layer1).features)
+                .enter()
+                .append("path")
+                .attr("d", path2)
+                // .attr("id", function(d) { return d.id; })
+                .attr("class", "province")
+                .attr("class", "Xianggang")
+                .attr("fill", "#000")
+                // .attr("fill", function(d) { return mapColor(umap["Xianggang"]); })
+                .attr("stroke", "#ccc")
+                .attr("stroke-width", "0.35");
 
-        viz.select(".hk")
-            .append("text") //add some text
-            .attr("dx", function(d){return 20})
-            .attr("dy", function(d){return 35})
-            .attr("font-family", "sans-serif")
-            .attr("fill", "#aaaaaa")
-            .attr("font-size", 10)
-            .text("Hong Kong & Macau");
-
-        // add demarcation
-        viz.select(".hk")
-           .append("svg:line")
-             .attr("x1", 130)
-             .attr("y1", 5)
-             .attr("x2", 0)
-             .attr("y2", 10)
-             .style("stroke", "#cccccc")
-             .style("stroke-width", 1);
-        
-        viz.select(".hk")
-            .append("svg:line")
-             .attr("x1", 0)
-             .attr("y1", 10)
-             .attr("x2", -10)
-             .attr("y2", 60)
-             .style("stroke", "#cccccc")
-             .style("stroke-width", 1);
-    }
-
-    function tickMap() {
-        
-
-        // var ext=mapToUsers.data().map(function(d){return d.weight });
-        // console.log(umap,v);
-        mapColor=d3.scale.linear().domain(d3.extent(v)).range(["black","white"])
-
-        for (var i = 0; i < mapToUsers.data().length; i++) {
-            var province="path."+mapToUsers.data()[i].target
-            // console.log(c(mapToUsers.data()[i].weight))
-            d3.select(province)
-                // .attr("fill",mapColor(mapToUsers.data()[i].weight))
-                .attr("fill",  mapColor(umap[mapToUsers.data()[i].target]))
-        };
-
-        // DRAW LEGEND  Color bar adapted from http://tributary.io/tributary/3650755/
-        var cw=10,
-            ch=2.5;
-        map.append("g")
-            .attr("class","caption")
-            .append("g")
-            .attr("class","color-bar")
-            .selectAll("rect")
-                .data(d3.range(d3.min(v), d3.max(v), (d3.max(v)-d3.min(v))/50.0))
-            .enter()
-            .append("rect")
-            .attr({width: cw,
-                  height: 5,
-                  y: function(d,i) { return mapY-cw-i*ch },
-                  x: vizWidth-200,
-                  fill: function(d,i) { return mapColor(d); } })
-        
-        map.select(".caption")
-            .append("g")
-            .attr("transform", "translate(" + (vizWidth-cw-180) + "," + (mapY-cw-ch*49) + ")")
-            .call(d3.svg.axis()
-                   .scale(d3.scale.linear().domain(d3.extent(v)).range([ch*50,0]))
-                    .orient("right"))
-            .attr("font-family", "sans-serif")
-            .attr("fill", "#ccc")
-            .attr("font-size", 10)
-                
-        map.select('.caption')
-            .append("g")
-            .attr("class","units")
-            .attr("transform", "translate("+(vizWidth-cw-200)+","+(mapY/2-cw+180)+")")
-            // .attr("transform", "rotate(90 "+(map_width-cw)+","+(map_height/2-cw)+")")
-            .append("text")
-            .attr("dx", -5)          
-            .attr("dy", 2 )
-            .attr("text-anchor", "middle")  
-            .attr("font-family", "sans-serif")
-            .attr("fill", "#ccc")
-            .attr("font-size", 10)
-            .attr("transform", "rotate(-90)")//function(d){ console.log(d); return "rotate(90 "+d.x+","+d.y+")"})          
-            .text("Volume of tweets (x100)")
-    }
-
-    function drawMap() {
-        drawMainland(error,mainland);
-        drawTaiwan(error,taiwan);
-        drawHkMacau(error,hkmacau);
-        tickMap();
-    }
-
-    function drawTimeSerie() {
-        
-        d3.select("#timeserie").selectAll("*").remove() //clear precedent version
-        // Margins, timeWidth and timeHeight. 
-        var w=300,
-            h=300;
-
-        var margin = {top: 20, right: 20, bottom: 90, left: 30},
-            barTimeWidth = w,
-            timeWidth = barTimeWidth - margin.left - margin.right,
-            timeHeight = h - margin.top - margin.bottom;
-
-        // // Construct our SVG object.
-        var svg = d3.select("#timeserie").append("svg")
-            .attr("width", timeWidth + margin.left + margin.right)
-            .attr("height", timeHeight + margin.top + margin.bottom)
-          .append("g")
-            .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-
-        // Build Scales.
-        var x = d3.time.scale().range([timeWidth/timeData.length/2, timeWidth-timeWidth/timeData.length/2]);
-        // var x = d3.scale.ordinal().rangeRoundBands([0, timeWidth], .05);
-        var y = d3.scale.linear().range([timeHeight, 0]);
-
-        // Date parsing.
-        // var parseDate = d3.time.format("%Y-%m-%d %H:%M:%S");
-
-        // X-axis.
-        var xAxis = d3.svg.axis()
-            .scale(x)
-            .orient("bottom")
-            // .ticks(d3.time.month, 1)
-            .tickFormat(d3.time.format("%d %B"));
-
-        var yAxis = d3.svg.axis()
-            .scale(y)
-            .orient("left")
-            .ticks(10);
-
-        timeData.forEach(function(d) {
-            d.date=new Date(d.timestamp*1000);
-            // console.log(dt);
-            // d.date = parseDate.parse(dtmp);
-            // console.log(d);
-        });
-
-        // Set scale domains. 
-        x.domain(d3.extent(timeData, function(d) { return d.date; }));
-        y.domain([0, d3.max(timeData, function(d) { return d.count; })]);
-
-        // Call x-axis. 
-        d3.select(".x.axis")
-            .transition().duration(1000)
-            .call(xAxis);
-
-        var timeseries= svg.append("g")
-            .attr("class","time bars series")
-            // .attr("transform", "translate(" + (vizWidth-timeWidth-70) + "," +(vizHeight-timeHeight-100)  + ")")  
-
-
-        // Draw bars. 
-        var bars = timeseries.append("g")
-            .attr("class","bars")
-            .selectAll(".count")
-            .data(timeData, function(d) { return d.date; });
-
-        bars.exit().remove();
-            
-        bars.transition().duration(1000)
-            .attr("x", function(d) { return x(d.date) - timeWidth/timeData.length/2; })
-            .attr("width", timeWidth / timeData.length)
-            .attr("y", function(d) { return y(d.count); })
-            .attr("height", function(d) { return timeHeight - y(d.count);});
-            
-        bars.enter().append("rect")
-            .attr("class", "count")
-            .attr("width", timeWidth / timeData.length)
-            .attr("x", function(d) { return x(d.date) - (timeWidth/timeData.length)/2; })
-            .attr("y", timeHeight)
-            .attr("height", 0)
-            .transition().duration(1000)
-            .attr("y", function(d) { return y(d.count); })
-            .attr("height", function(d) { return timeHeight - y(d.count);});
-
-        timeseries.append("g")
-            .attr("class", "x axis")
-            .attr("transform", "translate(0," + timeHeight + ")")
-            .call(xAxis)
-            .selectAll("text")
+            viz.select(".hk")
+                .append("text") //add some text
+                .attr("dx", function(d){return 20})
+                .attr("dy", function(d){return 35})
                 .attr("font-family", "sans-serif")
-                .attr("fill", "#4B4B4B")
+                .attr("fill", "#aaaaaa")
                 .attr("font-size", 10)
-                .style("text-anchor", "end")
-                .attr("dx", "-.8em")
-                .attr("dy", ".15em")
-                .attr("transform", function(d) {
-                    return "rotate(-65)" 
-                    })
-                // .attr("transform", "rotate(-90)" );
+                .text("Hong Kong & Macau");
 
-        timeseries.append("g")
-            .attr("class", "y axis")
-            .attr("transform", "translate(0,0)")
-            .call(yAxis)
-            .selectAll("text")
+            // add demarcation
+            viz.select(".hk")
+               .append("svg:line")
+                 .attr("x1", 130)
+                 .attr("y1", 5)
+                 .attr("x2", 0)
+                 .attr("y2", 10)
+                 .style("stroke", "#cccccc")
+                 .style("stroke-width", 1);
+            
+            viz.select(".hk")
+                .append("svg:line")
+                 .attr("x1", 0)
+                 .attr("y1", 10)
+                 .attr("x2", -10)
+                 .attr("y2", 60)
+                 .style("stroke", "#cccccc")
+                 .style("stroke-width", 1);
+        }
+
+        function tickMap() {
+            
+
+            // var ext=mapToUsers.data().map(function(d){return d.weight });
+            // console.log(umap,v);
+            mapColor=d3.scale.linear().domain(d3.extent(v)).range(["black","white"])
+
+            for (var i = 0; i < mapToUsers.data().length; i++) {
+                var province="path."+mapToUsers.data()[i].target
+                // console.log(c(mapToUsers.data()[i].weight))
+                d3.select(province)
+                    // .attr("fill",mapColor(mapToUsers.data()[i].weight))
+                    .attr("fill",  mapColor(umap[mapToUsers.data()[i].target]))
+            };
+
+            // DRAW LEGEND  Color bar adapted from http://tributary.io/tributary/3650755/
+            var cw=10,
+                ch=2.5;
+            map.append("g")
+                .attr("class","caption")
+                .append("g")
+                .attr("class","color-bar")
+                .selectAll("rect")
+                    .data(d3.range(d3.min(v), d3.max(v), (d3.max(v)-d3.min(v))/50.0))
+                .enter()
+                .append("rect")
+                .attr({width: cw,
+                      height: 5,
+                      y: function(d,i) { return mapY-cw-i*ch },
+                      x: vizWidth-200,
+                      fill: function(d,i) { return mapColor(d); } })
+            
+            map.select(".caption")
+                .append("g")
+                .attr("transform", "translate(" + (vizWidth-cw-180) + "," + (mapY-cw-ch*49) + ")")
+                .call(d3.svg.axis()
+                       .scale(d3.scale.linear().domain(d3.extent(v)).range([ch*50,0]))
+                        .orient("right"))
                 .attr("font-family", "sans-serif")
-                .attr("fill", "#4B4B4B")
+                .attr("fill", "#ccc")
                 .attr("font-size", 10)
-        
-        timeseries.select(".y")
-            .append("text") // caption
-                .attr("transform", "rotate(-90)")
-                .attr("y", 6)
-                .attr("dy", ".71em")
-                .style("text-anchor", "end")
+                    
+            map.select('.caption')
+                .append("g")
+                .attr("class","units")
+                .attr("transform", "translate("+(vizWidth-cw-200)+","+(mapY/2-cw+180)+")")
+                // .attr("transform", "rotate(90 "+(map_width-cw)+","+(map_height/2-cw)+")")
+                .append("text")
+                .attr("dx", -5)          
+                .attr("dy", 2 )
                 .attr("text-anchor", "middle")  
                 .attr("font-family", "sans-serif")
-                .attr("fill", "#4B4B4B")
-                // .style("text-decoration", "bold")  
+                .attr("fill", "#ccc")
                 .attr("font-size", 10)
-                .text("Qty per day (tweets)")
+                .attr("transform", "rotate(-90)")//function(d){ console.log(d); return "rotate(90 "+d.x+","+d.y+")"})          
+                .text("Volume of tweets (x100)")
+        }
 
-    }
+        function drawMap() {
+            drawMainland(error,mainland);
+            drawTaiwan(error,taiwan);
+            drawHkMacau(error,hkmacau);
+            tickMap();
+        }
+
+    // TIME SERIES
+        function drawTimeSerie() {
+            
+            d3.select("#timeserie").selectAll("*").remove() //clear precedent version
+            // Margins, timeWidth and timeHeight. 
+            var w=300,
+                h=300;
+
+            var margin = {top: 20, right: 20, bottom: 90, left: 30},
+                barTimeWidth = w,
+                timeWidth = barTimeWidth - margin.left - margin.right,
+                timeHeight = h - margin.top - margin.bottom;
+
+            // // Construct our SVG object.
+            var svg = d3.select("#timeserie").append("svg")
+                .attr("width", timeWidth + margin.left + margin.right)
+                .attr("height", timeHeight + margin.top + margin.bottom)
+              .append("g")
+                .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+            // Build Scales.
+            var x = d3.time.scale().range([timeWidth/timeData.length/2, timeWidth-timeWidth/timeData.length/2]);
+            // var x = d3.scale.ordinal().rangeRoundBands([0, timeWidth], .05);
+            var y = d3.scale.linear().range([timeHeight, 0]);
+
+            // Date parsing.
+            // var parseDate = d3.time.format("%Y-%m-%d %H:%M:%S");
+
+            // X-axis.
+            var xAxis = d3.svg.axis()
+                .scale(x)
+                .orient("bottom")
+                // .ticks(d3.time.month, 1)
+                .tickFormat(d3.time.format("%d %B"));
+
+            var yAxis = d3.svg.axis()
+                .scale(y)
+                .orient("left")
+                .ticks(10);
+
+            timeData.forEach(function(d) {
+                d.date=new Date(d.timestamp*1000);
+                // console.log(dt);
+                // d.date = parseDate.parse(dtmp);
+                // console.log(d);
+            });
+
+            // Set scale domains. 
+            x.domain(d3.extent(timeData, function(d) { return d.date; }));
+            y.domain([0, d3.max(timeData, function(d) { return d.count; })]);
+
+            // Call x-axis. 
+            d3.select(".x.axis")
+                .transition().duration(1000)
+                .call(xAxis);
+
+            var timeseries= svg.append("g")
+                .attr("class","time bars series")
+                // .attr("transform", "translate(" + (vizWidth-timeWidth-70) + "," +(vizHeight-timeHeight-100)  + ")")  
+
+
+            // Draw bars. 
+            var bars = timeseries.append("g")
+                .attr("class","bars")
+                .selectAll(".count")
+                .data(timeData, function(d) { return d.date; });
+
+            bars.exit().remove();
+                
+            bars.transition().duration(1000)
+                .attr("x", function(d) { return x(d.date) - timeWidth/timeData.length/2; })
+                .attr("width", timeWidth / timeData.length)
+                .attr("y", function(d) { return y(d.count); })
+                .attr("height", function(d) { return timeHeight - y(d.count);});
+                
+            bars.enter().append("rect")
+                .attr("class", "count")
+                .attr("width", timeWidth / timeData.length)
+                .attr("x", function(d) { return x(d.date) - (timeWidth/timeData.length)/2; })
+                .attr("y", timeHeight)
+                .attr("height", 0)
+                .transition().duration(1000)
+                .attr("y", function(d) { return y(d.count); })
+                .attr("height", function(d) { return timeHeight - y(d.count);});
+
+            timeseries.append("g")
+                .attr("class", "x axis")
+                .attr("transform", "translate(0," + timeHeight + ")")
+                .call(xAxis)
+                .selectAll("text")
+                    .attr("font-family", "sans-serif")
+                    .attr("fill", "#4B4B4B")
+                    .attr("font-size", 10)
+                    .style("text-anchor", "end")
+                    .attr("dx", "-.8em")
+                    .attr("dy", ".15em")
+                    .attr("transform", function(d) {
+                        return "rotate(-65)" 
+                        })
+                    // .attr("transform", "rotate(-90)" );
+
+            timeseries.append("g")
+                .attr("class", "y axis")
+                .attr("transform", "translate(0,0)")
+                .call(yAxis)
+                .selectAll("text")
+                    .attr("font-family", "sans-serif")
+                    .attr("fill", "#4B4B4B")
+                    .attr("font-size", 10)
+            
+            timeseries.select(".y")
+                .append("text") // caption
+                    .attr("transform", "rotate(-90)")
+                    .attr("y", 6)
+                    .attr("dy", ".71em")
+                    .style("text-anchor", "end")
+                    .attr("text-anchor", "middle")  
+                    .attr("font-family", "sans-serif")
+                    .attr("fill", "#4B4B4B")
+                    // .style("text-decoration", "bold")  
+                    .attr("font-size", 10)
+                    .text("Qty per day (tweets)")
+
+        }
 
 // INIT /////////////////////////////////////////////////////////
     
     communitiesDisplay=function() {
 
         if(communitiesForceStarted) {
-
+            $(".arcs").show();
             communities.call(communitiesForce.drag)
             communitiesForce.start();
 
         } else {
 
+            communitiesForce.stop();
+            $(".arcs").hide();
+            updateCommunityXY();
             communities.on('click', function (d) {
 
                     // select / remove node on click
@@ -1651,11 +1788,19 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
         }
     }
 
+    centroidsDisplay=function() {
+        updateCentroidsXY();
+        tickMapToCommunities();
+        tickCentroids(); 
+        mapCommunitiesXY();
+        tickMapToCommunities();
+        tickMapToCommunities();
+    }
+
     updateSelection=function (selection){
         selectedCommunity=selection;
         initViz();
     }
-
 
     initViz=function() {
 
@@ -1669,25 +1814,26 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
         
         drawWords();
         tickWords();
-
-        // drawWordPath();
-        // drawUsers();
         
-        // drawCommunity();
-        // drawCommunityPath();
-        // tickArrows();
-        // communitiesDisplay();
+        drawCommunity();
+        drawCommunityPath();
+        tickArrows();
+        communitiesDisplay();
         
         drawMapCommunities();
         drawCentroids();
         tickMapToCommunities();
 
-        drawWordsToUsers()
+        // tickWordsToUsers()
+        drawWordPath();
+        
+        // drawLegend();
 
-        if (centroidsOnMap) {
-            drawMap();
-            drawLegend();
-        }
+        drawMap();
+        if(!centroidsOnMap) $(".map").hide();
+        else $(".map").show();
+        
+        // drawUsers();
         // drawMapToUsers()
     }
 
@@ -1761,7 +1907,6 @@ function drawD3Time (timeFile) {
 
 
 $(".btn-wordforce").click(function(e){
-    
     wordForceStarted=(wordForceStarted)?false:true;
     tickWords();  
     $(".btn-wordforce").html( (wordForceStarted) ?  "Stop Words" : "Start Words");
@@ -1769,20 +1914,35 @@ $(".btn-wordforce").click(function(e){
 
 $(".btn-centroids").click(function(e){
 
-    $(".map").toggle();
     centroidsOnMap=(centroidsOnMap)? false:true;
-    tickCentroids(); 
-    tickMapToCommunities();
+    
+    if(!centroidsOnMap) $(".map").hide();
+    else $(".map").show();
+
+    centroidsDisplay();
     $(this).html((centroidsOnMap)?"Show cities":"Place on Map");
 })
 
+$(".btn-sortCentroids").click(function(e){
+
+    centroidsSort=(centroidsSort=="population")? "gdp":"population";
+    $(this).html((centroidsSort=="population")?"Sort by GDP":"Sort by Population");
+    centroidsDisplay();
+})
 
 $(".btn-userlayout").click(function(e){
     // communityLayout=(communityLayout == "YAxis")? "XAxis":"YAxis";
     // updateCommunityXY();
     // tickCommunity();
+    communitiesForceStarted=false;
     communitiesDisplay()
     $(".btn-userlayout").html(communityLayout)
+})
+
+$(".btn-comforce").click(function(e){      
+    communitiesForceStarted=(communitiesForceStarted)? false : true;
+    communitiesDisplay()
+    $(".btn-comforce").html((communitiesForceStarted)? "Stop Communities" : "Start Communities")
 })
 
 $(".btn-showall").click(function(e){
