@@ -1,18 +1,18 @@
 // Layout
 var wordForceStarted=false,
     communitiesForceStarted=true,
-    centroidsOnMap=false,
+    centroidsOnMap=true,
     initViz;
 
 // hide/show things
 var displayWordForce=true,
     displayWordToUsers=false,
     displayMapToUsers=true,
-    communityLayout="XAxis", //default layout : "YAxis", "XAxis"
     communitySort=null,
-    communitySort="random",
+    communitySort="",
     centroidsSort= "population", //"gdp",
     communityUsersLayout="pack", // "pie"
+    communityLayout="geo", //default layout : "YAxis", "XAxis", "geo"
     selectedCommunity=[]; //11
 
 // public functions
@@ -107,6 +107,170 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
                     }
                     );
             }
+
+        // MAP : parse data properly
+
+            var provincesInfo={};
+            for (var i = 0; i < provincesInfoData.length; i++) {
+                provincesInfo[provincesInfoData[i].name]=provincesInfoData[i];
+            };
+            console.log(provincesInfo);
+
+            var umap=[];
+            // sort provinces 
+            mapData.provinces.map(function(d) { umap[d.name]=d.count });
+            delete(umap[null]); // remove useless elements
+            delete(umap[0]);
+
+            var v = Object.keys(umap).map(function(k){return umap[k]})
+
+            var projection = d3.geo.mercator()
+                .center([116,39]) // china long lat 
+                .scale(vizWidth/2);
+
+            var mapPath = d3.geo.path()
+                .projection(projection);
+
+            // projection for HK / Macau
+            var projection2 = d3.geo.mercator()
+                .center([126,17])
+                .scale(2000);
+
+            var path2 = d3.geo.path()
+                .projection(projection2);
+
+        // CENTROIDS
+            // Get provinces centroids
+            var mapCentroids=[];
+            var mapFeatures= [topojson.feature(mainland, mainland.objects.provinces).features,topojson.feature(taiwan, taiwan.objects.layer1).features.filter(function(d) { return d.properties.GU_A3 === 'TWN'; }),topojson.feature(hkmacau, hkmacau.objects.layer1).features]
+            
+            var centroids={}
+
+            function updateCentroidsXY() {                
+                mapCentroids=[];
+                centroids={};
+                var cnt=0,
+                    rgx=d3.scale.linear().domain([0,30]).range([0,vizWidth-300]);
+
+                for (var i = 0; i < mapFeatures.length; i++) {
+                    mapFeatures[i].forEach(function(d, i) {
+                        cnt++;
+                        var centroid;
+                        if (d.properties.name==undefined && (d.properties.NAME=="Hong Kong" || d.properties.NAME=="Macao") ) {
+                            centroid = path2.centroid(d);
+                            centroid.x = centroid[0]+650;
+                            centroid.y = centroid[1]+400;
+                            centroid.cx = centroid[0]+650;
+                            centroid.cy = centroid[1]+400;
+                        } else {
+                            centroid = mapPath.centroid(d);
+                            centroid.x = centroid[0];
+                            centroid.y = centroid[1];
+                            centroid.cx = centroid[0];
+                            centroid.cy = centroid[1];
+                        }
+
+                        if (centroid.some(isNaN)) return;
+
+                        centroid.feature = d;
+                        if (d.properties.name != undefined) centroid.name=d.properties.name
+                        else if (d.properties.name==undefined && d.properties.NAME=="Taiwan") centroid.name='Taiwan';
+                        else if (d.properties.name==undefined && d.properties.NAME=="Macao") centroid.name='Aomen';
+                        else centroid.name='Xianggang';
+
+                        centroid.type="province";
+                        centroid.cleanName=provincesInfo[centroid.name].clean_name
+                        centroid.gdp=provincesInfo[centroid.name].gdp
+                        centroid.population=provincesInfo[centroid.name].population
+
+                        mapCentroids.push(centroid);
+                    });
+                };
+
+                // sort according to selected value
+                if (centroidsSort=="gdp") mapCentroids.sort(function(a,b){ return b.gdp-a.gdp;})
+                else if (centroidsSort=="population") mapCentroids.sort(function(a,b){ return b.population-a.population;})
+
+                for (var i = 0; i < mapCentroids.length; i++) {
+                    var c=mapCentroids[i];
+                    
+                    mapCentroids[i].absx= rgx(i)-rgx(i-1);
+                    mapCentroids[i].fixx = rgx(i); // fix display
+                    mapCentroids[i].fixy = mapY+250; // fix display
+
+                    centroids[c.name]=c;
+                };
+            }
+
+            updateCentroidsXY()
+        
+        // MAP TO COMMUNITIES        
+            var mapUsersEdges=[];
+            var tmpUE={}
+
+            for (var i = 0; i < userNodes.length; i++) {
+                var o=userNodes[i];
+                if( o.province!="0" && o.province != "Qita" && o.province != "Haiwai") {
+                    if(tmpUE[o.community+"_"+o.province] == undefined ) tmpUE[o.community+"_"+o.province]=0;
+                    tmpUE[o.community+"_"+o.province]+=1;
+                }
+            };
+
+            for (a in tmpUE) {
+                var data=a.split("_");
+                mapUsersEdges.push({
+                        "source" : data[0],
+                        "target" : data[1],
+                        "weight" : tmpUE[a] })
+            }
+
+            var provinceToUsers={},
+                usersToProvinces={};
+            
+            for (var i = 0; i < mapUsersEdges.length; i++) {
+                var d=mapUsersEdges[i];
+                
+                if(provinceToUsers[d.target]==undefined) provinceToUsers[d.target]=[]
+                provinceToUsers[d.target].push(d.source);
+
+                if(usersToProvinces[d.source]==undefined) usersToProvinces[d.source]=[]
+                usersToProvinces[d.source].push( {"province" : d.target, "weight" : d.weight} );
+
+            };
+            
+            // console.log(usersToProvinces);
+            var mapCommunitiesX={},
+                mapCommunitiesY={};
+
+            var mapCommunitiesXY=function() {
+
+                console.log("mapCommunitiesXY");
+
+                var centroidsMapCom={};
+
+                // weights by province for each community
+                for (uid in usersToProvinces){
+                    
+                    // vector
+                    var p=usersToProvinces[uid],
+                        w=0,
+                        tmpX=20,
+                        o=0;
+                    
+                    // sort by weight
+                    p.sort(function(a,b) { return b.weight -a.weight  })
+
+                    for (var i = 0; i < p.length; i++) {
+                        if(i==0) o=centroids[p[i].province].fixx
+                        tmpX+=centroids[p[i].province].absx*p[i].weight;
+                        w+=p[i].weight;
+                    };
+
+                    mapCommunitiesX[uid]=tmpX/w+o;
+                    mapCommunitiesY[uid]=Math.random()*300;
+                }
+            }
+            mapCommunitiesXY()
 
         // ARCS (Links between communities)
             userEdges.forEach(function(link) {
@@ -213,8 +377,7 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
                         if(maxA<maxB) return b,a
                         else return a,b
                     })
-                } if (communitySort =="random") {
-                }
+                } 
             
                 for (var i = 0; i < userCommunities.length; i++) {
                     var r,x,y;
@@ -223,18 +386,22 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
                         x=100,
                         y=yprev+r*2+rprev-2;
                     } else if (communityLayout=="XAxis") {
-                        
                         // x=scaleUsersWidth(i);
-
                         // if(i<=iTopUsersStart) x=xprev+r*2+rprev-2;
                         if(i<=iTopUsersStart) x=scaleTopUsersWidth(i)
                         else x=scaleUsersWidth(i);
                         y=vizMiddleY-200+Math.random()*200;
+                    } else if (communityLayout=="geo") {
+
+                        x=mapCommunitiesX[userCommunities[i].id];
+                        y=mapCommunitiesY[userCommunities[i].id];
 
                     }
 
                     communitiesX[userCommunities[i].id]=x;
                     communitiesY[userCommunities[i].id]=y;
+
+                    
                     xprev=x;
                     yprev=y;
                     rprev=r;
@@ -317,182 +484,16 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
             }
 
         // COMMUNITIES NODES - PUSH MORE DATA
-        communitiesIndex={}
+            communitiesIndex={}
 
-        userCommunities.forEach(function(community){
-            
-            community.words=communitiesToWords[community.id];
-
-            if(myCommunitiesEdges[community.id]!=undefined)community.children=myCommunitiesEdges[community.id];
-
-            communitiesIndex[community.id]=community;
-        })
-        
-        // MAP : parse data properly
-
-            var provincesInfo={};
-            for (var i = 0; i < provincesInfoData.length; i++) {
-                provincesInfo[provincesInfoData[i].name]=provincesInfoData[i];
-            };
-            console.log(provincesInfo);
-
-            var umap=[];
-            // sort provinces 
-            mapData.provinces.map(function(d) { umap[d.name]=d.count });
-            delete(umap[null]); // remove useless elements
-            delete(umap[0]);
-
-            var v = Object.keys(umap).map(function(k){return umap[k]})
-
-            var projection = d3.geo.mercator()
-                .center([116,39]) // china long lat 
-                .scale(vizWidth/2);
-
-            var mapPath = d3.geo.path()
-                .projection(projection);
-
-            // projection for HK / Macau
-            var projection2 = d3.geo.mercator()
-                .center([126,17])
-                .scale(2000);
-
-            var path2 = d3.geo.path()
-                .projection(projection2);
-
-        // CENTROIDS
-            // Get provinces centroids
-            var mapCentroids=[];
-            var mapFeatures= [topojson.feature(mainland, mainland.objects.provinces).features,topojson.feature(taiwan, taiwan.objects.layer1).features.filter(function(d) { return d.properties.GU_A3 === 'TWN'; }),topojson.feature(hkmacau, hkmacau.objects.layer1).features]
-            
-            var centroids={}
-
-            function updateCentroidsXY() {                
-                mapCentroids=[];
-                centroids={};
-                var cnt=0,
-                    rgx=d3.scale.linear().domain([0,30]).range([20,vizWidth-300]);
-
-                for (var i = 0; i < mapFeatures.length; i++) {
-                    mapFeatures[i].forEach(function(d, i) {
-                        cnt++;
-                        var centroid;
-                        if (d.properties.name==undefined && (d.properties.NAME=="Hong Kong" || d.properties.NAME=="Macao") ) {
-                            centroid = path2.centroid(d);
-                            centroid.x = centroid[0]+650;
-                            centroid.y = centroid[1]+400;
-                            centroid.cx = centroid[0]+650;
-                            centroid.cy = centroid[1]+400;
-                        } else {
-                            centroid = mapPath.centroid(d);
-                            centroid.x = centroid[0];
-                            centroid.y = centroid[1];
-                            centroid.cx = centroid[0];
-                            centroid.cy = centroid[1];
-                        }
-
-                        if (centroid.some(isNaN)) return;
-
-                        centroid.feature = d;
-                        if (d.properties.name != undefined) centroid.name=d.properties.name
-                        else if (d.properties.name==undefined && d.properties.NAME=="Taiwan") centroid.name='Taiwan';
-                        else if (d.properties.name==undefined && d.properties.NAME=="Macao") centroid.name='Aomen';
-                        else centroid.name='Xianggang';
-
-                        centroid.type="province";
-                        centroid.cleanName=provincesInfo[centroid.name].clean_name
-                        centroid.gdp=provincesInfo[centroid.name].gdp
-                        centroid.population=provincesInfo[centroid.name].population
-
-                        mapCentroids.push(centroid);
-                    });
-                };
-
-                // sort according to selected value
-                if (centroidsSort=="gdp") mapCentroids.sort(function(a,b){ return b.gdp-a.gdp;})
-                else if (centroidsSort=="population") mapCentroids.sort(function(a,b){ return b.population-a.population;})
-
-                for (var i = 0; i < mapCentroids.length; i++) {
-                    var c=mapCentroids[i];
-                    
-                    mapCentroids[i].absx= rgx(i)-rgx(i-1);
-                    mapCentroids[i].fixx = rgx(i); // fix display
-                    mapCentroids[i].fixy = mapY+50; // fix display
-
-                    centroids[c.name]=c;
-                };
-            }
-
-            updateCentroidsXY()
-        
-        // MAP TO COMMUNITIES        
-            var mapUsersEdges=[];
-            var tmpUE={}
-
-            for (var i = 0; i < userNodes.length; i++) {
-                var o=userNodes[i];
-                if( o.province!="0" && o.province != "Qita" && o.province != "Haiwai") {
-                    if(tmpUE[o.community+"_"+o.province] == undefined ) tmpUE[o.community+"_"+o.province]=0;
-                    tmpUE[o.community+"_"+o.province]+=1;
-                }
-            };
-
-            for (a in tmpUE) {
-                var data=a.split("_");
-                mapUsersEdges.push({
-                        "source" : data[0],
-                        "target" : data[1],
-                        "weight" : tmpUE[a] })
-            }
-
-            var provinceToUsers={},
-                usersToProvinces={};
-            
-            for (var i = 0; i < mapUsersEdges.length; i++) {
-                var d=mapUsersEdges[i];
+            userCommunities.forEach(function(community){
                 
-                if(provinceToUsers[d.target]==undefined) provinceToUsers[d.target]=[]
-                provinceToUsers[d.target].push(d.source);
+                community.words=communitiesToWords[community.id];
 
-                if(usersToProvinces[d.source]==undefined) usersToProvinces[d.source]=[]
-                usersToProvinces[d.source].push( {"province" : d.target, "weight" : d.weight} );
+                if(myCommunitiesEdges[community.id]!=undefined)community.children=myCommunitiesEdges[community.id];
 
-            };
-            
-            // console.log(usersToProvinces);
-            var mapCommunitiesX={},
-                mapCommunitiesY={};
-
-            var mapCommunitiesXY=function() {
-
-                console.log("mapCommunitiesXY");
-
-                var centroidsMapCom={};
-
-                // weights by province for each community
-                for (uid in usersToProvinces){
-                    
-                    // vector
-                    var p=usersToProvinces[uid],
-                        w=0,
-                        tmpX=20,
-                        o=0;
-                    
-                    // sort by weight
-                    p.sort(function(a,b) { return b.weight -a.weight  })
-
-                    for (var i = 0; i < p.length; i++) {
-                        if(i==0) o=centroids[p[i].province].fixx
-                        tmpX+=centroids[p[i].province].absx*p[i].weight;
-                        w+=p[i].weight;
-                    };
-                    mapCommunitiesX[uid]=tmpX/w+o;
-                    mapCommunitiesY[uid]=mapY-200+Math.random()*200;
-
-                }
-
-            }
-            mapCommunitiesXY()
-            // console.log(mapCommunitiesX);
+                communitiesIndex[community.id]=community;
+            })
 
 // SVG SETUP //////////////////////////////////////////////////////////
 
@@ -656,7 +657,7 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
 
         // GEO 
         divGeo=viz.append("g").attr("class","geo")
-            .attr("transform","translate(0,300)") 
+            .attr("transform","translate(30,0)") 
 
         mapCommunities=divGeo.append("g").attr("class","map-communities")
             .selectAll('.mapCommunity')
@@ -664,7 +665,7 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
         
         map=divGeo.append("g")
             .attr("class", "map")
-            .attr("transform", function(d) { return "translate(0,"+ mapY +")";})
+            .attr("transform", function(d) { return "translate(0,"+ (mapY) +")";})
 
         // Draw centroids
         mapToUsers=divGeo.append("g")
@@ -754,15 +755,11 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
             .selectAll("circle")
                 .data(communitiesLength);
 
-        // legendCommunities
-        //     .append("text")
-        //     .text("Communities")
-
         legendCommunities
             .enter()
             .append("circle")
-            .attr("r", function(d,i){  return userScaleSize(d)*2 })
-            .attr("cy", function(d,i){ return userScaleSize(d)*2})
+            .attr("r",  function(d,i){ return userScaleSize(d) })
+            .attr("cy", function(d,i){ return userScaleSize(d)})
             .attr("cx", 50)
             .style("fill","transparent")
             .style("stroke","#ccc")
@@ -771,9 +768,9 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
             .enter()
             .append("line")
             .attr("x1", 50)
-            .attr("y1", function(d,i){ return (d*2)*2})
+            .attr("y1", function(d,i){ return userScaleSize(d)*2})
             .attr("x2", 100)
-            .attr("y2", function(d,i){ return (d*2)*2})
+            .attr("y2", function(d,i){ return userScaleSize(d)*2})
             .style("stroke","#ccc")
             .style("stroke-width",.5);
         
@@ -781,10 +778,10 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
             .enter()
             .append("text")
             .attr("dx", 100)
-            .attr("dy", function(d,i){ return (d*2)*2})
+            .attr("dy", function(d,i){ return userScaleSize(d)*2})
             .style("font-size",9)
             .style("fill","#aaa")
-            // .attr("transform",function(d){ "translate("+ d*2+",150)" })
+
             .text(function(d){ return d+" users" })
 
         legendBtwCent = legend
@@ -1353,8 +1350,8 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
                 
                 var self=d3.select(this);
 
-                var x1=mapCommunitiesX[d.source],
-                    y1=mapCommunitiesY[d.source],
+                var x1=communitiesX[d.source],
+                    y1=communitiesY[d.source]+330,
                     x2=(!centroidsOnMap)? centroids[d.target].fixx : centroids[d.target].x,
                     y2=(!centroidsOnMap)? centroids[d.target].fixy : mapY+centroids[d.target].y;
 
@@ -1390,7 +1387,6 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
                         .attr("cy",y);
                         // .attr("transform", "translate(" + x + "," + y + ")")
             })
-
         }
 
         function drawMapCommunities () {
@@ -1401,11 +1397,6 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
                 .each(function (d, i) {
 
                     var self = d3.select(this);
-
-                    // for (var i = 0; i < usersToProvinces[d.id].length; i++) {
-                    //     var p=usersToProvinces[d.id][i];
-                    //     console.log(d.id,p.province,p.weight);
-                    // };
 
                     var r=mapCommunitesScaleSize(d.users.length),
                         x=mapCommunitiesX[d.id],
@@ -1586,6 +1577,7 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
                 ch=2.5;
             map.append("g")
                 .attr("class","caption")
+                .attr("transform", "translate("+(vizWidth-350)+","+300+")")
                 .append("g")
                 .attr("class","color-bar")
                 .selectAll("rect")
@@ -1594,13 +1586,13 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
                 .append("rect")
                 .attr({width: cw,
                       height: 5,
-                      y: function(d,i) { return mapY-cw-i*ch },
-                      x: vizWidth-200,
+                      y: function(d,i) { return -i*ch },
+                      x: -10,
                       fill: function(d,i) { return mapColor(d); } })
             
             map.select(".caption")
                 .append("g")
-                .attr("transform", "translate(" + (vizWidth-cw-180) + "," + (mapY-cw-ch*49) + ")")
+                .attr("transform", "translate(0,-122.5)")
                 .call(d3.svg.axis()
                        .scale(d3.scale.linear().domain(d3.extent(v)).range([ch*50,0]))
                         .orient("right"))
@@ -1611,11 +1603,11 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
             map.select('.caption')
                 .append("g")
                 .attr("class","units")
-                .attr("transform", "translate("+(vizWidth-cw-200)+","+(mapY/2-cw+180)+")")
+                // .attr("transform", "translate(0,40)")
                 // .attr("transform", "rotate(90 "+(map_width-cw)+","+(map_height/2-cw)+")")
                 .append("text")
-                .attr("dx", -5)          
-                .attr("dy", 2 )
+                .attr("dx", 55)          
+                .attr("dy", -15 )
                 .attr("text-anchor", "middle")  
                 .attr("font-family", "sans-serif")
                 .attr("fill", "#ccc")
@@ -1762,6 +1754,7 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
 
         if(communitiesForceStarted) {
             $(".arcs").show();
+            $(".mapusers").hide();
             communities.call(communitiesForce.drag)
             communitiesForce.start();
 
@@ -1769,6 +1762,7 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
 
             communitiesForce.stop();
             $(".arcs").hide();
+            $(".mapusers").show();
             updateCommunityXY();
             communities.on('click', function (d) {
 
@@ -1820,14 +1814,13 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
         tickArrows();
         communitiesDisplay();
         
-        drawMapCommunities();
+        // drawMapCommunities();
         drawCentroids();
         tickMapToCommunities();
 
-        // tickWordsToUsers()
         drawWordPath();
         
-        // drawLegend();
+        drawLegend();
 
         drawMap();
         if(!centroidsOnMap) $(".map").hide();
@@ -1882,45 +1875,28 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
 
 }
 
-// TIME SERIES //////////////////////////////////////////////////////////
-function drawD3Time (timeFile) {
- 
-    // Margins, timeWidth and timeHeight. 
-    // var w=300,
-    //     h=300;
-    // var margin = {top: 20, right: 20, bottom: 90, left: 30},
-    //     barTimeWidth = w,
-    //     timeWidth = barTimeWidth - margin.left - margin.right,
-    //     timeHeight = h - margin.top - margin.bottom;
-
-    // // Construct our SVG object.
-    // var svg = d3.select("#timeserie").append("svg")
-    //     .attr("width", timeWidth + margin.left + margin.right)
-    //     .attr("height", timeHeight + margin.top + margin.bottom)
-    //   .append("g")
-    //     .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-
-        
-}
-
 // BUTTONS //////////////////////////////////////////////////////////
 
 
 $(".btn-wordforce").click(function(e){
     wordForceStarted=(wordForceStarted)?false:true;
     tickWords();  
-    $(".btn-wordforce").html( (wordForceStarted) ?  "Stop Words" : "Start Words");
+    var txt='<span class="glyphicon glyphicon-comment"></span> ';
+    txt+=(wordForceStarted) ?  "Words Graph" : "Words Cloud";
+    $(".btn-wordforce").html(txt);
 })
 
 $(".btn-centroids").click(function(e){
 
     centroidsOnMap=(centroidsOnMap)? false:true;
-    
+
     if(!centroidsOnMap) $(".map").hide();
     else $(".map").show();
 
     centroidsDisplay();
-    $(this).html((centroidsOnMap)?"Show cities":"Place on Map");
+    var txt='<span class="glyphicon glyphicon-map-marker"></span> ';
+    txt+=(centroidsOnMap)?"List Provinces":"Place on Map";
+    $(this).html(txt);
 })
 
 $(".btn-sortCentroids").click(function(e){
@@ -1931,18 +1907,10 @@ $(".btn-sortCentroids").click(function(e){
 })
 
 $(".btn-userlayout").click(function(e){
-    // communityLayout=(communityLayout == "YAxis")? "XAxis":"YAxis";
-    // updateCommunityXY();
-    // tickCommunity();
-    communitiesForceStarted=false;
-    communitiesDisplay()
-    $(".btn-userlayout").html(communityLayout)
-})
-
-$(".btn-comforce").click(function(e){      
     communitiesForceStarted=(communitiesForceStarted)? false : true;
     communitiesDisplay()
-    $(".btn-comforce").html((communitiesForceStarted)? "Stop Communities" : "Start Communities")
+    var txt=(communitiesForceStarted)? "<span class='glyphicon glyphicon-globe'></span> Provinces Graph" : "<span class='glyphicon glyphicon-user'></span> Discussion Graph";
+    $(".btn-userlayout").html(txt);
 })
 
 $(".btn-showall").click(function(e){
