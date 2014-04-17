@@ -1,12 +1,12 @@
 // Layout
 var wordForceStarted=false,
-    communitiesForceStarted=true,
+    communitiesForceStarted=false,
     centroidsOnMap=true,
     initViz;
 
 // hide/show things
 var displayWordForce=true,
-    displayWordToUsers=false,
+    displayWordToUsers=true,
     displayMapToUsers=true,
     communitySort=null,
     communitySort="",
@@ -440,47 +440,49 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
 
             // clean data to match communities instead of users
             wordsUsersPath.forEach(function(word){
-                var p=word.source+"_"+word.community; 
-                if (!tmp[p]) tmp[p]=0;
+                var p=word.source+"_"+word.community;
+                // console.log(p);
+                if (tmp[p]==undefined) tmp[p]=0;
                 tmp[p]+=word.weight;
             })
             
             for(var word in  tmp) {
                 var data= word.split("_")
-                if( !isNaN(communitiesX[data[1]]) ) { 
-                    wordsToCommunities.push({"source": data[0], "target" : data[1], "weight": tmp[word]})
-                    
+
+                // console.log(data[1]);
+
+                if(tmp[word] > 30 ) {
+                    // if( !isNaN(communitiesX[data[1]]) ) { 
+                    wordsToCommunities.push({"source": data[0], "target" : data[1], "weight": tmp[word]})                  
+
                     // init word
                     if(communitiesToWords[data[1]]== undefined) communitiesToWords[data[1]]=[]
                     communitiesToWords[data[1]].push({"word": data[0], "weight": tmp[word]})
                 }
+
             }
-            
+            console.log(wordsToCommunities)
+
             wordsToCommunities.forEach(function(link) {            
                 link.source = myWordNodes[link.source] || 
                     (myWordNodes[link.source] = {name: link.source});
-                link.target = myWordNodes[link.target] || 
-                    (myWordNodes[link.target] = {name: link.target});
+                link.target = myCommunities[link.target] || 
+                    (myCommunities[link.target] = {name: link.target});
                 link.value = +link.weight;
             });
 
             updateWordXY= function updateWordXY() {
-                // console.log("updateWordXY")
+
                 var margin=30,
                     rgx=d3.scale.linear().domain([0,wordNodes.length]).range([margin,vizWidth-margin-200]),
                     s=d3.shuffle(wordNodes),
                     rgy=d3.scale.linear().domain(fontScale).range([margin,vizMiddleY-150]);
-                // var rgy=d3.scale.linear().domain([0,wordNodes.length]).range([0,vizHeight])
 
                 for (var i = 0; i < wordNodes.length; i++) {
                     var d=s[i];
-
-                    // console.log(wordScaleFont(d.count))
                     wordsX[d.name]=rgx(i);
                     wordsY[d.name]=rgy(wordScaleFont(d.count));
-
                 };
-                // console.log("wordsXY",wordsX,wordsY);
             }
 
         // COMMUNITIES NODES - PUSH MORE DATA
@@ -585,6 +587,8 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
             .attr("class", "wordusers")
             .selectAll("path")
             .data(wordsToCommunities.filter(function (d) { 
+                // if(d.weight > 30) return false
+                // console.log(d);
                 if(selectedCommunity.length!=0) {
                     for (var j = 0; j < selectedCommunity.length; j++) {
                         var com=communitiesIndex[selectedCommunity[j]];
@@ -598,7 +602,7 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
             }))
             .enter()
             .append("line")
-            .attr("class", "word-link")
+            // .attr("class", "word-link")
 
         if(displayWordForce) wordForce.start()
 
@@ -672,7 +676,6 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
             .attr("class", "mapusers")
             .selectAll("path")
             .data(mapUsersEdges.filter(function (d) { 
-                // console.log(d);
                 if(selectedCommunity.length!=0) {
                     for (var j = 0; j < selectedCommunity.length; j++) {
                         var com=communitiesIndex[selectedCommunity[j]];
@@ -962,7 +965,7 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
 
             ww.attr("transform", function(d) { 
                 
-                // console.log(d.count)
+                // console.log(d)
                 var r=wordScaleFont(d.count),
                     w=vizWidth-200,
                     h=vizMiddleY-30,
@@ -978,7 +981,6 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
             });
 
             if(displayWordForce) tickWordPath();
-            if(displayWordToUsers) tickWordsToUsers();
         }
 
         function tickWordPath() {
@@ -1180,7 +1182,7 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
                     // drawCommunity();
                 })
 
-                tickCommunity();
+                // tickCommunity();
         }
 
         tickCommunity=function () {
@@ -1429,17 +1431,22 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
     
     // WORDS TO USERS
         function tickWordsToUsers() {
-            console.log("displayWordToUsers");
-            wordsToUsers.each(function (d, i) {                
-
+            // console.log("displayWordToUsers");
+            wordsToUsers.each(function (d, i) {             
+                console.log(d.target.name)
                 var self=d3.select(this);
                 var x1=wordsX[d.source.name],
                     y1=wordsY[d.source.name],
-                    x2=communitiesX[d.target.name],
-                    y2=communitiesY[d.target.name];
+                    x2=(communitiesForceStarted)? d.target.x : communitiesX[d.target.id],
+                    y2=(communitiesForceStarted)? d.target.y : communitiesY[d.target.id];
+                    x2+=30;
+                    y2+=330.0;
+                    console.log(x1,x2,y1,y2);
+
+                console.log(d.target)
 
                 if(!isNaN(x1) && !isNaN(y1) && !isNaN(x2) && !isNaN(y2)) {
-                    self.style("stroke", function(d) { return "#fff" })
+                    self.style("stroke", function(d) { return "green" })
                         .style("stroke-opacity", function(d) { return (d.weight > 50)? d.weight*0.002:0 })
                         .style("stroke-width", function(d) {  return 2 })
                         .transition()
@@ -1798,12 +1805,18 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
 
     initViz=function() {
 
+        // init
         viz.selectAll("*").remove()
 
+        // coordinates
         updateCentroidsXY();
         updateWordXY(); // sort data
+        // mapCommunitiesXY();
 
+        // setup
         setupSVG();
+
+        // draw
         drawTimeSerie();
         
         drawWords();
@@ -1814,7 +1827,6 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
         tickArrows();
         communitiesDisplay();
         
-        // drawMapCommunities();
         drawCentroids();
         tickMapToCommunities();
 
@@ -1825,7 +1837,9 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
         drawMap();
         if(!centroidsOnMap) $(".map").hide();
         else $(".map").show();
-        
+
+      
+        // drawMapCommunities();
         // drawUsers();
         // drawMapToUsers()
     }
