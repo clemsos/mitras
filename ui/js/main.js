@@ -1,7 +1,6 @@
 var memes_list="data/2012_sina-weibo-memes_list.csv",
     memes={},
-    loadmeme,
-    showInfo;
+    loadmeme;
 
 $(document).ready(function() {
 
@@ -103,46 +102,81 @@ $(document).ready(function() {
 
       if($('#memes').attr("class").split(" ").indexOf("in") != -1) $('#memes').collapse("hide");
     }
-  
-  showInfo = function showInfo(info) {
-    
-    if(! typeof(a)=="object") throw "Info should be an object"
-    $(".infobox").html("")
-    if(info==null) return
 
-    console.log(info);
-    var d=info.data;
-    var infodiv="<div>";
-    if(info.type == "community") {
-      
-      var ul="<ul>";
-      ul+="<li><strong>Number of users :</strong>"+d.users.length+"</li>";
 
-      // var provinces_count={};
-      // for (var i = 0; i < d.users.length; i++) {
-      //   var num=d.users[i].province;
-      //   provinces_count[num] = provinces_count[num] ? provinces_count[num]+1 : 1;
-      // };
-      
-      // console.log(provinces_count);
-      // var myData=[];
-      // for( key in provinces_count )  myData.push({"label":key,"value":provinces_count[key]});
-      // drawPie(".chart", myData);
+  // save stuff
+  $(".btn-save-all").click(function(){
 
-      ul+="<ul>";
-      infodiv+=ul;
-    }
+    var sv=new Simg($(".svg-viz")[0]);
+    sv.download();
 
-    infodiv+="</div>";
-    $(".infobox").html(infodiv)
+  })
 
-  }
   // parse URL
   // var url=getLocation(document.URL)
   // var current_meme=url.hash
   // console.log(current_meme)
   // console.log(url.pathname.split('#')+url.hash)
 });
+
+var showInfo = function (_info, _div) {
+    if(! typeof(a)=="object") throw "Info should be an object"
+}
+
+var showUserInfo = function(_info) {
+  
+  var _div=$(".userinfobox");
+  _div.html("")
+  if(_info==null) return;
+  console.log(_info);
+
+  var d=_info;
+  var infodiv="<div>";
+  
+  var dl="<dl class=dl-horizontal>";
+  dl+="<dt>" +"Users"+"</dt><dd>"+d.users.length+"</dd>";
+  dl+="<dt>" +"Average Between Centrality"+"</dt><dd>"+d.avgBtwCent+"</dd>";
+  dl+="<dl>";
+  infodiv+=dl;
+
+  infodiv+="</div>";
+  _div.html(infodiv);
+
+  // console.log(d.provinces);
+  $(".userpie").html("")
+  drawPie(".userpie", d.provinces);
+  
+  
+
+
+}
+
+var showUserGraphInfo = function(_info) {
+  var _div= $(".usergraphinfo");
+  
+  console.log(_info);
+
+  _div.html("")
+  if(_info==null) return;
+
+  // var d=_info.data;
+  var infodiv="<div>";
+  var dl="<dl class=dl-horizontal>";
+
+  for(key in _info.graph) {
+    dl+="<dt>" +key+"</dt><dd>"+_info.graph[key]+"</dd>";
+  }
+
+  for(key in _info.communities) {
+    dl+="<dt>" +key+"</dt><dd>"+_info.communities[key]+"</dd>";
+  }
+
+  dl+="<dl>";
+  infodiv+=dl;
+  infodiv+="</div>";
+  _div.html(infodiv);
+}
+
 
 function getLocation(href) {
   var match = href.match(/^(https?\:)\/\/(([^:\/?#]*)(?:\:([0-9]+))?)(\/[^?#]*)(\?[^#]*|)(#.*|)$/);
@@ -156,13 +190,8 @@ function getLocation(href) {
       hash: match[7]
   }
 }
-/*
-function drawPie(self, data) {
 
-  data.forEach(function(d) {
-    d.value = +d.value;
-  });
-  console.log(data)
+function drawPie(self, data) {
 
   var width = 200,
     height = 200,
@@ -176,7 +205,7 @@ function drawPie(self, data) {
 
   var pie = d3.layout.pie()
       .sort(null)
-      .value(function(d) { console.log(d);return d.value; });
+      .value(function(d) {if(d.label != 0 ) return d.value; });
 
   var svg = d3.select(self)
       .append("svg")
@@ -207,5 +236,5 @@ function drawPie(self, data) {
       .attr("class", "legend")
       .attr("transform", "translate(50,30)")
       .style("font-size", "12px")
-      .call(d3.legend)
-}*/
+      // .call(d3.legend)
+}

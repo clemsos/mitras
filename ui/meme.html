@@ -1,3 +1,4 @@
+<link href="css/slider.css" rel="stylesheet">
 <link href="css/bootstrap.min.css" rel="stylesheet">
 <style>
     /*time*/
@@ -16,17 +17,23 @@
     body {
       padding :0;
       padding-top: 50px;
-      background: #000
+      /*background: #000*/
     }
 
     #viz {
       padding :0;
       padding-top: 30px;
-      background: #000
+      /*background: #000*/
     }
 
     #legend {
-      padding:20px 0 0 30px
+      padding:20px 0 0 30px;
+      position: absolute;
+      top:850px;
+      right:350px;
+    }
+    dl {
+      font-size:0.8em;
     }
 </style>
 
@@ -57,6 +64,9 @@
         <li>
             <a data-toggle="collapse" data-target="#memes"><small>Select a meme</small></a>
         </li>
+        <li>
+          <a data-toggle="collapse" data-target="#save" type="button" class="btn-save"><span class="glyphicon glyphicon-save"></span> Save</a>
+        </li>
       </ul>
 
       <ul class="nav navbar-nav navbar-right">
@@ -76,6 +86,14 @@
         <div class="panel-body ">
           <h4 class="panel-title">About</h4>
           blabla
+        </div>
+      </div>
+
+      <div id="save" class="panel-collapse collapse">
+        <div class="row panel-body">
+          <button type="button" class="btn btn-sm btn-save-all"><span class="glyphicon glyphicon-map-picture"></span> Save whole</button>
+          <button type="button" class="btn btn-sm btn-save-map"><span class="glyphicon glyphicon-map-marker"></span> Save map</button>
+
         </div>
       </div>
 
@@ -124,8 +142,40 @@
       
         <ul class="nodeinfo"></ul>
 
-        <h4>Legend <small class="text-muted">& info</small></h4>
-        <div id="legend"></div>
+        <h4>Words<small class="text-muted">  options</small></h4>
+        
+        <div class="word-options input-group input-group-lg">
+          <label>charge
+            <input class="linkDistance" data-slider-id='ex1Slider' type="text" data-slider-min="0" data-slider-max="400" data-slider-step="5"/>
+          </label>
+          <label>Gravity
+            <input class="charge" data-slider-id='ex1Slider' type="text" data-slider-min="-3000" data-slider-max="-500" data-slider-step="100"/>
+          </label>
+          <label>Gravity
+            <input class="gravity" data-slider-id='ex1Slider' type="text" data-slider-min="0" data-slider-max="5" data-slider-step="0.1"/>
+          </label>
+        </div>
+        
+        <h4>Users <small class="text-muted"> legend</small></h4>
+        <div class="usergraphinfo"></div>
+        <div class="communities-options form-group">          
+          <!-- <span class="input-group-addon">linkDistance</span> -->
+          <label for="linkDistance">linkDistance
+            <input class="linkDistance" data-slider-id='ex1Slider' type="text" data-slider-min="0" data-slider-max="400" data-slider-step="5" data-slider-value="150"/>
+          </label>
+          
+          
+          <label>charge
+            <input class="charge" data-slider-id='ex1Slider' type="text" data-slider-min="-5000" data-slider-max="2000" data-slider-step="100" data-slider-value="-1000"/>
+          </label>
+          
+          <label>Gravity
+            <input class="gravity" data-slider-id='ex1Slider' type="text" data-slider-min="0" data-slider-max="5" data-slider-step="0.1" data-slider-value="0.3"/>
+          </label>
+        </div>
+        <div class="userinfobox"></div>
+        <div class="userpie"></div>
+
 
         <h4>Volume of tweets <small class="text-muted">Time series</small></h4>
         <div id="timeserie"></div>
@@ -138,17 +188,24 @@
     
 </div>
 
+<div id="legend"></div>
+
+<canvas id="render"></canvas>
+<div id="renderd3"></div>
 
 <script type="text/javascript" src="libs/jquery.min.js"></script>
 <script type="text/javascript" src="libs/bootstrap.min.js"></script>
+<script type="text/javascript" src="libs/bootstrap-slider.js"></script>
 <script type="text/javascript" src="libs/d3.v3.min.js"></script>
 <script type="text/javascript" src="libs/jquery.csv.min.js"></script>
 <script type="text/javascript" src="libs/queue.v1.min.js"></script>
-<script src="http://d3js.org/colorbrewer.v1.min.js"></script>
+<script type="text/javascript" src="libs/colorbrewer.v1.min.js"></script>
 <script type="text/javascript" src="libs/topojson.v1.min.js"></script>    
+
+<!-- <script type="text/javascript" src="libs/canvg/rgbcolor.js"></script> 
+<script type="text/javascript" src="libs/canvg/StackBlur.js"></script>
+<script type="text/javascript" src="libs/canvg/canvg.js"></script>  -->
+<script type="text/javascript" src="libs/simg.js"></script> 
+
 <script type="text/javascript" src="js/d3flatlayers.js"></script>
 <script type="text/javascript" src="js/main.js"></script>
-
-<script>
-//   $(".memethumb")*10;
-</script>
