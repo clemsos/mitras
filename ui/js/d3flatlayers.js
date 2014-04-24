@@ -1,7 +1,7 @@
 // Layout
 var wordForceStarted=false,
     communitiesForceStarted=true,
-    centroidsOnMap=false,
+    centroidsOnMap=true,
     initViz;
 
 // hide/show things
@@ -10,7 +10,7 @@ var displayWordForce=true,
     displayMapToUsers=true,
     communitySort=null,
     communitySort="",
-    centroidsSort= "population", //"gdp",
+    centroidsSort= "meme", //"gdp",
     communityUsersLayout= "pack", // "pie"
     communityLayout="geo", //default layout : "YAxis", "XAxis", "geo"
     selectedCommunity=[]; //11
@@ -198,6 +198,8 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
                 // sort according to selected value
                 if (centroidsSort=="gdp") mapCentroids.sort(function(a,b){ return b.gdp-a.gdp;})
                 else if (centroidsSort=="population") mapCentroids.sort(function(a,b){ return b.population-a.population;})
+                else if (centroidsSort == "meme") mapCentroids.sort(function(a,b){return umap[b.name]-umap[a.name] })
+                
 
                 for (var i = 0; i < mapCentroids.length; i++) {
                     var c=mapCentroids[i];
@@ -2076,8 +2078,8 @@ $(".btn-centroids").click(function(e){
 
 $(".btn-sortCentroids").click(function(e){
 
-    centroidsSort=(centroidsSort=="population")? "gdp":"population";
-    $(this).html((centroidsSort=="population")?"Sort by GDP":"Sort by Population");
+    centroidsSort=(centroidsSort=="population")? "meme":"population";
+    $(this).html((centroidsSort=="population")?"Sort by mentions":"Sort by Population");
     centroidsDisplay();
 })
 
