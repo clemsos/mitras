@@ -1,8 +1,9 @@
 // controllers.js
 
+var safename="biaoge";
+
 app.controller('timeCtrl', function($scope,$http,config){
 
-  var safename="biaoge";
   var timeFile="../data/"+safename+"/"+safename+"_time_series.json";
 
   $http.get(timeFile).success(function(data) {
@@ -50,6 +51,23 @@ app.controller('timeCtrl', function($scope,$http,config){
     });
   }
 
-
 });
 
+app.controller('geoCtrl', function($scope,$http,config){
+  
+    var mapFile="../data/"+safename+"/"+safename+"_usermap.json";
+  
+    // $scope.sort=["gdp","population","meme"]
+    $scope.centroidsOnMap=true;
+
+    $http.get("../public/maps/zh-mainland-provinces.topo.json").success(function(data) { $scope.mainland=data; })
+    
+    $http.get("../public/maps/zh-chn-twn.topo.json").success(function(data) { $scope.taiwan=data; })
+
+    $http.get("../public/maps/zh-hkg-mac.topo.json").success(function(data) { $scope.hkmacau=data; })
+            
+  $http.get(mapFile).success(function(data) {
+    // console.log(data);
+    $scope.geoData=data.provinces;
+  })
+})
