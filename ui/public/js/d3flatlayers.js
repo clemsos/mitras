@@ -10,8 +10,8 @@ var displayWordForce=true,
     displayMapToUsers=true,
     communitySort=null,
     communitySort="",
-    centroidsSort= "meme", //"gdp",
-    communityUsersLayout= "pack", // "pie"
+    centroidsSort= "meme", //"gdp", "population"
+    communityUsersLayout= "pie", // "pie"
     communityLayout="geo", //default layout : "YAxis", "XAxis", "geo"
     selectedCommunity=[]; //11
 
@@ -206,7 +206,7 @@ function drawD3Layers(graphFile,mapFile,timeFile) {
                     
                     mapCentroids[i].absx= rgx(i)-rgx(i-1);
                     mapCentroids[i].fixx = rgx(i); // fix display
-                    mapCentroids[i].fixy = mapY+250; // fix display
+                    mapCentroids[i].fixy = mapY+100; // fix display
 
                     centroids[c.name]=c;
                 };
@@ -2078,8 +2078,12 @@ $(".btn-centroids").click(function(e){
 
 $(".btn-sortCentroids").click(function(e){
 
-    centroidsSort=(centroidsSort=="population")? "meme":"population";
-    $(this).html((centroidsSort=="population")?"Sort by mentions":"Sort by Population");
+    centroidsSort=$(this).attr("rel");
+    console.log(centroidsSort);
+    
+    $(".btn-sortCentroids").removeClass("active");
+    $(this).addClass("active");
+
     centroidsDisplay();
 })
 

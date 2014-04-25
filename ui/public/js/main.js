@@ -145,9 +145,6 @@ var showUserInfo = function(_info) {
   // console.log(d.provinces);
   $(".userpie").html("")
   drawPie(".userpie", d.provinces);
-  
-  
-
 
 }
 

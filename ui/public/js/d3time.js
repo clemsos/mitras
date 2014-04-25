@@ -1,8 +1,8 @@
 function drawD3Time (timeFile) {
  
     // Margins, time_width and time_height. 
-    var w=300,
-        h=300;
+    var w=960,
+        h=200;
 
 
     var margin = {top: 20, right: 20, bottom: 90, left: 30},
