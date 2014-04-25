@@ -207,7 +207,7 @@ app.directive("map", function () {
         scope: { 
          },
         link: function ($scope, element, attrs) {
-            console.log($scope);
+            // console.log($scope);
             var centroids,
                 mapFeatures,
                 centroidsSort="gdp";
@@ -507,3 +507,277 @@ app.directive("map", function () {
         }
     }
 });
+
+
+app.directive("words", function () {
+     return {
+        replace: false,
+        controller: 'wordCtrl',
+        scope: { 
+         },
+        link: function ($scope, element, attrs) {
+            
+            var w=900,
+                h=500;
+
+            var viz=d3.select(element[0]).append("svg")
+                .attr("class","svg-viz")
+                .attr("width", w)
+                .attr("height", h)
+                .attr("preserveAspectRatio", "xMidYMid")
+                .attr("viewBox", "0 0 " + w + " " + h);
+
+            $scope.$watch("words", function(newVal,oldVal){
+
+                if(newVal==undefined) return
+
+                
+
+                var wordsX={},
+                    wordsY={};
+
+                updateWordXY= function updateWordXY() {
+
+                    var margin=30,
+                        rgx=d3.scale.linear().domain([0,wordNodes.length]).range([margin,w-margin-200]),
+                        s=d3.shuffle(wordNodes),
+                        rgy=d3.scale.linear().domain(fontScale).range([margin,communityTopY-150]);
+
+                    for (var i = 0; i < wordNodes.length; i++) {
+                        var d=s[i];
+                        wordsX[d.name]=rgx(i);
+                        wordsY[d.name]=rgy(wordScaleFont(d.count));
+                    };
+                }
+
+                //SVG Setup
+                var divWords=viz.append("g").attr("class","wordzone")
+
+                var wordForce=d3.layout.force()
+                    .nodes(newVal.nodes)
+                    .links(newVal.edges)
+                    .size([w,h])
+                    .linkDistance(150)
+                    .charge(-1000)
+                    .gravity(.4)
+                    .on("tick", tickWord);
+
+                
+                
+                var myWordNodes={}
+
+                for (var i = 0; i < newVal.length; i++) {
+                    myWordNodes[data.words[i]["name"]]=newVal[i];
+                    newVal[i].words=null;
+                };
+
+                newVal.edges.forEach(function(link) {
+                    // console.log(link.weight);
+                    link.source = myWordNodes[link.source] || 
+                        (myWordNodes[link.source] = {name: link.source});
+                    link.target = myWordNodes[link.target] || 
+                        (myWordNodes[link.target] = {name: link.target});
+                    link.value = link.weight;
+                });
+                
+
+                var wordPath = divWords.append("g")
+                    .attr("class", "wordgraph")
+                    .selectAll("path")
+                        .data(newVal.edges)
+                    .enter() //.append("svg:path")
+                    .append("line")
+                    .attr("class", "word-link")
+
+                var words = divWords.append("g")
+                    .attr("class", "words")
+                    .selectAll("path")
+                    .data(newVal.nodes)
+                    .enter()
+                    .append("g")
+                    .attr("class", "word")
+                    .call(wordForce.drag);
+
+                
+                // scales
+                var fontScale=[15,60],
+                    wordScale=newVal.nodes.map(function(d){return d.count}),
+                    maxMinWordScale=[Math.min.apply(Math,wordScale), Math.max.apply(Math,wordScale)],
+                    wordScaleFont=d3.scale.linear().domain(maxMinWordScale).range(fontScale),
+                    userPathColor=d3.scale.category20b(),
+                    mapColor;
+                
+                
+
+                function drawWords() {
+
+                    words.each(function (d, i) {
+
+                        var self = d3.select(this);
+                        
+                        // var ext;
+                        // if(selectedCommunity) ext=communitiesIndex[selectedCommunity].words.map(function(d) {return d.weight})
+                        // else  
+                        var ext=words.data().map(function(d){ return d.count })
+                        // console.log(d3.extent(ext))
+                        var wordScaleSize=d3.scale.linear().domain(d3.extent(ext)).range([15, 35]);
+                        var wordScaleOpacity=d3.scale.linear().domain(d3.extent(ext)).range([.8,1]);
+                        var wordColor = d3.scale.linear().domain(d3.extent(ext)).range(["#a1d99b","#006d2c"]);
+                        self.append("rect")
+                            .attr("width", function(d) { return wordScaleSize(d.count) })
+                            .attr("height", function(d) { return 20 })
+                            .style("fill", function(d) {  return "transparent"; })
+                            .style("stroke", function(d) { return "transparent" });
+
+                        self.append("text")
+                            .attr("dx", 12)
+                            .attr("dy", 8)
+                            .style("font-size", function(d) { return wordScaleSize(d.count) })//scale_size(d.btw_cent) })
+                            .style("fill", function(d) {  return wordColor(d.count) })
+                            .style("fill-opacity", function(d) {  return wordScaleOpacity(d.count) })
+                            .attr("text-anchor", "middle") // text-align: right
+                            .text(function(d) { return d.name });
+
+                        var x=i*20;
+                        var y=80;
+
+                        wordsX[d.name]=x;
+                        wordsY[d.name]=y;
+                        // self.attr("transform", function(d) { return "translate(" + x + "," + y + ")"; });
+
+                    })
+                }
+
+                function drawWordPath() {
+                    
+                    // console.log(newVal.edges[0].source);
+
+                    wordPath.each(function (d, i) {
+                        var self = d3.select(this);
+                        // console.log(d);
+                        
+                        self.style("stroke", function(d) { return "red" })
+                            .style("stroke-width", function(d) {  return 1 });
+
+                        if(!$scope.wordForceStarted) self.style("stroke-opacity", function(d) { return 0 })
+                        else self.style("stroke-opacity", function(d) { return 0.3 })
+                    })
+
+                }
+
+                
+                
+
+                function tickWord() {
+                    // remove transition for force
+                    var ww = ($scope.wordForceStarted)? words : words.transition();
+
+                    ww.attr("transform", function(d) { 
+                        
+                        // console.log(w,h)
+                        var r=wordScaleFont(d.count),
+                            x=(d.x==undefined || !$scope.wordForceStarted)? wordsX[d.name] : Math.max(r, Math.min(w - r, d.x)),
+                            y=(d.y==undefined || !$scope.wordForceStarted)? wordsY[d.name] : Math.max(r, Math.min(h - r, d.y));
+                        // console.log(x,y);
+
+                        // console.log(d.x,x,d.y,y,r,w,h);
+                        wordsX[d.name]=x;
+                        wordsY[d.name]=y;
+
+                        return "translate(" + x + "," + y + ")"; 
+
+                    });
+
+                    // if(displayWordForce) 
+                    tickWordPath();
+                }
+
+                function tickWordPath() {
+                    // console.log(wordForce.links());
+                    wordPath.each(function (d, i) {
+
+                        var self=d3.select(this);
+
+                        if(!$scope.wordForceStarted) self.style("stroke-opacity", function(d) { return 0 })
+                        else self.style("stroke-opacity", function(d) { return 0.3 })
+
+                        console.log(d.source);
+
+                        
+                        self.attr("fill", function(d){
+                            console.log(d);
+                            var r=wordScaleFont(d.source.count),
+                                w=wordForce.size()[0],
+                                x=Math.max(r, Math.min(w, d.source.x));
+                                console.log(d.source.x)
+                                return d.source.x=x;
+                            })
+                            /*
+                            .attr("y1", function(d){
+                                var r=wordScaleFont(d.source.count),
+                                    h=wordForce.size()[1],
+                                    y=Math.max(r, Math.min(h, d.source.y));
+                                    // console.log(r,h)
+                                    return d.source.y=y;
+                                })
+                            .attr("x2", function(d) { 
+                                
+                                var r=wordScaleFont(d.target.count),
+                                    w=wordForce.size()[0],
+                                    x=Math.max(r, Math.min(w, d.target.x));
+                                    // console.log(x>w)
+                                    return d.target.x=x;
+                                     })
+                            .attr("y2", function(d) { 
+                                var r=wordScaleFont(d.target.count),
+                                    h=wordForce.size()[1],
+                                    y=Math.max(r, Math.min(h, d.target.y));
+                                    // console.log(r,h)
+                                    return d.target.y=y;
+                            });*/
+
+                        });
+                }
+
+                
+                // tickWordPath();
+                drawWords();
+
+                wordForce.stop()
+                wordForce.start()
+                
+                
+
+            });
+        }
+    }
+})
+
+
+app.directive("users", function () {
+     return {
+        replace: false,
+        controller: 'userCtrl',
+        scope: { 
+         },
+        link: function ($scope, element, attrs) {
+            
+            var w=900,
+                h=500;
+
+            var viz=d3.select(element[0]).append("svg")
+                .attr("class","svg-viz")
+                .attr("width", w)
+                .attr("height", h)
+                .attr("preserveAspectRatio", "xMidYMid")
+                .attr("viewBox", "0 0 " + w + " " + h);
+
+            $scope.$watch("users", function(newVal,oldVal){
+
+                if(newVal==undefined) return
+                console.log(newVal);
+
+            })
+        }
+    }
+})

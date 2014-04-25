@@ -66,8 +66,28 @@ app.controller('geoCtrl', function($scope,$http,config){
 
     $http.get("../public/maps/zh-hkg-mac.topo.json").success(function(data) { $scope.hkmacau=data; })
             
-  $http.get(mapFile).success(function(data) {
-    // console.log(data);
-    $scope.geoData=data.provinces;
+    $http.get(mapFile).success(function(data) {
+      // console.log(data);
+      $scope.geoData=data.provinces;
+    })
+})
+
+app.controller('wordCtrl', function($scope,$http,config){
+  var wordFile="../data/"+safename+"/"+safename+"_d3graph.json";
+  
+  $http.get(wordFile).success(function(data) { 
+
+    $scope.words=data.words;
+    $scope.wordForceStarted=true;
+
+  })
+
+})
+
+app.controller('userCtrl', function($scope,$http,config){
+  var wordFile="../data/"+safename+"/"+safename+"_d3graph.json";
+  
+  $http.get(wordFile).success(function(data) { 
+    $scope.users=data.users;
   })
 })
