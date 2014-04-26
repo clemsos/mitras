@@ -130,8 +130,6 @@ def analyze_meme(meme_name):
             words_users_time.append((tmp_words,user_edges,timestamp))
 
 
-
-    '''
     # CSV processed
     edges_weighted=[str(p[0][0]+" "+p[0][1]+" "+str(p[1])) for p in Counter(user_edges).most_common()] # if p[1] > 1]
 
@@ -208,7 +206,7 @@ def analyze_meme(meme_name):
     cent_items=[(b,a) for (a,b) in cent_dict.iteritems()]
     # add value to nodes
     for node in cent_dict: d3nodes[node]["btw_cent"]=cent_dict[node]
-    '''
+    
     '''
     # Sort in descending order 
     cent_items.sort() 
@@ -226,7 +224,7 @@ def analyze_meme(meme_name):
     jsondata["betweeness_centrality"]["distribution"]=btw_cent_dist
     jsondata["graph"]["average_betweeness_centrality"]=sum([c[0] for c in cent_items])/len(cent_items)
     '''
-    '''
+    
     # CREATE WORDS GRAPH
     ################################
 
@@ -318,7 +316,7 @@ def analyze_meme(meme_name):
     #     json.dump(d3fulldata, outfile)
     #     print "full json data have been saved to %s"%(d3_file)
 
-'''
+
 for meme in meme_names:
     analyze_meme(meme)
 

@@ -24,6 +24,7 @@ app.controller('timeCtrl', function($scope,$http,config){
     $scope.updateTimeData()
 
   });
+ 
 
   // // monitor time changes
   $scope.$watch('start', function(newStart, oldVal) {
@@ -31,6 +32,7 @@ app.controller('timeCtrl', function($scope,$http,config){
     if (newStart!=undefined) {
       $scope.start=newStart; 
       $scope.updateTimeData();
+      socket.emit('config', "feedconfig.toJSON()");
     }
   })
 
