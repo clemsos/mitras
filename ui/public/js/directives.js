@@ -207,44 +207,46 @@ app.directive("map", function () {
         scope: { 
          },
         link: function ($scope, element, attrs) {
-            // console.log($scope);
-            var centroids,
-                mapFeatures,
-                centroidsSort="gdp";
-                map_width=800,
-                mapY=100,
-                map_height=600,
-                vizWidth=1000;
-
-            var geo = d3.select(element[0]).append("svg")
-
-                .attr("width", map_width)
-                .attr("height", map_height)
-                .attr("preserveAspectRatio", "xMidYMid")
-                .attr("viewBox", "0 0 " + map_width + " " + map_height);
-
-            var projection = d3.geo.mercator()
-                .center([116,39]) // china long lat 
-                .scale(vizWidth/2);
-
-            var mapPath = d3.geo.path()
-                .projection(projection);
-
-            // projection for HK / Macau
-            var projection2 = d3.geo.mercator()
-                .center([126,17])
-                .scale(2000);
-
-            var path2 = d3.geo.path()
-                .projection(projection2);
-
-            var map=geo.append("g").attr("class", "map")
-                    // .attr("transform","translate(30,0)") 
             
-            $scope.centroids=[]
+            ////// SETUP
+                var centroids,
+                    mapFeatures,
+                    centroidsSort="gdp";
+                    map_width=800,
+                    mapY=100,
+                    map_height=600,
+                    vizWidth=1000;
 
-            var defaultFillColor="#eee",
-                defaultStrokeColor="#404040";
+                var geo = d3.select(element[0]).append("svg")
+
+                    .attr("width", map_width)
+                    .attr("height", map_height)
+                    .attr("preserveAspectRatio", "xMidYMid")
+                    .attr("viewBox", "0 0 " + map_width + " " + map_height);
+
+                var projection = d3.geo.mercator()
+                    .center([116,39]) // china long lat 
+                    .scale(vizWidth/2);
+
+                var mapPath = d3.geo.path()
+                    .projection(projection);
+
+
+                // projection for HK / Macau
+                var projection2 = d3.geo.mercator()
+                    .center([126,17])
+                    .scale(2000);
+
+                var path2 = d3.geo.path()
+                    .projection(projection2);
+
+                var map=geo.append("g").attr("class", "map")
+                        // .attr("transform","translate(30,0)") 
+                
+                $scope.centroids=[]
+
+                var defaultFillColor="#eee",
+                    defaultStrokeColor="#404040";
 
             $scope.$watch('mainland', function(newVal, oldVal) {
                 if(newVal!=undefined) {
@@ -268,8 +270,45 @@ app.directive("map", function () {
                     parseCentroids(features)
                     drawHkMacau(features)
                 }
-            })           
-          
+            })
+
+            // draw edges
+            var geoEdges= geo.append("g").attr("class","geo-path")
+
+            $scope.$watch('geoEdges', function(newVal, oldVal) {
+
+                if(newVal==[]) return
+                console.log("geoEdges",newVal.length);
+
+                var geoPaths=geoEdges.selectAll(".geoPath")
+                    .data(newVal)
+                  
+                geoPaths.enter() 
+                    .append("line")
+                    .attr("class", "geoPath")
+                        .attr("x1", function(d) { return $scope.centroidsXY[d.source].x; })
+                        .attr("y1", function(d) { return $scope.centroidsXY[d.source].y; })
+                        .attr("x2", function(d) { return $scope.centroidsXY[d.target].x; })
+                        .attr("y2", function(d) { return $scope.centroidsXY[d.target].y; })
+                    .style("stroke", function(d) { return "#428bca" })
+                    .style("stroke-opacity", function(d) { return 0.3 })
+                    .style("stroke-width", function(d) {  return d.weight });
+
+                updateGeoEdges();
+                geoPaths.exit().transition().style({opacity: 0}).remove();
+
+                
+                function updateGeoEdges() {
+                    // console.log($scope.centroidsXY);
+                    geoPaths.data(newVal)
+                    // userMap.transition()
+                    // .duration(500)
+                    // .each("end", userMapTick);
+                }
+
+                
+                
+            })
           
             function parseCentroids (features) {
                 var vizWidth=900,
@@ -465,11 +504,15 @@ app.directive("map", function () {
 
             function tickCentroids () {
 
+                $scope.centroidsXY={}
                 $scope.nodeCentroids
                     .each(function (d, i) {
                         var x=($scope.centroidsOnMap)? d.x :d.fixx;
                         var y=($scope.centroidsOnMap)? d.y :d.fixy;
 
+                        $scope.centroidsXY[d.name]={"x":x,"y":y};
+
+                        // console.log(d);
                         var self=d3.select(this);
                         self.transition().attr("transform", "translate(" + x + "," + y + ")")
 
@@ -483,25 +526,6 @@ app.directive("map", function () {
                 })
             }
 
-
-            // DRAW
-            $scope.$watch('geoData', function(newVal, oldVal) {
-
-                if(newVal==undefined) return
-                console.log(newVal);
-
-                var mapColor=d3.scale.category20();
-
-                for (var i = 0; i < newVal.length; i++) {
-                    var province="path."+newVal[i].name
-                    // console.log(province);
-                    // console.log(mapColor(newVal[i].count));
-                    // console.log(d3.select(province)[0]);
-                    d3.select(province)
-                        .attr("fill",  mapColor(newVal[i].count))
-                }
-                
-            })
 
     
         }

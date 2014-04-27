@@ -24,7 +24,7 @@
     <link href="/css/bootstrap.min.css" rel="stylesheet">
 
 <div class="container-fluid">
-    <div class="row well">
+    <div class="row well" ng-controller="dataCtrl">
         <div id="timeline" ng-controller="timeCtrl">
             <!-- here goes the timeline -->
             <div timeserie time-data="timeSeriesData" start="start" end="end" ></div>
@@ -34,6 +34,11 @@
             <b>End: {{end | date:'medium'}}</b>
             <br/>
             <slider id="time-slider" model="timeframe" type="text" data-slider-min="0"  data-slider-step="1" data-slider-orientation="horizontal" data-slider-selection="after" data-slider-tooltip="show"></slider>
+
+            <div class="row" ng-controller="geoCtrl">
+                <div map start="start" end="end" geo-data="geoData"></div>
+            </div> 
+    
         </div>
     </div>
     
@@ -43,11 +48,9 @@
     </div> 
     -->
 
-    <!-- 
-    <div class="row" ng-controller="geoCtrl">
-        <div map start="start" end="end" geo-data="geoData"></div>
-    </div> 
-    -->
+    
+    
+   
     
    <!--  <div class="row" ng-controller="userCtrl">
         <div users start="start" end="end"></div>
@@ -64,7 +67,7 @@
 <script type="text/javascript" src="/libs/colorbrewer.v1.min.js"></script>
 <script type="text/javascript" src="/libs/topojson.v1.min.js"></script>   
 
-<!-- <script src="/socket.io/socket.io.js"></script> -->
+<script src="/socket.io/socket.io.js"></script>
 
 <script src="/libs/angular/angular.js"></script>
 <script src="/libs/angular/angular-resource.js"></script>

@@ -1,18 +1,41 @@
 // services.js
 
 app.factory('config', function($window) {
-    
     return new Config();
-    // return new $window.feedconfig.FeedConfig();
-
 });
 
-app.factory('JsonService', function($resource) {
-    // var data = generateData(10);
-    // return data;
+
+app.factory('dataService', function() {
+    return {
+
+      "users" : { nodes:[],edges:[]},
+      "words" : { nodes:[],edges:[]},
+      "geo"   : [],
+      "multilayer": []
+
+    };
+});
+
+
+app.factory('mapService', function($resource) {
+  return {
+    "mainland":
+      $resource("maps/zh-mainland-provinces.topo.json",{ }, {
+        getData: {method:'GET', isArray: false}
+      }),
+    "taiwan":
+      $resource("maps/zh-chn-twn.topo.json",{ }, {
+        getData: {method:'GET', isArray: false}
+      }),
+    "hkmacau":
+      $resource("maps/zh-hkg-mac.topo.json",{ }, {
+        getData: {method:'GET', isArray: false}
+      })
+  }
 });
 
 app.factory('socket', function ($rootScope) {
+    
     var socket = io.connect();
     return {
       on: function (eventName, callback) {

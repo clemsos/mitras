@@ -8,20 +8,21 @@
 
     var moment = require('moment');
 
+    var config = require("./config/config.json");
+
+    var db = require('monk')('localhost/'+config.MITRAS_MONGO_DB)
+    , memes = db.get('memes')
+
     // dbs
     // var redis = require('redis');
-    var mongoose = require("mongoose");
+    // var mongoose = require("mongoose");
 
     // Hook Socket.io into Express
-    // var io = require('socket.io').listen(server);
+    var io = require('socket.io').listen(server);
 
 /////////////////////////// CONFIGURATION
 
-    // https://github.com/visionmedia/express/wiki/Migrating-from-3.x-to-4.x
-
-    var config = require("./config/config.json");
-
-    
+    // TODO? https://github.com/visionmedia/express/wiki/Migrating-from-3.x-to-4.x
     app.use(function(err, req, res, next){
       console.error(err.stack);
       res.send(500, 'Something broke!');
@@ -50,16 +51,6 @@
         app.use(express.errorHandler());
     });
 
-/////////////////////////// MONGO
-
-    mongoose.connect('mongodb://localhost/'+config.ETHER_MONGO_DB, function(err) {
-      if (err) { throw err; }
-    });
-
-    var db = mongoose.connection;
-    db.on('error', console.error.bind(console, 'connection error:'));
-
-    // model 
 
 /////////////////////////// ROUTES
 
@@ -75,23 +66,61 @@
         
     });
 
-/////////////////////////// SOCKET IO
-/*
+    app.get("/data/:meme",  function(req, res){
+        
+        console.log(req.params.meme)
+        var meme_name=req.params.meme;
 
-    // var redisSocketClient= redis.createClient()
-    // // redisSocketClient.subscribe(config.ETHER_REDIS_Q);
+        memes.findOne({"name":req.params.meme}).on('success', function (doc) {
+
+            if(doc==null) res.send("meme doesn't exist")
+            else res.send(doc.data)
+            // for (var i = 0; i < doc.data.length; i++) {
+            //     console.log(doc.data[i].time);
+            // }
+        });
+       
+    });
+
+    app.get("/times/:meme", function(req, res){
+        
+        console.log(req.params.meme)
+        var meme_name=req.params.meme;
+
+        memes.findOne({"name":req.params.meme}).on('success', function (doc) {
+
+            if(doc==null) res.send("meme doesn't exist")
+            else res.send(doc.data.map(function(d){
+                return {"count":d.count, "timestamp":d.time}
+            }))
+
+        });
+       
+    });
+
+/////////////////////////// SOCKET IO
 
     var clientSocket = io
         .sockets
-        // .of('/device')
         .on('connection', function (socket) {
 
             socket.emit('connect', {
-                 'hi': 'hello device!'
+                 'hi': 'hello frontend!'
             });
 
+            socket.on("config",function (data){
+                var config=JSON.parse(data)
+                // console.log(config);
+                // updateData(config.start,config.end);
+                socket.emit("update");
+            })
         });
-*/
+
+function updateData (start,end){
+    console.log("time changed");
+    // console.log(start,end);
+}
+
 
 // Start server
 server.listen(config.MITRAS_NODE_PORT, function() {

@@ -22,15 +22,17 @@ var Config = function() {
       "geo"
     ];
 
+    self.setName= function(name) {
+      self.name=name;
+    }
+
     self.setStart = function(start) {
-      if(!isValidDate(start))
-        throw new Error("Invalid datetime: " + start);
+      // if(!isValidDate(start)) throw new Error("Invalid datetime: " + start);
       self.start = start;
     }
 
     self.setEnd = function(end) {
-      if(!isValidDate(end))
-        throw new Error("Invalid datetime: " + end);
+      // if(!isValidDate(end)) throw new Error("Invalid datetime: " + end);
       self.end = end;
     }
 
@@ -38,8 +40,7 @@ var Config = function() {
       return JSON.stringify({
         start: self.start,
         end: self.end,
-        cosming: self.cosming
-
+        name: self.name
       })
     }
 
