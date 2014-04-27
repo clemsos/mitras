@@ -28,17 +28,18 @@
         <div id="timeline" ng-controller="timeCtrl">
             <!-- here goes the timeline -->
             <div timeserie time-data="timeSeriesData" start="start" end="end" ></div>
-            <br/>
+            <p>
+            <a class="btn btn-primary" href="#" ng-click="playAll(); $event.preventDefault()"><span class="glyphicon glyphicon-play"></span>Play</a>
             <b>Start: {{start | date:'medium'}}</b>
-            <br/>
             <b>End: {{end | date:'medium'}}</b>
-            <br/>
+            </p>
+
             <slider id="time-slider" model="timeframe" type="text" data-slider-min="0"  data-slider-step="1" data-slider-orientation="horizontal" data-slider-selection="after" data-slider-tooltip="show"></slider>
 
             <div class="row" ng-controller="geoCtrl">
                 <div map start="start" end="end" geo-data="geoData"></div>
             </div> 
-    
+
         </div>
     </div>
     

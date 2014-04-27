@@ -2,7 +2,7 @@
 
 var safename="biaoge";
 
-app.controller('timeCtrl', function($scope,$http,socket,config,dataService){
+app.controller('timeCtrl', function($scope,$http,$timeout,socket,config,dataService){
   
   config.setName(safename);
 
@@ -35,7 +35,33 @@ app.controller('timeCtrl', function($scope,$http,socket,config,dataService){
     $scope.updateData();
 
   });
- 
+
+
+  $scope.stop = function(){
+    $timeout.cancel(playAll);
+  }
+
+  var i,step,frames;
+
+  $scope.playAll=function (){
+    step=60,
+    i=step, 
+    frames=$scope.timeSeriesData.length/step;
+    $timeout($scope.playFrame,100);
+  }
+
+  $scope.playFrame=function() {
+
+    var t0=$scope.timeSeriesData[i-step].timestamp,
+        t1=$scope.timeSeriesData[i].timestamp;
+
+        $scope.start=t0;
+        $scope.end=t1;
+        console.log(t0,t1);
+
+        i+=5;
+        $timeout($scope.playFrame,100)
+  }
 
   // // monitor time changes
   $scope.$watch('start', function(newStart, oldVal) {
@@ -176,7 +202,6 @@ app.controller('timeCtrl', function($scope,$http,socket,config,dataService){
         });
 
       };
-    
   }
 
 });

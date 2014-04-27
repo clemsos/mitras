@@ -277,8 +277,8 @@ app.directive("map", function () {
 
             $scope.$watch('geoEdges', function(newVal, oldVal) {
 
-                if(newVal==[]) return
-                console.log("geoEdges",newVal.length);
+                if(newVal==[] && $scope.centroidsXY) return
+                // console.log("geoEdges",newVal.length);
 
                 var geoPaths=geoEdges.selectAll(".geoPath")
                     .data(newVal)
@@ -294,17 +294,8 @@ app.directive("map", function () {
                     .style("stroke-opacity", function(d) { return 0.3 })
                     .style("stroke-width", function(d) {  return d.weight });
 
-                updateGeoEdges();
-                geoPaths.exit().transition().style({opacity: 0}).remove();
 
-                
-                function updateGeoEdges() {
-                    // console.log($scope.centroidsXY);
-                    geoPaths.data(newVal)
-                    // userMap.transition()
-                    // .duration(500)
-                    // .each("end", userMapTick);
-                }
+                geoPaths.exit().transition().style({opacity: 0}).remove();
 
                 
                 
