@@ -44,7 +44,7 @@ app.controller('timeCtrl', function($scope,$http,$timeout,socket,config,dataServ
   var i,step,frames;
 
   $scope.playAll=function (){
-    step=60,
+    step=10,
     i=step, 
     frames=$scope.timeSeriesData.length/step;
     $timeout($scope.playFrame,100);
@@ -55,11 +55,11 @@ app.controller('timeCtrl', function($scope,$http,$timeout,socket,config,dataServ
     var t0=$scope.timeSeriesData[i-step].timestamp,
         t1=$scope.timeSeriesData[i].timestamp;
 
-        $scope.start=t0;
+        // $scope.start=t0;
         $scope.end=t1;
         console.log(t0,t1);
 
-        i+=5;
+        i+=step;
         $timeout($scope.playFrame,100)
   }
 
