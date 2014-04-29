@@ -23,39 +23,38 @@
     <link href="/css/slider.css" rel="stylesheet">
     <link href="/css/bootstrap.min.css" rel="stylesheet">
 
-<div class="container-fluid">
-    <div class="row well" ng-controller="dataCtrl">
-        <div id="timeline" ng-controller="timeCtrl">
-            <!-- here goes the timeline -->
-            <div timeserie time-data="timeSeriesData" start="start" end="end" ></div>
+<div class="container-fluid" ng-controller="dataCtrl">
+        
+        <div class="row" ng-controller="wordCtrl">
+            <a type="button" ng-click="saveWords(); $event.preventDefault()" class="btn-sm btn-primary btn-save"><span class="glyphicon glyphicon-save" ></span> Save</a>
+            <div words start="start" end="end" class="words-container"></div>
+        </div> 
+        
+        <div class="row" ng-controller="userCtrl">
+            <a type="button" ng-click="saveUsers(); $event.preventDefault()" class="btn-sm btn-primary btn-save"><span class="glyphicon glyphicon-save" ></span> Save</a>
+            <div users start="start" end="end" class="user-container"></div>
+        </div> 
+
+        
+   
+        <div class="row" ng-controller="geoCtrl">
+            <a type="button" ng-click="saveGeo(); $event.preventDefault()" class="btn-sm btn-primary btn-save"><span class="glyphicon glyphicon-save" ></span> Save</a>
+            <div map start="start" end="end" geo-data="geoData" class="geo-container"></div>
+        </div>  
+        
+
+        <div class="row well" id="timeline">
+            <slider id="time-slider" model="timeframe" type="text" data-slider-min="0"  data-slider-step="1" data-slider-orientation="horizontal" data-slider-selection="after" data-slider-tooltip="show"></slider>
+            <div timeserie time-data="timeSeriesData" start="start" end="end" >
+            </div>
             <p>
-            <a class="btn btn-primary" href="#" ng-click="playAll(); $event.preventDefault()"><span class="glyphicon glyphicon-play"></span>Play</a>
-            <b>Start: {{start | date:'medium'}}</b>
-            <b>End: {{end | date:'medium'}}</b>
+                <a class="btn btn-primary" href="#" ng-click="playAll(); $event.preventDefault()"><span class="glyphicon glyphicon-play"></span>Play</a>
+                <b>Start: {{start | date:'medium'}}</b>
+                <b>End: {{end | date:'medium'}}</b>
             </p>
 
-            <slider id="time-slider" model="timeframe" type="text" data-slider-min="0"  data-slider-step="1" data-slider-orientation="horizontal" data-slider-selection="after" data-slider-tooltip="show"></slider>
-
-            <div class="row" ng-controller="geoCtrl">
-                <div map start="start" end="end" geo-data="geoData"></div>
-            </div> 
-
+           
         </div>
-    </div>
-    
-    <!-- 
-    <div class="row" ng-controller="wordCtrl">
-        <div words start="start" end="end"></div>
-    </div> 
-    -->
-
-    
-    
-   
-    
-   <!--  <div class="row" ng-controller="userCtrl">
-        <div users start="start" end="end"></div>
-    </div>  -->
    
 
 </div>
@@ -67,8 +66,8 @@
 <script type="text/javascript" src="/libs/queue.v1.min.js"></script>
 <script type="text/javascript" src="/libs/colorbrewer.v1.min.js"></script>
 <script type="text/javascript" src="/libs/topojson.v1.min.js"></script>   
-
-<script src="/socket.io/socket.io.js"></script>
+<script type="text/javascript" src="libs/simg.js"></script> 
+<!-- <script src="/socket.io/socket.io.js"></script> -->
 
 <script src="/libs/angular/angular.js"></script>
 <script src="/libs/angular/angular-resource.js"></script>

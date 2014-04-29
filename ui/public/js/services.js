@@ -17,7 +17,7 @@ app.factory('dataService', function() {
 });
 
 
-app.factory('mapService', function($resource) {
+app.factory('geoService', function($resource) {
   return {
     "mainland":
       $resource("maps/zh-mainland-provinces.topo.json",{ }, {
@@ -30,10 +30,16 @@ app.factory('mapService', function($resource) {
     "hkmacau":
       $resource("maps/zh-hkg-mac.topo.json",{ }, {
         getData: {method:'GET', isArray: false}
-      })
+      }),
+    "ratio":
+      $resource("info",{ }, {
+        getData: {method:'GET', isArray: false}
+      }),
+
   }
 });
 
+/*
 app.factory('socket', function ($rootScope) {
     
     var socket = io.connect();
@@ -65,3 +71,4 @@ app.factory('socket', function ($rootScope) {
 
     };
   });
+  */

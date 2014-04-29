@@ -2,7 +2,7 @@
 
 var safename="biaoge";
 
-app.controller('timeCtrl', function($scope,$http,$timeout,socket,config,dataService){
+app.controller('dataCtrl', function($scope,$http,$timeout,config,dataService){
   
   config.setName(safename);
 
@@ -35,7 +35,6 @@ app.controller('timeCtrl', function($scope,$http,$timeout,socket,config,dataServ
     $scope.updateData();
 
   });
-
 
   $scope.stop = function(){
     $timeout.cancel(playAll);
@@ -207,21 +206,23 @@ app.controller('timeCtrl', function($scope,$http,$timeout,socket,config,dataServ
 });
 
 
-app.controller("dataCtrl", function($scope,$http,socket,config,dataService){
-  console.log("dataCtrl");
-  console.log(dataService);
-})
+// app.controller("dataCtrl", function($scope,$http,socket,config,dataService){
+//   console.log("dataCtrl");
+//   console.log(dataService);
+// })
 
-app.controller('geoCtrl', function($scope,$http,config,mapService,dataService){
+app.controller('geoCtrl', function($scope,$http,config,geoService,dataService){
   
-    var mapFile="../data/"+safename+"/"+safename+"_usermap.json";
+    // var mapFile="../data/"+safename+"/"+safename+"_usermap.json";
   
     // $scope.sort=["gdp","population","meme"]
     $scope.centroidsOnMap=true;
 
-    mapService.mainland.getData(function(data){ $scope.mainland=data })
-    mapService.taiwan.getData(function(data){ $scope.taiwan=data })
-    mapService.hkmacau.getData(function(data){ $scope.hkmacau=data })
+    geoService.mainland.getData(function(data){ $scope.mainland=data })
+    geoService.taiwan.getData(function(data){ $scope.taiwan=data })
+    geoService.hkmacau.getData(function(data){ $scope.hkmacau=data })
+
+    geoService.ratio.getData(function(data){ $scope.ratio=data })    
     
     // update geoData
     $scope.$watch(function() { return config.end; }, function(newVal,oldVal){
@@ -232,25 +233,53 @@ app.controller('geoCtrl', function($scope,$http,config,mapService,dataService){
       $scope.geoEdges=dataService.geo;
     })
 
-    
-})
-
-app.controller('wordCtrl', function($scope,$http,config){
-  var wordFile="../data/"+safename+"/"+safename+"_d3graph.json";
-  
-  $http.get(wordFile).success(function(data) { 
-
-    $scope.words=data.words;
-    $scope.wordForceStarted=true;
-
-  })
+    $scope.saveGeo=function(){
+      var sv=new Simg($(".geo-container svg")[0]);
+      sv.download();
+    }
 
 })
 
-app.controller('userCtrl', function($scope,$http,config){
-  var wordFile="../data/"+safename+"/"+safename+"_d3graph.json";
-  
-  $http.get(wordFile).success(function(data) { 
-    $scope.users=data.users;
+app.controller('wordCtrl', function($scope,$http,config,dataService){
+
+  $scope.wordForceStarted=true;
+
+  $scope.$watch(function() { return config.end; }, function(newVal,oldVal){
+    $scope.words=dataService.words;
+    if(dataService.words.index!=undefined) $scope.wordsLength=dataService.words.index.length;
+
   })
+
+  $scope.$watch(function() { return config.start; }, function(newVal,oldVal){
+    $scope.words=dataService.words;
+    if(dataService.words.index!=undefined) $scope.wordsLength=dataService.words.index.length;
+  })
+
+  $scope.saveWords=function(){
+    var sv=new Simg($(".word-container svg")[0]);
+    sv.download();
+  }
+
+})
+
+app.controller('userCtrl', function($scope,$http,config,dataService){
+
+  $scope.userForceStarted=true;
+
+  $scope.$watch(function() { return config.end; }, function(newVal,oldVal){
+    $scope.users=dataService.users;
+    if(dataService.users.index!=undefined) $scope.usersLength=dataService.users.index.length;
+
+  })
+
+  $scope.$watch(function() { return config.start; }, function(newVal,oldVal){
+    $scope.users=dataService.users;
+    if(dataService.users.index!=undefined) $scope.usersLength=dataService.users.index.length;
+  })
+
+  $scope.saveUsers=function(){
+    var sv=new Simg($(".user-container svg")[0]);
+    sv.download();
+  }
+
 })

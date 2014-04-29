@@ -47,7 +47,7 @@ app.directive('timeserie', function () {
          },
         link: function ($scope, element, attrs) {
             
-            console.log("timeline binded");
+            // console.log("timeline binded");
 
             var margin = {top: 20, right: 20, bottom: 40, left: 40},
                         width = 900,
@@ -74,7 +74,7 @@ app.directive('timeserie', function () {
                 // console.log($scope.start)
                 if(updatedTimeData != undefined && $scope.start!= undefined && $scope.end!= undefined) {
 
-                    console.log('draw timeline');
+                    // console.log('draw timeline');
 
                     var _data=updatedTimeData;
 
@@ -294,11 +294,7 @@ app.directive("map", function () {
                     .style("stroke-opacity", function(d) { return 0.3 })
                     .style("stroke-width", function(d) {  return d.weight });
 
-
                 geoPaths.exit().transition().style({opacity: 0}).remove();
-
-                
-                
             })
           
             function parseCentroids (features) {
@@ -462,7 +458,6 @@ app.directive("map", function () {
 
             function drawCentroids () {
                 
-                console.log('test');
 
                 $scope.nodeCentroids=geo.append("g")
                     .attr("class", "centroids")
@@ -517,12 +512,10 @@ app.directive("map", function () {
                 })
             }
 
-
     
         }
     }
 });
-
 
 app.directive("words", function () {
      return {
@@ -532,6 +525,7 @@ app.directive("words", function () {
          },
         link: function ($scope, element, attrs) {
             
+            //SVG Setup
             var w=900,
                 h=500;
 
@@ -542,11 +536,19 @@ app.directive("words", function () {
                 .attr("preserveAspectRatio", "xMidYMid")
                 .attr("viewBox", "0 0 " + w + " " + h);
 
-            $scope.$watch("words", function(newVal,oldVal){
+            var divWords=viz.append("g").attr("class","wordzone")
+
+            var wordEdges = divWords.append("g")
+                        .attr("class", "wordgraph")
+
+            var words = divWords.append("g")
+                        .attr("class", "words")
+            
+            // data 
+            $scope.$watch("wordsLength", function(newVal,oldVal){
 
                 if(newVal==undefined) return
-
-                
+                var wordsData=$scope.words;
 
                 var wordsX={},
                     wordsY={};
@@ -556,7 +558,7 @@ app.directive("words", function () {
                     var margin=30,
                         rgx=d3.scale.linear().domain([0,wordNodes.length]).range([margin,w-margin-200]),
                         s=d3.shuffle(wordNodes),
-                        rgy=d3.scale.linear().domain(fontScale).range([margin,communityTopY-150]);
+                        rgy=d3.scale.linear().domain(fontScale).range([margin,h-150]);
 
                     for (var i = 0; i < wordNodes.length; i++) {
                         var d=s[i];
@@ -565,28 +567,16 @@ app.directive("words", function () {
                     };
                 }
 
-                //SVG Setup
-                var divWords=viz.append("g").attr("class","wordzone")
-
-                var wordForce=d3.layout.force()
-                    .nodes(newVal.nodes)
-                    .links(newVal.edges)
-                    .size([w,h])
-                    .linkDistance(150)
-                    .charge(-1000)
-                    .gravity(.4)
-                    .on("tick", tickWord);
-
-                
-                
+                // parse data properly                     
                 var myWordNodes={}
 
-                for (var i = 0; i < newVal.length; i++) {
-                    myWordNodes[data.words[i]["name"]]=newVal[i];
-                    newVal[i].words=null;
+                for (var i = 0; i < wordsData.nodes.length; i++) {
+
+                    myWordNodes[wordsData.nodes[i]["name"]]=wordsData.nodes[i];
+                    // wordsData[i].words=null;
                 };
 
-                newVal.edges.forEach(function(link) {
+                wordsData.edges.forEach(function(link) {
                     // console.log(link.weight);
                     link.source = myWordNodes[link.source] || 
                         (myWordNodes[link.source] = {name: link.source});
@@ -594,50 +584,65 @@ app.directive("words", function () {
                         (myWordNodes[link.target] = {name: link.target});
                     link.value = link.weight;
                 });
-                
 
-                var wordPath = divWords.append("g")
-                    .attr("class", "wordgraph")
-                    .selectAll("path")
-                        .data(newVal.edges)
-                    .enter() //.append("svg:path")
+                var wordForce=d3.layout.force()
+                        .nodes(wordsData.nodes)
+                        .links(wordsData.edges)
+                        .size([w,h])
+                        .linkDistance(150)
+                        .charge(-1000)
+                        .gravity(.4)
+                        .on("tick", tickWord);
+
+                var wordPath=wordEdges.selectAll(".word-link")
+                        .data(wordForce.links())
+                
+                wordPath.enter()
                     .append("line")
                     .attr("class", "word-link")
 
-                var words = divWords.append("g")
-                    .attr("class", "words")
-                    .selectAll("path")
-                    .data(newVal.nodes)
-                    .enter()
+                var wordNodes=words.selectAll(".word")
+                        .data(wordForce.nodes())
+
+                wordNodes.enter()
                     .append("g")
                     .attr("class", "word")
-                    .call(wordForce.drag);
+                    
+                if($scope.wordForceStarted) {
+                    wordForce.start()
+                    wordNodes.call(wordForce.drag);
+                } else { 
+                }
 
-                
+                wordNodes.exit().remove();
+                wordPath.exit().remove();
+                drawWords();
+
                 // scales
                 var fontScale=[15,60],
-                    wordScale=newVal.nodes.map(function(d){return d.count}),
+                    wordScale=wordsData.nodes.map(function(d){return d.count}),
                     maxMinWordScale=[Math.min.apply(Math,wordScale), Math.max.apply(Math,wordScale)],
                     wordScaleFont=d3.scale.linear().domain(maxMinWordScale).range(fontScale),
                     userPathColor=d3.scale.category20b(),
                     mapColor;
                 
-                
-
                 function drawWords() {
+                    
+                    // console.log(wordNodes);
+                     var ext=wordsData.nodes.map(function(d){ return d.count });
+                    var wordScaleSize=d3.scale.linear().domain(d3.extent(ext)).range([15, 35]);
+                    var wordScaleOpacity=d3.scale.linear().domain(d3.extent(ext)).range([.8,1]);
+                    var wordColor = d3.scale.linear().domain(d3.extent(ext)).range(["#a1d99b","#006d2c"]);
 
-                    words.each(function (d, i) {
+                    wordNodes.each(function (d, i) {
 
                         var self = d3.select(this);
                         
                         // var ext;
                         // if(selectedCommunity) ext=communitiesIndex[selectedCommunity].words.map(function(d) {return d.weight})
                         // else  
-                        var ext=words.data().map(function(d){ return d.count })
-                        // console.log(d3.extent(ext))
-                        var wordScaleSize=d3.scale.linear().domain(d3.extent(ext)).range([15, 35]);
-                        var wordScaleOpacity=d3.scale.linear().domain(d3.extent(ext)).range([.8,1]);
-                        var wordColor = d3.scale.linear().domain(d3.extent(ext)).range(["#a1d99b","#006d2c"]);
+                        
+                    
                         self.append("rect")
                             .attr("width", function(d) { return wordScaleSize(d.count) })
                             .attr("height", function(d) { return 20 })
@@ -661,11 +666,11 @@ app.directive("words", function () {
                         // self.attr("transform", function(d) { return "translate(" + x + "," + y + ")"; });
 
                     })
+
+                    drawWordPath();
                 }
 
                 function drawWordPath() {
-                    
-                    // console.log(newVal.edges[0].source);
 
                     wordPath.each(function (d, i) {
                         var self = d3.select(this);
@@ -677,15 +682,11 @@ app.directive("words", function () {
                         if(!$scope.wordForceStarted) self.style("stroke-opacity", function(d) { return 0 })
                         else self.style("stroke-opacity", function(d) { return 0.3 })
                     })
-
                 }
-
-                
-                
 
                 function tickWord() {
                     // remove transition for force
-                    var ww = ($scope.wordForceStarted)? words : words.transition();
+                    var ww = ($scope.wordForceStarted)? wordNodes : wordNodes.transition();
 
                     ww.attr("transform", function(d) { 
                         
@@ -716,18 +717,15 @@ app.directive("words", function () {
                         if(!$scope.wordForceStarted) self.style("stroke-opacity", function(d) { return 0 })
                         else self.style("stroke-opacity", function(d) { return 0.3 })
 
-                        console.log(d.source);
-
+                        // console.log(d.source);
                         
-                        self.attr("fill", function(d){
-                            console.log(d);
+                        self.attr("x1", function(d){
                             var r=wordScaleFont(d.source.count),
                                 w=wordForce.size()[0],
                                 x=Math.max(r, Math.min(w, d.source.x));
-                                console.log(d.source.x)
+                                // console.log(d.source.x)
                                 return d.source.x=x;
                             })
-                            /*
                             .attr("y1", function(d){
                                 var r=wordScaleFont(d.source.count),
                                     h=wordForce.size()[1],
@@ -749,19 +747,10 @@ app.directive("words", function () {
                                     y=Math.max(r, Math.min(h, d.target.y));
                                     // console.log(r,h)
                                     return d.target.y=y;
-                            });*/
+                            });
 
                         });
                 }
-
-                
-                // tickWordPath();
-                drawWords();
-
-                wordForce.stop()
-                wordForce.start()
-                
-                
 
             });
         }
@@ -779,18 +768,146 @@ app.directive("users", function () {
             
             var w=900,
                 h=500;
+            
+            var sw=.5,
+                sh=.5,
+                sx=w/2,
+                sy=h/2;
 
             var viz=d3.select(element[0]).append("svg")
                 .attr("class","svg-viz")
                 .attr("width", w)
                 .attr("height", h)
                 .attr("preserveAspectRatio", "xMidYMid")
-                .attr("viewBox", "0 0 " + w + " " + h);
+                .attr("viewBox", "0 0 "+ w + " " + h)
+                
 
-            $scope.$watch("users", function(newVal,oldVal){
+            var divUsers=viz.append("g").attr("class","userzone")
+                    .attr("transform","scale("+sh+","+sw+") translate("+sx+","+sy+")")
+
+
+            var userEdges = divUsers.append("g")
+                        .attr("class", "usergraph")
+
+            var users = divUsers.append("g")
+                        .attr("class", "users")
+
+            $scope.$watch("usersLength", function(newVal,oldVal){
 
                 if(newVal==undefined) return
-                console.log(newVal);
+                // console.log(newVal);
+                var userData=$scope.users;
+
+                // parse data properly                     
+                var myUsersNodes={}
+
+                for (var i = 0; i < userData.nodes.length; i++) {
+                    myUsersNodes[userData.nodes[i]["name"]]=userData.nodes[i];
+                };
+
+                userData.edges.forEach(function(link) {
+                    // console.log(link.weight);
+                    link.source = myUsersNodes[link.source] || 
+                        (myUsersNodes[link.source] = {name: link.source});
+                    link.target = myUsersNodes[link.target] || 
+                        (myUsersNodes[link.target] = {name: link.target});
+                    link.value = link.weight;
+                });
+
+                var userForce=d3.layout.force()
+                        .nodes(userData.nodes)
+                        .links(userData.edges)
+                        .size([w,h])
+                        .linkDistance(150)
+                        .charge(-1000)
+                        .gravity(.4)
+                        .on("tick", tickUsers);
+
+                var userPath=userEdges.selectAll(".user-link")
+                        .data(userForce.links())
+                
+                userPath.enter()
+                    .append("line")
+                    .attr("class", "user-link")
+
+                var userNodes=users.selectAll(".user")
+                        .data(userForce.nodes())
+
+                userNodes.enter()
+                    .append("g")
+                    .attr("class", "user")
+
+                if($scope.userForceStarted) {
+                    userForce.start()
+                    userNodes.call(userForce.drag);
+                } else { 
+                }
+
+                userPath.exit().remove();
+                userNodes.exit().remove();
+                drawUsers();
+
+                function drawUsers(){
+                    var userPathColor=d3.scale.category20b();
+                    userNodes.enter()
+                        .append("g")
+                        .attr("class","user")
+                        .append("circle")
+                        .attr("r",function(d){ return (d.count+1)*5})
+                        .style("fill", function(d){return userPathColor(d.community)})
+                        .each(function (d, i) {
+                            // sth
+                        })
+
+                    drawUserPath()
+                }
+
+                function drawUserPath() {
+                    
+                    userPath.each(function (d, i) {
+                        var self = d3.select(this);
+                        self.style("stroke", function(d){return "#ccc"})
+                            .style("stroke-width",2)
+                    })
+                }
+
+                function tickUsers() {
+
+                    var r=5,
+                        w=userForce.size()[0],
+                        h=userForce.size()[1];
+
+                    userPath
+                        .attr("x1", function(d){ 
+                            var x1=Math.max(r, Math.min(w - r, d.source.x));
+                            return x1
+                        })
+                        .attr("y1", function(d){
+                            var y1=Math.max(r, Math.min(h - r, d.source.y));
+                            return y1
+                        })
+                        .attr("x2", function(d) { 
+                            var x2=Math.max(r, Math.min(w - r, d.target.x));
+                            return x2
+                                 })
+                        .attr("y2", function(d) { 
+                            var y2=Math.max(r, Math.min(h - r, d.target.y));
+                            // console.log(y2);
+                            return y2;
+                        });
+
+                    userNodes
+                        .attr("transform", function(d) { 
+                            
+                            var r=5,
+                                w=userForce.size()[0],
+                                h=userForce.size()[1],
+                                x=Math.max(r, Math.min(w - r, d.x)),
+                                y=Math.max(r, Math.min(h - r, d.y));
+
+                            return "translate(" + x + "," + y + ")"; 
+                        });
+                }
 
             })
         }

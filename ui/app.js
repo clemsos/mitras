@@ -61,9 +61,14 @@
 
     // serve data 
     app.get('/time', function(req, res){
-
         res.render('timeline', {layout: false});
-        
+    });
+
+    var provinces_info=require("./data/nb_of_users_by_provinces")
+    // console.log(info);
+    
+    app.get('/info', function(req, res){
+        res.send(provinces_info);
     });
 
     app.get("/data/:meme",  function(req, res){
@@ -100,6 +105,7 @@
 
 /////////////////////////// SOCKET IO
 
+    /*
     var clientSocket = io
         .sockets
         .on('connection', function (socket) {
@@ -115,7 +121,7 @@
                 socket.emit("update");
             })
         });
-
+    */
 function updateData (start,end){
     console.log("time changed");
     // console.log(start,end);
