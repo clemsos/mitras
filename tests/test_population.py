@@ -42,7 +42,12 @@ for province in provinces:
     elif province=="Aomen" : p="Macau"
     elif province=="Inner Mongol" : p="Inner Mongolia"
 
-    data.append({"name":province, "clean_name": p, "gdp":gdp[province],"population":pop[province]})
+    data.append({
+        "name":province, 
+        "clean_name": p, 
+        "gdp":gdp[province],
+        "population":pop[province]
+        })
     
 print data
 # write d3js annotated graph

@@ -98,9 +98,6 @@ app.directive('timeserie', function () {
                     // Set scale domains. 
                     x.domain(d3.extent(_data, function(d) { return d.date; }));
                     y.domain([0, d3.max(_data, function(d) { return d.count; })]);
-
-                    
-                    
                     
                     svg.transition().duration(duration).attr({width: width, height: height})
                     
@@ -212,8 +209,8 @@ app.directive("map", function () {
                 var centroids,
                     mapFeatures,
                     centroidsSort="gdp";
-                    map_width=800,
                     mapY=100,
+                    map_width=800,
                     map_height=600,
                     vizWidth=1000;
 
@@ -241,6 +238,7 @@ app.directive("map", function () {
                     .projection(projection2);
 
                 var map=geo.append("g").attr("class", "map")
+                            .style("fill",'#fff')
                         // .attr("transform","translate(30,0)") 
                 
                 $scope.centroids=[]
@@ -275,6 +273,8 @@ app.directive("map", function () {
             // draw edges
             var geoEdges= geo.append("g").attr("class","geo-path")
 
+            var geoDefs=geo.append("defs").attr("class","geo-arrows")
+
             $scope.$watch('geoEdges', function(newVal, oldVal) {
 
                 if(newVal==[] && $scope.centroidsXY==undefined) return
@@ -283,18 +283,48 @@ app.directive("map", function () {
                 var geoPaths=geoEdges.selectAll(".geoPath")
                     .data(newVal)
                   
+                var geoMarkers=geoDefs.selectAll("marker")
+                   .data(["medium"])
+
+                geoMarkers.enter()
+                    .append("marker")
+                    .attr("id", String)
+                    .attr("viewBox", "0 -5 10 10")
+                    .attr("refX", 20)
+                    .attr("refY", -1.5)
+                    .attr("markerWidth", 6)
+                    .attr("markerHeight", 6)
+                    .attr("orient", "auto")
+                    .append("svg:path")
+                    .attr("d", "M0,-5L10,0L0,5");
+
                 geoPaths.enter() 
                     .append("line")
                     .attr("class", "geoPath")
-                        .attr("x1", function(d) { return $scope.centroidsXY[d.source].x; })
-                        .attr("y1", function(d) { return $scope.centroidsXY[d.source].y; })
-                        .attr("x2", function(d) { return $scope.centroidsXY[d.target].x; })
-                        .attr("y2", function(d) { return $scope.centroidsXY[d.target].y; })
                     .style("stroke", function(d) { return "#428bca" })
                     .style("stroke-opacity", function(d) { return 0.3 })
-                    .style("stroke-width", function(d) {  return d.weight });
+                    .attr("marker-mid", "url(#end)")                
+                
+                if($scope.centroidsXY!=undefined) {
+                    geoPaths.attr("x1", function(d) { return $scope.centroidsXY[d.source].x; })
+                            .attr("y1", function(d) { return $scope.centroidsXY[d.source].y; })
+                            .attr("x2", function(d) { return $scope.centroidsXY[d.target].x; })
+                            .attr("y2", function(d) { return $scope.centroidsXY[d.target].y; })
 
-                geoPaths.exit().transition().style({opacity: 0}).remove();
+                }
+
+                if($scope.ratio!=undefined) {
+                    
+                    var geoExt=newVal.map(function(d){return d.weight*($scope.ratio[d.source]/100);}),
+                        geoPathStrokeWidth=d3.scale.linear().domain(d3.extent(geoExt)).range([1, 10]);
+                    
+                    geoPaths.style("stroke-width", function(d) {  
+                                    // console.log($scope.ratio[d.source]);
+                                    return geoPathStrokeWidth(d.weight *($scope.ratio[d.source]/100));
+                                });
+                }
+
+                geoPaths.exit().remove();
             })
           
             function parseCentroids (features) {
@@ -485,11 +515,6 @@ app.directive("map", function () {
                         .style("font-size", 11 )
                         .text(function(d) {d.name})
 
-                tickCentroids()
-            }
-
-            function tickCentroids () {
-
                 $scope.centroidsXY={}
                 $scope.nodeCentroids
                     .each(function (d, i) {
@@ -510,6 +535,32 @@ app.directive("map", function () {
                             self.select("text")
                                 .attr("transform", "rotate(0)")
                 })
+
+                tickCentroids()
+            }
+
+            function tickCentroids () {
+
+                 $scope.nodeCentroids
+                    .each(function (d, i) {
+                        
+                        var x=($scope.centroidsOnMap)? d.x :d.fixx;
+                        var y=($scope.centroidsOnMap)? d.y :d.fixy;
+
+                        // console.log(d);
+                        var self=d3.select(this);
+                        self.transition().attr("transform", "translate(" + x + "," + y + ")")
+
+                        if (!$scope.centroidsOnMap) 
+                            self.select("text")
+                                .attr("transform", "rotate(60)")
+                                .attr("dy","0.45em")
+                        else
+                            self.select("text")
+                                .attr("transform", "rotate(0)")
+                })
+
+                
             }
 
     
@@ -614,9 +665,8 @@ app.directive("words", function () {
                     .attr("class", "word")
                     
                 if($scope.wordForceStarted) {
-                    wordForce.start()
+                    wordForce.start();
                     wordNodes.call(wordForce.drag);
-                } else { 
                 }
 
                 wordNodes.exit().remove();
@@ -633,9 +683,8 @@ app.directive("words", function () {
                 
                 $scope.selection=false;
                 function drawWords() {
-                    
-                    // console.log(wordNodes);
-                    var ext=wordsData.nodes.map(function(d){ return d.count }), 
+
+                    var ext=wordsData.nodes.map(function(d){ return d.children.length }), 
                         wordScaleSize=d3.scale.linear().domain(d3.extent(ext)).range([15, 35]),
                         wordScaleOpacity=d3.scale.linear().domain(d3.extent(ext)).range([.5,1]),
                         wordColor = d3.scale.linear().domain(d3.extent(ext)).range(["#a1d99b","#006d2c"]);
@@ -643,14 +692,9 @@ app.directive("words", function () {
                     wordNodes.each(function (d, i) {
 
                         var self = d3.select(this);
-                        
-                        // var ext;
-                        // if(selectedCommunity) ext=communitiesIndex[selectedCommunity].words.map(function(d) {return d.weight})
-                        // else  
-                        
                     
                         self.append("rect")
-                            .attr("width", function(d) { return wordScaleSize(d.count) })
+                            .attr("width", function(d) { return wordScaleSize(d.children.length) })
                             .attr("height", function(d) { return 20 })
                             .style("fill", function(d) {  return "transparent"; })
                             .style("stroke", function(d) { return "transparent" });
@@ -658,7 +702,7 @@ app.directive("words", function () {
                         self.append("text")
                             .attr("dx", 12)
                             .attr("dy", 8)
-                            .style("font-size", function(d) { return wordScaleSize(d.count) })//scale_size(d.btw_cent) })
+                            .style("font-size", function(d) { return wordScaleSize(d.children.length) })//scale_size(d.btw_cent) })
                             .style("fill", function(d) {  return "#006d2c" })
                             // .style("fill-opacity", function(d) {  return "#006d2c" })
                             // .style("fill-opacity", function(d) {  return wordScaleOpacity(d.count) })
@@ -670,22 +714,79 @@ app.directive("words", function () {
 
                         wordsX[d.name]=x;
                         wordsY[d.name]=y;
-
                     }).on("mouseover",function(d,i){
+                        
                         $scope.selection=true;
                         d.selected=true;
                         d.children.forEach(function(e){
                             e.selected=true;
                         })
+                        
+                        drawWordPie(d3.select(".wordpie-container"),$scope.wordProvinces[d.name])
+
                     }).on("mouseout",function(d,i){
                         $scope.selection=false;
                         d.selected=false;
                         d.children.forEach(function(e){
                             e.selected=false;
                         })
+                        d3.select(".wordpie-chart").remove()
+
                     });
 
                     drawWordPath();
+                }
+
+                function drawWordPie(element, data) {
+
+                  d3.select(".wordpie-chart").remove()
+                  data.map(function(d){
+                    if(d.label != 0) return d
+                  })
+
+                  var width = 200,
+                    height = 200,
+                    radius = Math.min(width, height) / 2;
+
+                  var arc = d3.svg.arc()
+                      .outerRadius(radius - 10)
+                      .innerRadius(0);
+
+                  var pie = d3.layout.pie()
+                      .sort(null)
+                      .value(function(d) { return d.value; });
+
+                  var svg = element
+                      .append("svg")
+                      .attr("class","wordpie-chart")
+                      .attr("width", 200)
+                      .attr("height", 200)
+                      .append("g")
+                      .attr("transform", "translate(" + width / 2 + "," + height / 2 + ")");
+
+                  var g = svg.selectAll(".arc")
+                      .data(pie(data))
+                    .enter().append("g")
+                      .attr("class", "arc");
+
+                  g.append("path")
+                      .attr("d", arc)
+                      .attr("data-legend", function(d){ return d.data.label })
+                      .style("fill", function(d) { return d.data.color; });
+
+                  g.append("text")
+                      .attr("transform", function(d) { return "translate(" + arc.centroid(d) + ")"; })
+                      .attr("dy", ".25em")
+                      .style("fill","#000")
+                      .style("fill-opacity","0.8")
+                      .style("text-anchor", "middle")
+                      .text(function(d) { return d.data.label; });
+
+                  svg.append("g")
+                      .attr("class", "legend")
+                      .attr("transform", "translate(50,30)")
+                      .style("font-size", "12px")
+                      // .call(d3.legend)
                 }
 
                 function drawWordPath() {
@@ -703,18 +804,17 @@ app.directive("words", function () {
                     })
                 }
 
+                var ext=wordsData.nodes.map(function(d){ return d.children.length }), 
+                    wordScaleOpacity=d3.scale.linear().domain(d3.extent(ext)).range([.5,1]);
+
                 function tickWord() {
-
-                    var ext=wordsData.nodes.map(function(d){ return d.count }), 
-                        wordScaleOpacity=d3.scale.linear().domain(d3.extent(ext)).range([.5,1]);
-
 
                     // remove transition for force
                     var ww = ($scope.wordForceStarted)? wordNodes : wordNodes.transition();
 
                     ww.attr("transform", function(d) { 
                     
-                        var r=wordScaleFont(d.count),
+                        var r=wordScaleFont(d.children.length),
                             x=(d.x==undefined || !$scope.wordForceStarted)? wordsX[d.name] : Math.max(r, Math.min(w - r, d.x)),
                             y=(d.y==undefined || !$scope.wordForceStarted)? wordsY[d.name] : Math.max(r, Math.min(h - r, d.y));
 
@@ -726,8 +826,8 @@ app.directive("words", function () {
                     }).attr("fill-opacity",function(d){
                         if($scope.selection) {
                             if(!d.selected) return 0;
-                            else return wordScaleOpacity(d.count);
-                        } else return wordScaleOpacity(d.count);
+                            else return wordScaleOpacity(d.children.length);
+                        } else return wordScaleOpacity(d.children.length);
                     });
 
                     tickWordPath();
@@ -801,17 +901,18 @@ app.directive("users", function () {
          },
         link: function ($scope, element, attrs) {
             
-            var w=900,
-                h=500;
+            var svg_w=d3.select(element[0]).style('width'),
+                h=500,
+                w=600;
             
-            var sw=.5,
-                sh=.5,
-                sx=w/2,
-                sy=h/2;
+            var sw=1,
+                sh=1,
+                sx=0,
+                sy=0;
 
             var viz=d3.select(element[0]).append("svg")
                 .attr("class","svg-viz")
-                .attr("width", w)
+                .attr("width", svg_w)
                 .attr("height", h)
                 .attr("preserveAspectRatio", "xMidYMid")
                 .attr("viewBox", "0 0 "+ w + " " + h)
@@ -838,10 +939,15 @@ app.directive("users", function () {
 
                 for (var i = 0; i < userData.nodes.length; i++) {
                     myUsersNodes[userData.nodes[i]["name"]]=userData.nodes[i];
+                    userData.nodes[i].children=[];
+                    userData.nodes[i].selected=false;
                 };
 
                 userData.edges.forEach(function(link) {
-                    // console.log(link.weight);
+
+                     myUsersNodes[link.source].children.push(myUsersNodes[link.target]);
+                     myUsersNodes[link.target].children.push(myUsersNodes[link.source]);
+
                     link.source = myUsersNodes[link.source] || 
                         (myUsersNodes[link.source] = {name: link.source});
                     link.target = myUsersNodes[link.target] || 
@@ -849,12 +955,50 @@ app.directive("users", function () {
                     link.value = link.weight;
                 });
 
+
+                // TODO : move data logic to controllers
+                var myCommunities={},
+                    myProvinces={},
+                    leaders={};
+
+                var communities=userData.nodes.map(function(d){
+                    if(myCommunities[d.community]== undefined) myCommunities[d.community]=[]
+                    myCommunities[d.community].push(d);
+                    return d.community
+                })
+
+                var color = d3.scale.category20c();
+                for (com in myCommunities) {
+                    myCommunities[com].sort(function(a,b){ return b.count-a.count});
+                    leaders[com]=myCommunities[com][0]; // keep only the biggest node
+                    
+                    // count by provinces
+                    var pc=count(myCommunities[com].map(function(d){ return d.province }))
+                    myProvinces[com]=[]
+                    for (p in pc) { 
+                        myProvinces[com].push({"label":p, "value":pc[p], "color": color(p)})
+                    }
+                }
+
+                function count(arr){
+                    var obj={}
+                    for (var i = 0, j = arr.length; i < j; i++) {
+                       if (obj[arr[i]]) {
+                          obj[arr[i]]++;
+                       }
+                       else {
+                          obj[arr[i]] = 1;
+                       } 
+                    }
+                    return obj;
+                }
+
                 var userForce=d3.layout.force()
                         .nodes(userData.nodes)
                         .links(userData.edges)
                         .size([w,h])
-                        .linkDistance(150)
-                        .charge(-1000)
+                        // .linkDistance(50)
+                        .charge(-100)
                         .gravity(.4)
                         .on("tick", tickUsers);
 
@@ -873,26 +1017,55 @@ app.directive("users", function () {
                     .attr("class", "user")
 
                 if($scope.userForceStarted) {
-                    userForce.start()
+                    userForce.start();
+                    // console.log(userNodes.call(""));
                     userNodes.call(userForce.drag);
-                } else { 
-                }
+                } 
 
                 userPath.exit().remove();
                 userNodes.exit().remove();
                 drawUsers();
 
+                var padding = 5, // separation between same-color circles
+                    clusterPadding = 36, // separation between different-color circles
+                    maxRadius = 20;
+
                 function drawUsers(){
-                    var userPathColor=d3.scale.category20b();
-                    userNodes.enter()
-                        .append("g")
-                        .attr("class","user")
-                        .append("circle")
-                        .attr("r",function(d){ return (d.count+1)*5})
-                        .style("fill", function(d){return userPathColor(d.community)})
-                        .each(function (d, i) {
-                            // sth
+
+                    var userColor=d3.scale.category20b(),
+                        userExt=userData.nodes.map(function(d){ return d.children.length }),
+                        userSize=d3.scale.linear().domain(d3.extent(userExt)).range([3,20]);
+
+                    userNodes.each(function (d, i) {
+                            
+                            var self = d3.select(this);
+                            
+                            self.append("circle")
+                            .attr("r",function(d){ 
+                                d.radius=userSize(d.children.length);
+                                return d.radius;
+                            })
+                            .style("fill", function(d){return userColor(d.community)})
+                    }).on("mouseover",function(d,i){
+                        // var self = d3.select(this);
+
+                        $scope.selection=true;
+                        d.selected=true;
+                        d.children.forEach(function(e){
+                            e.selected=true;
                         })
+                        
+                        drawUserPie(d3.select(".pie-container"),myProvinces[d.community])
+                    }).on("mouseout",function(d,i){
+                        $scope.selection=false;
+                        d.selected=false;
+                        d.children.forEach(function(e){
+                            e.selected=false;
+                        })
+                        d3.select(".pie-chart").remove()
+                    });
+                    
+                    
 
                     drawUserPath()
                 }
@@ -906,7 +1079,7 @@ app.directive("users", function () {
                     })
                 }
 
-                function tickUsers() {
+                function tickUsers(e) {
 
                     var r=5,
                         w=userForce.size()[0],
@@ -929,9 +1102,17 @@ app.directive("users", function () {
                             var y2=Math.max(r, Math.min(h - r, d.target.y));
                             // console.log(y2);
                             return y2;
+                        })
+                        .attr("stroke-opacity",function(d){
+                            if($scope.selection) {
+                                if(!d.selected) return 0;
+                                else return 1;
+                            } else return 1;
                         });
 
                     userNodes
+                        // .each(cluster(12 * e.alpha * e.alpha))
+                        .each(collide(.5))
                         .attr("transform", function(d) { 
                             
                             var r=5,
@@ -939,9 +1120,117 @@ app.directive("users", function () {
                                 h=userForce.size()[1],
                                 x=Math.max(r, Math.min(w - r, d.x)),
                                 y=Math.max(r, Math.min(h - r, d.y));
+                                // x=d.x,
+                                // y=d.y;
 
                             return "translate(" + x + "," + y + ")"; 
+                        }).attr("fill-opacity",function(d){
+                            if($scope.selection) {
+                                if(!d.selected) return 0;
+                                else return 1;
+                            } else return 1;
                         });
+                }
+
+                // Move d to be adjacent to the cluster node.
+                function cluster(alpha) {
+                  return function(d) {
+                    var cluster = leaders[d.community];
+                    // console.log(cluster);
+                    if (cluster === d) return;
+                    var x = d.x - cluster.x,
+                        y = d.y - cluster.y,
+                        l = Math.sqrt(x * x + y * y),
+                        r = d.radius + cluster.radius;
+                    if (l != r) {
+                      l = (l - r) / l * alpha;
+                      d.x -= x *= l;
+                      d.y -= y *= l;
+                      cluster.x += x;
+                      cluster.y += y;
+                    }
+                  };
+                }
+
+                // Resolves collisions between d and all other circles. 
+                function collide(alpha) {
+                  var quadtree = d3.geom.quadtree(userData.nodes);
+                  return function(d) {
+                    var r = d.radius + maxRadius + Math.max(padding, clusterPadding),
+                        nx1 = d.x - r,
+                        nx2 = d.x + r,
+                        ny1 = d.y - r,
+                        ny2 = d.y + r;
+                    quadtree.visit(function(quad, x1, y1, x2, y2) {
+                      if (quad.point && (quad.point !== d)) {
+                        var x = d.x - quad.point.x,
+                            y = d.y - quad.point.y,
+                            l = Math.sqrt(x * x + y * y),
+                            r = d.radius + quad.point.radius + (d.cluster === quad.point.cluster ? padding : clusterPadding);
+                        if (l < r) {
+                          l = (l - r) / l * alpha;
+                          d.x -= x *= l;
+                          d.y -= y *= l;
+                          quad.point.x += x;
+                          quad.point.y += y;
+                        }
+                      }
+                      return x1 > nx2 || x2 < nx1 || y1 > ny2 || y2 < ny1;
+                    });
+                  };
+                }
+
+                function drawUserPie(element, data) {
+
+                  d3.select(".pie-chart").remove()
+
+                  data.map(function(d){
+                    if(d.label != 0) return d
+                  })
+
+                  var width = 200,
+                    height = 200,
+                    radius = Math.min(width, height) / 2;
+
+                  var arc = d3.svg.arc()
+                      .outerRadius(radius - 10)
+                      .innerRadius(0);
+
+                  var pie = d3.layout.pie()
+                      .sort(null)
+                      .value(function(d) { return d.value; });
+
+                  var svg = element
+                      .append("svg")
+                      .attr("class","pie-chart")
+                      .attr("width", 200)
+                      .attr("height", 200)
+                      .append("g")
+                      .attr("transform", "translate(" + width / 2 + "," + height / 2 + ")");
+
+                  var g = svg.selectAll(".arc")
+                      .data(pie(data))
+                    .enter().append("g")
+                      .attr("class", "arc");
+
+                  g.append("path")
+                      .attr("d", arc)
+                      .attr("data-legend", function(d){ return d.data.label })
+                      .style("fill", function(d) { return d.data.color; });
+
+                  g.append("text")
+                      .attr("transform", function(d) { return "translate(" + arc.centroid(d) + ")"; })
+                      .attr("dy", ".25em")
+                      .style("fill","#000")
+                      .style("fill-opacity","0.8")
+                      .style("text-anchor", "middle")
+                      .text(function(d) { return d.data.label; });
+
+                  svg.append("g")
+                      .attr("class", "legend")
+                      .attr("transform", "translate(50,30)")
+                      .style("font-size", "12px")
+                      // .call(d3.legend)
                 }
 
             })

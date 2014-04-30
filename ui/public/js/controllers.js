@@ -1,21 +1,59 @@
 // controllers.js
 
-var safename="biaoge";
+app.controller('navCtrl', function($scope,config,memeService){
 
-app.controller('dataCtrl', function($scope,$http,$timeout,config,dataService){
+  memeService.list.getData(function(memeList){ 
+    $scope.memeList=[];
+    memeList.memes.forEach(function(meme){
+       // exclude some memes from the list
+        if (meme.safename != "diaosi" && meme.safename != "iphone5" && meme.safename != "tuhao" && meme.safename != "cgc" && meme.rank == 1 && meme.name != "") $scope.memeList.push(meme)
+    });
+
+  })
+
+})
+
+app.controller('dataCtrl', function($scope,$http,$location,$timeout,config,dataService){
+
+
+  console.log($location.$$absUrl);
+  var url=getLocation($location.$$absUrl); // default
   
-  config.setName(safename);
+  var safename=url.pathname.slice(1,url.pathname.length);
+  console.log(safename);
+
+  if(safename == undefined) safename="biaoge"
+  console.log(safename);
+
+
+  function getLocation(href) {
+    var match = href.match(/^(https?\:)\/\/(([^:\/?#]*)(?:\:([0-9]+))?)(\/[^?#]*)(\?[^#]*|)(#.*|)$/);
+    return match && {
+        protocol: match[1],
+        host: match[2],
+        hostname: match[3],
+        port: match[4],
+        pathname: match[5],
+        search: match[6],
+        hash: match[7]
+    }
+  }
+    
+  
+
+  config.setName(safename);   //default
+
 
   $http.get("data/"+safename).success(function(data) {
 
-    // console.log(data);
+    console.log(data);
     $scope.rawdata=data;
     $scope.data=data;
 
     // TIME
     $scope.timeSeriesData=data.map(function(d){
-            return {"count":d.count, "timestamp":d.time}
-      });
+      return {"count":d.count, "timestamp":d.time}
+    });
 
     // sort time frames
     $scope.timeSeriesData.sort(function(a,b){ return a.timestamp-b.timestamp});
@@ -33,8 +71,8 @@ app.controller('dataCtrl', function($scope,$http,$timeout,config,dataService){
     $scope.updateTimeData();
 
     $scope.updateData();
-
   });
+
 
   $scope.stop = function(){
     $timeout.cancel(playAll);
@@ -85,6 +123,8 @@ app.controller('dataCtrl', function($scope,$http,$timeout,config,dataService){
     }  
   })
 
+  var color = d3.scale.category20c();
+
   $scope.updateTimeData=function () {
     $scope.timeSeriesData.forEach(function(d) {
         if(d.timestamp>$scope.start && d.timestamp<$scope.end) d.selected=true
@@ -113,8 +153,8 @@ app.controller('dataCtrl', function($scope,$http,$timeout,config,dataService){
       dataService.words.edges=[],
       dataService.words.index=[],
       dataService.geo=[],
-      dataService.multilayer
-      ;
+      dataService.wordsProvince={};
+
 
       // update data
       for (var i = 0; i < $scope.data.length; i++) {
@@ -195,13 +235,26 @@ app.controller('dataCtrl', function($scope,$http,$timeout,config,dataService){
               // dataService.geo.push(v);
         });
 
-        // multilayer
-        d.data.multi_graph.forEach(function(v){  
-            dataService.multilayer.push(v);
-        });
+        // provinces_words
+        d.data.words_provinces.forEach(function(v){
 
+          // init word
+          if(dataService.wordsProvince[v.word]==undefined) dataService.wordsProvince[v.word]=[]
+
+          //check if province already exists
+          var index=-1;
+          for (var j = 0; j < dataService.wordsProvince[v.word].length; j++) {
+            var e=dataService.wordsProvince[v.word][j];
+            if (v.province===e.label) {
+              index=j;
+              break;
+            } 
+          }
+          if(index==-1) dataService.wordsProvince[v.word].push({"label":v.province,"value":v.weight, "color":color(v.province)});
+          else dataService.wordsProvince[v.word][index]["value"]+=v.weight;
+        })
       };
-  }
+    }
 
 });
 
@@ -222,7 +275,15 @@ app.controller('geoCtrl', function($scope,$http,config,geoService,dataService){
     geoService.taiwan.getData(function(data){ $scope.taiwan=data })
     geoService.hkmacau.getData(function(data){ $scope.hkmacau=data })
 
-    geoService.ratio.getData(function(data){ $scope.ratio=data })    
+    geoService.ratio.getData(function(data){ 
+      var provinceUsersRatio={}
+      data.nb_of_users_by_provinces.forEach(function(d){
+        provinceUsersRatio[d.name]=d.percent;
+      })
+
+      $scope.ratio=provinceUsersRatio;
+    })
+
     
     // update geoData
     $scope.$watch(function() { return config.end; }, function(newVal,oldVal){
@@ -247,12 +308,14 @@ app.controller('wordCtrl', function($scope,$http,config,dataService){
   $scope.$watch(function() { return config.end; }, function(newVal,oldVal){
     $scope.words=dataService.words;
     if(dataService.words.index!=undefined) $scope.wordsLength=dataService.words.index.length;
+    $scope.wordProvinces=dataService.wordsProvince;
 
   })
 
   $scope.$watch(function() { return config.start; }, function(newVal,oldVal){
     $scope.words=dataService.words;
     if(dataService.words.index!=undefined) $scope.wordsLength=dataService.words.index.length;
+    $scope.wordProvinces=dataService.wordsProvince;
   })
 
   $scope.saveWords=function(){

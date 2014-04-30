@@ -54,10 +54,7 @@
 
 /////////////////////////// ROUTES
 
-    app.get('/', function(req, res){
-        // res.send("hello world !");
-        res.render('index', {layout: false});
-    });
+    
 
     // serve data 
     app.get('/time', function(req, res){
@@ -69,6 +66,12 @@
     
     app.get('/info', function(req, res){
         res.send(provinces_info);
+    });
+
+    var memeList=require("./data/2012_sina-weibo-memes_list.json")
+
+    app.get('/list', function(req, res){
+        res.send(memeList);
     });
 
     app.get("/data/:meme",  function(req, res){
@@ -83,9 +86,7 @@
                         console.log(doc[0]);
                         if(doc==null) res.send("meme doesn't exist")
                         else res.send(doc[0].data)
-                    // for (var i = 0; i < doc.data.length; i++) {
-                    //     console.log(doc.data[i].time);
-                    // }
+                    
         });
        
     });
@@ -104,7 +105,12 @@
                             return {"count":d.count, "timestamp":d.time}
                         }))
         });
-       
+    });
+
+    app.get('*', function(req, res){
+        // res.send("hello world !");
+        // res.render('index', {layout: false});
+        res.sendfile(__dirname + '/public/index.html');
     });
 
 /////////////////////////// SOCKET IO

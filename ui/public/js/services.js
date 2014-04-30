@@ -11,11 +11,19 @@ app.factory('dataService', function() {
       "users" : { nodes:[],edges:[]},
       "words" : { nodes:[],edges:[]},
       "geo"   : [],
-      "multilayer": []
+      "wordProvinces": []
 
     };
 });
 
+app.factory('memeService', function($resource) {
+  return {
+    "list":
+      $resource("/list",{ }, {
+        getData: {method:'GET', isArray: false}
+      })
+    }
+});
 
 app.factory('geoService', function($resource) {
   return {

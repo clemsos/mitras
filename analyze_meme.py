@@ -14,7 +14,7 @@ import locale
 from lib.mongo import MongoDB
 
 results_path="/home/clemsos/Dev/mitras/results/"
-meme_names=["biaoge"]
+meme_names=["thevoice"]
 # meme_names=[ meme for meme in os.listdir(results_path) if meme[-3:] != "csv"]
 # meme_names=[
 #  'biaoge',
@@ -246,14 +246,15 @@ for meme_name in meme_names:
     words_minimum_exchange=200
     top_words_limit=500
 
-    words_allowed=[]
-    c in Counter(words).most_common(top_words_limit):
-        try: 
-            int(c[0])
-            words_allowed.append(c[0])
-        except ValueError:
-            pass
-            
+    words_allowed=[c[0] for c in Counter(words).most_common(top_words_limit)]
+
+    # for 
+    #     try: 
+    #         int(c[0])
+    #         words_allowed.append(c[0])
+    #     except ValueError:
+    #         pass
+
     print "%d words_allowed"%len(words_allowed)
 
     for word in words_edges:
@@ -367,7 +368,7 @@ for meme_name in meme_names:
                               and w[0] in words_allowed
                               and w[1] in words_allowed
                               ]
-                        
+        
         # timeframe["words_edges"]=[{"source":w[0][0],"target":w[0][1],"weight":w[1]} for w in Counter(words_edges_allowed).most_common()]
         # print "%d words edges"%len(timeframe["words_edges"])
         
@@ -387,23 +388,28 @@ for meme_name in meme_names:
         
         print "%d words_edges"%len(timeframe["words_edges"])
         
-        timeframe["multi_graph"]=[{"word":w[0][0],
-                       "user":w[0][1],
-                       "weight":w[1]} 
-                        for w in Counter(tf["words_to_users"]).most_common()
-                        if w[0][1] in allowed_users 
-                        and w[0][0] in words_allowed
-                        and w[1]>multi_median
-                        ]
-        print "%d multilayer interactions"%len(timeframe["multi_graph"])
-        
-        # add province info
-        for edge in timeframe["multi_graph"]:
-            # print edge["user"]
-            try : province=user_provinces[edge["user"]]
-            except KeyError: province=""
-            edge["province"]=province
 
+        word_2_provinces=[]
+        for w in Counter(tf["words_to_users"]).most_common():
+            word=w[0][0]
+            user=w[0][1]
+            weight=w[1]
+            if user in allowed_users and word in words_allowed:
+                try : province=user_provinces[user]
+                except KeyError: province=""
+            word_2_provinces.append( (word,province) )
+
+
+        timeframe["words_provinces"]=[{ "word":w[0][0],
+                                        "province":w[0][1],
+                                        "weight":w[1]} 
+                                        for w in Counter(word_2_provinces).most_common()
+                                        if w[0][1] !=""
+                                        and w[0][1] !="0"
+                                    ]
+
+        print "%d provinces interactions"%len(timeframe["words_provinces"])
+                    
         timeframes.append({"time":_time, "data":timeframe, "count":tf["count"]})
 
     timeframes_file=meme_path+"/"+meme_name+"_timeframes.json"
@@ -423,4 +429,4 @@ for meme_name in meme_names:
     meme={"name":meme_name,"data":timeframes}
     db[collection].insert(meme)
         
-        
+    

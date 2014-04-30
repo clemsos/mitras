@@ -2,4 +2,5 @@
 
 var app = angular.module('mitras', [
   'ngResource' //required for JSON
+
 ]);
