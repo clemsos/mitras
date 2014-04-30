@@ -277,7 +277,7 @@ app.directive("map", function () {
 
             $scope.$watch('geoEdges', function(newVal, oldVal) {
 
-                if(newVal==[] && $scope.centroidsXY) return
+                if(newVal==[] && $scope.centroidsXY==undefined) return
                 // console.log("geoEdges",newVal.length);
 
                 var geoPaths=geoEdges.selectAll(".geoPath")
