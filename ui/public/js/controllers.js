@@ -82,7 +82,7 @@ app.controller('dataCtrl', function($scope,$http,$timeout,config,dataService){
       config.setEnd(newEnd);
       // socket.emit('config', config.toJSON());
       $scope.updateData();
-    }
+    }  
   })
 
   $scope.updateTimeData=function () {

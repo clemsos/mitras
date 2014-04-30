@@ -568,22 +568,27 @@ app.directive("words", function () {
                 }
 
                 // parse data properly                     
-                var myWordNodes={}
+                var myWordNodes={},
+                    myWordEdges={};
 
                 for (var i = 0; i < wordsData.nodes.length; i++) {
-
                     myWordNodes[wordsData.nodes[i]["name"]]=wordsData.nodes[i];
-                    // wordsData[i].words=null;
+                    wordsData.nodes[i].children=[];
+                    wordsData.nodes[i].selected=false;
                 };
 
                 wordsData.edges.forEach(function(link) {
                     // console.log(link.weight);
+                     myWordNodes[link.source].children.push(myWordNodes[link.target]);
+                     myWordNodes[link.target].children.push(myWordNodes[link.source]);
+
                     link.source = myWordNodes[link.source] || 
                         (myWordNodes[link.source] = {name: link.source});
                     link.target = myWordNodes[link.target] || 
                         (myWordNodes[link.target] = {name: link.target});
                     link.value = link.weight;
                 });
+
 
                 var wordForce=d3.layout.force()
                         .nodes(wordsData.nodes)
@@ -626,13 +631,14 @@ app.directive("words", function () {
                     userPathColor=d3.scale.category20b(),
                     mapColor;
                 
+                $scope.selection=false;
                 function drawWords() {
                     
                     // console.log(wordNodes);
-                     var ext=wordsData.nodes.map(function(d){ return d.count });
-                    var wordScaleSize=d3.scale.linear().domain(d3.extent(ext)).range([15, 35]);
-                    var wordScaleOpacity=d3.scale.linear().domain(d3.extent(ext)).range([.8,1]);
-                    var wordColor = d3.scale.linear().domain(d3.extent(ext)).range(["#a1d99b","#006d2c"]);
+                    var ext=wordsData.nodes.map(function(d){ return d.count }), 
+                        wordScaleSize=d3.scale.linear().domain(d3.extent(ext)).range([15, 35]),
+                        wordScaleOpacity=d3.scale.linear().domain(d3.extent(ext)).range([.5,1]),
+                        wordColor = d3.scale.linear().domain(d3.extent(ext)).range(["#a1d99b","#006d2c"]);
 
                     wordNodes.each(function (d, i) {
 
@@ -653,8 +659,9 @@ app.directive("words", function () {
                             .attr("dx", 12)
                             .attr("dy", 8)
                             .style("font-size", function(d) { return wordScaleSize(d.count) })//scale_size(d.btw_cent) })
-                            .style("fill", function(d) {  return wordColor(d.count) })
-                            .style("fill-opacity", function(d) {  return wordScaleOpacity(d.count) })
+                            .style("fill", function(d) {  return "#006d2c" })
+                            // .style("fill-opacity", function(d) {  return "#006d2c" })
+                            // .style("fill-opacity", function(d) {  return wordScaleOpacity(d.count) })
                             .attr("text-anchor", "middle") // text-align: right
                             .text(function(d) { return d.name });
 
@@ -663,59 +670,87 @@ app.directive("words", function () {
 
                         wordsX[d.name]=x;
                         wordsY[d.name]=y;
-                        // self.attr("transform", function(d) { return "translate(" + x + "," + y + ")"; });
 
-                    })
+                    }).on("mouseover",function(d,i){
+                        $scope.selection=true;
+                        d.selected=true;
+                        d.children.forEach(function(e){
+                            e.selected=true;
+                        })
+                    }).on("mouseout",function(d,i){
+                        $scope.selection=false;
+                        d.selected=false;
+                        d.children.forEach(function(e){
+                            e.selected=false;
+                        })
+                    });
 
                     drawWordPath();
                 }
 
                 function drawWordPath() {
 
+                    var wordPathExt=wordsData.edges.map(function(d){ return d.weight }),
+                        wordPathWeight=d3.scale.linear().domain(d3.extent(wordPathExt)).range([1, 4]),
+                        wordPathOpacity=d3.scale.linear().domain(d3.extent(wordPathExt)).range([.1, 1]);
+                    
                     wordPath.each(function (d, i) {
                         var self = d3.select(this);
-                        // console.log(d);
                         
-                        self.style("stroke", function(d) { return "red" })
-                            .style("stroke-width", function(d) {  return 1 });
-
-                        if(!$scope.wordForceStarted) self.style("stroke-opacity", function(d) { return 0 })
-                        else self.style("stroke-opacity", function(d) { return 0.3 })
+                        self.style("stroke", function(d) { return "#de2d26" })
+                            .style("stroke-width", function(d) {  return wordPathWeight(d.weight) })
+                            .style("stroke-opacity", function(d) {  return wordPathOpacity(d.weight) });
                     })
                 }
 
                 function tickWord() {
+
+                    var ext=wordsData.nodes.map(function(d){ return d.count }), 
+                        wordScaleOpacity=d3.scale.linear().domain(d3.extent(ext)).range([.5,1]);
+
+
                     // remove transition for force
                     var ww = ($scope.wordForceStarted)? wordNodes : wordNodes.transition();
 
                     ww.attr("transform", function(d) { 
-                        
-                        // console.log(w,h)
+                    
                         var r=wordScaleFont(d.count),
                             x=(d.x==undefined || !$scope.wordForceStarted)? wordsX[d.name] : Math.max(r, Math.min(w - r, d.x)),
                             y=(d.y==undefined || !$scope.wordForceStarted)? wordsY[d.name] : Math.max(r, Math.min(h - r, d.y));
-                        // console.log(x,y);
 
-                        // console.log(d.x,x,d.y,y,r,w,h);
                         wordsX[d.name]=x;
                         wordsY[d.name]=y;
 
                         return "translate(" + x + "," + y + ")"; 
 
+                    }).attr("fill-opacity",function(d){
+                        if($scope.selection) {
+                            if(!d.selected) return 0;
+                            else return wordScaleOpacity(d.count);
+                        } else return wordScaleOpacity(d.count);
                     });
 
-                    // if(displayWordForce) 
                     tickWordPath();
                 }
 
                 function tickWordPath() {
+                    var wordPathExt=wordsData.edges.map(function(d){ return d.weight }),
+                        wordPathWeight=d3.scale.linear().domain(d3.extent(wordPathExt)).range([1, 4]),
+                        wordPathOpacity=d3.scale.linear().domain(d3.extent(wordPathExt)).range([.1, 1]);
+
                     // console.log(wordForce.links());
                     wordPath.each(function (d, i) {
 
                         var self=d3.select(this);
 
-                        if(!$scope.wordForceStarted) self.style("stroke-opacity", function(d) { return 0 })
-                        else self.style("stroke-opacity", function(d) { return 0.3 })
+                        self.style("stroke-opacity", function(d) { 
+                             if($scope.selection) {
+                                if( d.target.selected && d.source.selected) return wordPathOpacity(d.weight)
+                                else return 0;
+                            } else return wordPathOpacity(d.weight);
+
+                         })
+                        // else self.style("stroke-opacity", function(d) { return 0.3 })
 
                         // console.log(d.source);
                         

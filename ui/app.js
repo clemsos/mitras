@@ -76,13 +76,16 @@
         console.log(req.params.meme)
         var meme_name=req.params.meme;
 
-        memes.findOne({"name":req.params.meme}).on('success', function (doc) {
+        memes.find({"name":req.params.meme}, 
+                    {limit : 1, sort : { _id : -1 } }, 
+                    function (err, doc) {
 
-            if(doc==null) res.send("meme doesn't exist")
-            else res.send(doc.data)
-            // for (var i = 0; i < doc.data.length; i++) {
-            //     console.log(doc.data[i].time);
-            // }
+                        console.log(doc[0]);
+                        if(doc==null) res.send("meme doesn't exist")
+                        else res.send(doc[0].data)
+                    // for (var i = 0; i < doc.data.length; i++) {
+                    //     console.log(doc.data[i].time);
+                    // }
         });
        
     });
@@ -92,13 +95,14 @@
         console.log(req.params.meme)
         var meme_name=req.params.meme;
 
-        memes.findOne({"name":req.params.meme}).on('success', function (doc) {
+        memes.findOne({"name":req.params.meme}, 
+                    {limit : 1, sort : { _id : -1 } }, 
+                    function (err, doc) {
 
-            if(doc==null) res.send("meme doesn't exist")
-            else res.send(doc.data.map(function(d){
-                return {"count":d.count, "timestamp":d.time}
-            }))
-
+                        if(doc==null) res.send("meme doesn't exist")
+                        else res.send(doc.data[0].map(function(d){
+                            return {"count":d.count, "timestamp":d.time}
+                        }))
         });
        
     });
