@@ -46,9 +46,10 @@ app.controller('dataCtrl', function($scope,$http,$location,$timeout,config,dataS
 
   $http.get("data/"+safename).success(function(data) {
 
-    console.log(data);
     $scope.rawdata=data;
     $scope.data=data;
+
+    console.log(data);
 
     // TIME
     $scope.timeSeriesData=data.map(function(d){
@@ -134,16 +135,12 @@ app.controller('dataCtrl', function($scope,$http,$location,$timeout,config,dataS
   }
 
   $scope.updateData=function () {
-      
-      
+
       $scope.data=$scope.rawdata.map(function(d) {
         if(d.time>(config.start/1000) && d.time<(config.end/1000)) return d
       })
-
-
-      // console.log("updateData");
-      // console.log($scope.rawdata);
-      
+  
+    // console.log($scope.data);
       
       // init
       dataService.users.nodes=[], 
@@ -157,10 +154,14 @@ app.controller('dataCtrl', function($scope,$http,$location,$timeout,config,dataS
 
 
       // update data
-      for (var i = 0; i < $scope.data.length; i++) {
-        var d=$scope.data[i];
-        if(d==undefined) return;
-        
+      console.log($scope.data.length);
+      // for (var i = 0; i < $scope.data.length; i++) {
+      //   console.log($scope.data);
+      //   var d=$scope.data[i];
+      
+      $scope.data.forEach(function (d){
+        if(d==undefined) return; // remove empty timeframes
+        if(d!=undefined) console.log('times...');
         // user nodes
         d.data.user_nodes.forEach(function(v){  
           if(dataService.users.index.indexOf(v.name) == -1 ) {
@@ -197,7 +198,7 @@ app.controller('dataCtrl', function($scope,$http,$location,$timeout,config,dataS
 
         // words edges
         d.data.words_edges.forEach(function(v){  
-          
+
           // check if in scope
           if(dataService.words.index.indexOf(v.source) !=-1 && dataService.words.index.indexOf(v.target) != -1) {
               
@@ -223,13 +224,16 @@ app.controller('dataCtrl', function($scope,$http,$location,$timeout,config,dataS
             if (v.target == "Qita" || v.target == 0 || v.target =="Haiwai") return 
 
             var index=-1;
+            // console.log(v);
+
             for (var j = 0; j < dataService.geo.length; j++) {
               var e=dataService.geo[j];
               if (v.source===e.source && v.target ===e.target) {
                 index=j;
                 break;
               } 
-            }   
+            }
+            // console.log(index);
             if(index!=-1) dataService.geo[index].weight+=v.weight;
             else dataService.geo.push(v);
               // dataService.geo.push(v);
@@ -253,7 +257,7 @@ app.controller('dataCtrl', function($scope,$http,$location,$timeout,config,dataS
           if(index==-1) dataService.wordsProvince[v.word].push({"label":v.province,"value":v.weight, "color":color(v.province)});
           else dataService.wordsProvince[v.word][index]["value"]+=v.weight;
         })
-      };
+      });
     }
 
 });
@@ -270,6 +274,7 @@ app.controller('geoCtrl', function($scope,$http,config,geoService,dataService){
   
     // $scope.sort=["gdp","population","meme"]
     $scope.centroidsOnMap=true;
+    $scope.memeName=config.name
 
     geoService.mainland.getData(function(data){ $scope.mainland=data })
     geoService.taiwan.getData(function(data){ $scope.taiwan=data })

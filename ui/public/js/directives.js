@@ -228,6 +228,49 @@ app.directive("map", function () {
                 var mapPath = d3.geo.path()
                     .projection(projection);
 
+                var mapLegend=geo.append("g").attr("class","map-legend")
+                                .attr("transform", "translate("+(100)+","+(map_height-200)+")");
+                                // console.log($scope);
+                    
+                $scope.$watch('memeName', function(newVal, oldVal) {
+                    console.log(newVal);
+                    if(newVal!=undefined) {                           
+                        mapLegend.append("text")
+                            .attr("dx",1)
+                            .attr("dy",12)
+                            .text("Users interactions by provinces for '"+newVal+"'")
+                            .style("fill","#404040")
+                            .style("margin-left",5)
+                            .style("font-size",10)
+                            .call(wrap, 135);
+                    }
+
+                    
+                })
+
+                function wrap(text, width) {
+                        text.each(function() {
+                            var text = d3.select(this),
+                                words = text.text().split(/\s+/).reverse(),
+                                word,
+                                line = [],
+                                lineNumber = 0,
+                                lineHeight = 0.7, // ems
+                                y = text.attr("y"),
+                                dy = parseFloat(text.attr("dy")),
+                                tspan = text.text(null).append("tspan").attr("x", 0).attr("y", y).attr("dy", dy );
+                            while (word = words.pop()) {
+                              line.push(word);
+                              tspan.text(line.join(" "));
+                              if (tspan.node().getComputedTextLength() > width) {
+                                line.pop();
+                                tspan.text(line.join(" "));
+                                line = [word];
+                                tspan = text.append("tspan").attr("x", 0).attr("y", y).attr("dy", ++lineNumber * lineHeight + dy ).text(word);
+                              }
+                            }
+                        });
+                }
 
                 // projection for HK / Macau
                 var projection2 = d3.geo.mercator()
@@ -275,10 +318,12 @@ app.directive("map", function () {
 
             var geoDefs=geo.append("defs").attr("class","geo-arrows")
 
+            var geoStrokeColor="#428bca"
+
             $scope.$watch('geoEdges', function(newVal, oldVal) {
 
                 if(newVal==[] && $scope.centroidsXY==undefined) return
-                // console.log("geoEdges",newVal.length);
+                console.log("map updating !");
 
                 var geoPaths=geoEdges.selectAll(".geoPath")
                     .data(newVal)
@@ -301,7 +346,7 @@ app.directive("map", function () {
                 geoPaths.enter() 
                     .append("line")
                     .attr("class", "geoPath")
-                    .style("stroke", function(d) { return "#428bca" })
+                    .style("stroke", function(d) { return geoStrokeColor })
                     .style("stroke-opacity", function(d) { return 0.3 })
                     .attr("marker-mid", "url(#end)")                
                 
@@ -315,13 +360,62 @@ app.directive("map", function () {
 
                 if($scope.ratio!=undefined) {
                     
-                    var geoExt=newVal.map(function(d){return d.weight*($scope.ratio[d.source]/100);}),
-                        geoPathStrokeWidth=d3.scale.linear().domain(d3.extent(geoExt)).range([1, 10]);
+                    // poids de l'échange pondéré par la population totale de Weibo
+                    var geoExt=newVal.map(function(d){
+                            return (d.weight*$scope.ratio[d.source])/100;
+                        }),
+                        geoPathStrokeWidth=d3.scale.linear().domain(d3.extent(geoExt)).range([1, 10]),
+                        legendExt=d3.scale.linear().domain([0,4]).range(d3.extent(geoExt));
                     
+
                     geoPaths.style("stroke-width", function(d) {  
-                                    // console.log($scope.ratio[d.source]);
-                                    return geoPathStrokeWidth(d.weight *($scope.ratio[d.source]/100));
-                                });
+                        return geoPathStrokeWidth(d.weight *($scope.ratio[d.source]/100));
+                    });
+
+                    //legend
+
+                    
+                    d3.select(".legend-rates").remove()
+
+                    var mapRates=mapLegend.append("g")
+                            .attr("class","legend-rates")
+
+                    mapRates.append("text")
+                        .attr("transform","translate(0,30)")
+                        .attr("dx",1)
+                        .attr("dy",10)
+                        .text("User interactions rates (%) (weighted by population by province)")
+                        .style("fill","#aaa")
+                        .style("margin-left",5)
+                        .style("font-size",10)
+                        .call(wrap, 150);
+
+                    console.log(geoExt);
+                    for (var i = 0; i < 4; i++) {
+                        var strokeWidth=geoPathStrokeWidth(legendExt(i)),
+                            y=80+i*12+strokeWidth,
+                            percent=Math.round(legendExt(i)/d3.sum(geoExt)*100);
+
+                        mapRate=mapRates.append("g")
+
+                        mapRate.append("text")
+                            .attr("dx",1)
+                            .attr("dy",y+3)
+                            .text( percent+"%" )
+                            .style("fill","#aaa")
+                            .style("margin-left",5)
+                            .style("font-size",9);
+
+                        mapRate.append("line")
+                                 .attr("x1", 30)
+                                 .attr("y1", y)
+                                 .attr("x2", 60)
+                                 .attr("y2", y)
+                                 .style("stroke", geoStrokeColor)
+                                 .style("stroke-width", strokeWidth);
+
+                    }
+                    
                 }
 
                 geoPaths.exit().remove();

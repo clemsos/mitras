@@ -14,19 +14,20 @@ import locale
 from lib.mongo import MongoDB
 
 results_path="/home/clemsos/Dev/mitras/results/"
-meme_names=["thevoice"]
+meme_names=["qiegao"]
+
 # meme_names=[ meme for meme in os.listdir(results_path) if meme[-3:] != "csv"]
 # meme_names=[
-#  'biaoge',
-#  'thevoice',
+#  # 'biaoge',
+#  # 'thevoice',
 #  'moyan',
 #  'hougong',
 #  'gangnam',
 #  'sextape',
-#  'dufu',
+#  # 'dufu',
 #  'ccp',
 #  'yuanfang',
-#  'qiegao']
+#  # 'qiegao']
 
 
 print meme_names
@@ -234,7 +235,7 @@ for meme_name in meme_names:
 
     # betweeness_centrality
     print "computing betweeness_centrality... (this may take some time)"
-    users_btw_cent=nx.betweenness_centrality (G.to_undirected())
+    # users_btw_cent=nx.betweenness_centrality (G.to_undirected())
     print "computing done"
 
     # WORD graph info
@@ -299,7 +300,7 @@ for meme_name in meme_names:
 
     # betweeness_centrality
     print "computing betweeness_centrality... (this may take some time)"
-    words_btw_cent=nx.betweenness_centrality (Gw.to_undirected())
+    # words_btw_cent=nx.betweenness_centrality (Gw.to_undirected())
     print "computing done"
 
     # parse data using time reference
@@ -323,8 +324,9 @@ for meme_name in meme_names:
                                   "name":u[0],
                                   "count":u[1], 
                                   "province":user_provinces[u[0]], 
-                                  "community":user_communities[u[0]],
-                                  "btw_cent":users_btw_cent[u[0]]} 
+                                  # "btw_cent":users_btw_cent[u[0]],
+                                  "community":user_communities[u[0]]
+                                  } 
                                  for u in Counter(tf["user_nodes"]).most_common() 
                                  if u[0] in allowed_users]
         
