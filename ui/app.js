@@ -7,6 +7,7 @@
     var server = require('http').createServer(app);
 
     var moment = require('moment');
+    var d3 = require('d3');
 
     var config = require("./config/config.json");
 
@@ -71,6 +72,7 @@
     var memeList=require("./data/2012_sina-weibo-memes_list.json")
 
     app.get('/list', function(req, res){
+        
         res.send(memeList);
     });
 
@@ -82,13 +84,11 @@
         memes.find({"name":req.params.meme}, 
                     {limit : 1, sort : { _id : -1 } }, 
                     function (err, doc) {
-
                         console.log(doc[0]);
                         if(doc==null) res.send("meme doesn't exist")
                         else res.send(doc[0].data)
                     
         });
-       
     });
 
     app.get("/times/:meme", function(req, res){
@@ -99,12 +99,162 @@
         memes.findOne({"name":req.params.meme}, 
                     {limit : 1, sort : { _id : -1 } }, 
                     function (err, doc) {
-
+                        // console.log(doc.data);
                         if(doc==null) res.send("meme doesn't exist")
-                        else res.send(doc.data[0].map(function(d){
+                        else res.send(doc.data.map(function(d){
                             return {"count":d.count, "timestamp":d.time}
                         }))
         });
+    });
+
+    var color=d3.scale.category20()
+
+    app.get("/datatime/:meme/:start/:end", function(req, res){
+        
+        var meme_name=req.params.meme,
+            start=req.params.start,
+            end=req.params.end
+
+        memes.find({"name":req.params.meme}, {limit : 1, sort : { _id : -1 } }, 
+            function (err, doc) {  
+                // console.log(doc[0]);
+                var data=[];
+                for (var i = 0; i < doc[0].data.length; i++) {
+                    var d=doc[0].data[i];
+                    if(d.time>(start) && d.time<(end)) data.push(d.data)
+                }
+                
+                console.log(req.params,data.length+" frames");
+                var dataService={}
+                    dataService.users={}, 
+                    dataService.words={}, 
+                    dataService.geo=[],
+                    dataService.wordsProvince={};
+
+
+                // init
+                dataService.users.nodes=[], 
+                dataService.users.edges=[],
+                dataService.users.index=[],
+                dataService.words.nodes=[], 
+                dataService.words.edges=[],
+                dataService.words.index=[],
+                dataService.geo=[],
+                dataService.wordsProvince={};
+
+                
+                // users
+                data.forEach(function (d){
+
+                    if(d==undefined) return; // remove empty timeframes
+                    // if(d!=undefined) console.log('times...');
+                    
+                    // console.log(d);
+                    // user nodes
+                    d.user_nodes.forEach(function(v){  
+                      if(dataService.users.index.indexOf(v.name) == -1 ) {
+                        dataService.users.nodes.push(v);
+                        dataService.users.index.push(v.name);
+                      }
+                    });
+
+                    // user edges
+                    d.user_edges.forEach(function(v){  
+                      if(dataService.users.index.indexOf(v.source) !=-1 && dataService.users.index.indexOf(v.target) != -1 
+                        ) {
+                          // check if already exists
+                          var index=-1;
+                          for (var j = 0; j < dataService.users.edges.length; j++) {
+                            var e=dataService.users.edges[j];
+                            if (v.source===e.source && v.target ===e.target) {
+                              index=j;
+                              break;
+                            } 
+                          }   
+                          if(index!=-1) dataService.users.edges[index].weight+=v.weight;
+                          else dataService.users.edges.push(v);
+                      }
+                    });
+
+                    // word nodes
+                    d.words_nodes.forEach(function(v){  
+                      if(dataService.words.index.indexOf(v.name) == -1 ) {
+                        dataService.words.nodes.push(v);
+                        dataService.words.index.push(v.name);
+                      }
+                    });
+
+                    // words edges
+                    d.words_edges.forEach(function(v){  
+
+                      // check if in scope
+                      if(dataService.words.index.indexOf(v.source) !=-1 && dataService.words.index.indexOf(v.target) != -1) {
+                          
+                          // check if already exists
+                          var index=-1;
+                          for (var j = 0; j < dataService.words.edges.length; j++) {
+                            var e=dataService.words.edges[j];
+                            if (v.source===e.source && v.target ===e.target) {
+                              index=j;
+                              break;
+                            } 
+                          }   
+
+                          if(index!=-1) dataService.words.edges[index].weight+=v.weight;
+                          else dataService.words.edges.push(v);
+                      }
+                    });
+
+                    // geo (provinces edges)
+                    d.provinces_edges.forEach(function(v){  
+                        
+                        if (v.source == "Qita" || v.source == 0 || v.source =="Haiwai") return 
+                        if (v.target == "Qita" || v.target == 0 || v.target =="Haiwai") return 
+
+                        var index=-1;
+                        // console.log(v);
+
+                        for (var j = 0; j < dataService.geo.length; j++) {
+                          var e=dataService.geo[j];
+                          if (v.source===e.source && v.target ===e.target) {
+                            index=j;
+                            break;
+                          } 
+                        }
+                        // console.log(index);
+                        if(index!=-1) dataService.geo[index].weight+=v.weight;
+                        else dataService.geo.push(v);
+                          // dataService.geo.push(v);
+                    });
+
+                    // provinces_words
+                    d.words_provinces.forEach(function(v){
+
+                      // init word
+                      if(dataService.wordsProvince[v.word]==undefined) dataService.wordsProvince[v.word]=[]
+
+                      //check if province already exists
+                      var index=-1;
+                      for (var j = 0; j < dataService.wordsProvince[v.word].length; j++) {
+                        var e=dataService.wordsProvince[v.word][j];
+                        if (v.province===e.label) {
+                          index=j;
+                          break;
+                        } 
+                      }
+                      if(index==-1) dataService.wordsProvince[v.word].push({
+                            "label":v.province,
+                            "value":v.weight,
+                            "color":color(v.province)
+                        });
+                      else dataService.wordsProvince[v.word][index]["value"]+=v.weight;
+                    })
+                });
+
+                if(doc==null) res.send("meme doesn't exist")
+                else res.send(dataService)
+            }
+        )
     });
 
     app.get('*', function(req, res){

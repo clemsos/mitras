@@ -1,12 +1,15 @@
 # list of hashtags 
-db.tweets.aggregate( {$project: {a: '$hashtags'}}, 
+db.tweets.aggregate( 
+    {$project: {a: '$hashtags'}}, 
     {$unwind: '$a'}, 
-    {$group: {_id: 'a', items: {$addToSet: '$a'}}});
+    {$group: {_id: 'a', items: {$addToSet: '$a'}}}
+    );
 
 # count for each  hashtags
 
     # { $limit : 500000 },
     # { $skip : 100000 },
+
 db.tweets.aggregate([
     { $group: {
             _id: "$_id",

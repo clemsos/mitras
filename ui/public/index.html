@@ -23,6 +23,11 @@
             padding :0;
             padding-top: 45px;
         }
+
+        .btn-save-png {
+            position: relative;
+            top: 300px;
+        }
         
     </style>
 
@@ -139,35 +144,38 @@
                     <div words start="start" end="end" class="words-container"></div>
                 </div>
                 <div class="col-xs-3 col-sm-3">
-                    <a type="button" ng-click="saveWords(); $event.preventDefault()" class="btn-sm btn-default btn-save"><span class="glyphicon glyphicon-save" ></span> Save</a>
+                    <a type="button" ng-click="saveWords(); $event.preventDefault()" class="btn-sm btn-default btn-save btn-save-png"><span class="glyphicon glyphicon-save" ></span> Save</a>
                     <div class="wordpie-container"></div>
                 </div>
             </div> 
             <!-- 
+            -->
             <div class="row" ng-controller="userCtrl">
                 <div class="col-xs-9 col-sm-9">
                     <div users start="start" end="end" class="user-container"></div>
                 </div>
                 <div class="col-xs-3 col-sm-3">
-                    <a type="button" ng-click="saveUsers(); $event.preventDefault()" class="btn-sm btn-default btn-save"><span class="glyphicon glyphicon-save" ></span> Save</a>
+                    <a type="button" ng-click="saveUsers(); $event.preventDefault()" class="btn-sm btn-default btn-save btn-save-png"><span class="glyphicon glyphicon-save" ></span> Save</a>
                     <div class="pie-container"></div>
                 </div>
             </div>  
+            <!-- 
             -->
-            <div class="row" ng-controller="geoCtrl">
+              <div class="row" ng-controller="geoCtrl">
                 <div class="col-xs-9 col-sm-9">
                     <div map start="start" end="end" geo-data="geoData" class="geo-container"></div>
                 </div>
                 <div class="col-xs-3 col-sm-3">
-                    <a type="button" ng-click="saveGeo(); $event.preventDefault()" class="btn-sm btn-default btn-save"><span class="glyphicon glyphicon-save" ></span> Save</a>
+                    <a type="button" ng-click="saveGeo(); $event.preventDefault()" class="btn-sm btn-default btn-save btn-save-png"><span class="glyphicon glyphicon-save" ></span> Save</a>
                 </div>
-            </div>   
+            </div>    
             <div class="row well" id="timeline"u>
                 <slider id="time-slider" model="timeframe" type="text" data-slider-min="0"  data-slider-step="1" data-slider-orientation="horizontal" data-slider-selection="after" data-slider-tooltip="show"></slider>
                 <div timeserie time-data="timeSeriesData" start="start" end="end" >
                 </div>
                 <p>
-                    <a class="btn btn-defualt" href="#" ng-click="playAll(); $event.preventDefault()"><span class="glyphicon glyphicon-play"></span>Play</a>
+                    <a class="btn btn-default" href="#" ng-click="playAll(); $event.preventDefault()"><span class="glyphicon glyphicon-play"></span>Play</a>
+                    <a class="btn btn-default" href="#" ng-click="stop(); $event.preventDefault()"><span class="glyphicon glyphicon-stop"></span>Stop</a>
                     <b>Start: {{start | date:'medium'}}</b>
                     <b>End: {{end | date:'medium'}}</b>
                 </p>           

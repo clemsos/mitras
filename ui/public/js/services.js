@@ -11,7 +11,8 @@ app.factory('dataService', function() {
       "users" : { nodes:[],edges:[]},
       "words" : { nodes:[],edges:[]},
       "geo"   : [],
-      "wordProvinces": []
+      "wordProvinces": [],
+      "trigger": 0
 
     };
 });

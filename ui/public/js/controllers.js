@@ -5,8 +5,9 @@ app.controller('navCtrl', function($scope,config,memeService){
   memeService.list.getData(function(memeList){ 
     $scope.memeList=[];
     memeList.memes.forEach(function(meme){
-       // exclude some memes from the list
-        if (meme.safename != "diaosi" && meme.safename != "iphone5" && meme.safename != "tuhao" && meme.safename != "cgc" && meme.rank == 1 && meme.name != "") $scope.memeList.push(meme)
+       // limit list to some of the memes only
+       var memelist=['biaoge','thevoice','moyan','hougong', 'gangnam','sextape','dufu','ccp','yuanfang','qiegao']
+        if (memelist.indexOf(meme.safename)!=-1) $scope.memeList.push(meme)
     });
 
   })
@@ -16,15 +17,15 @@ app.controller('navCtrl', function($scope,config,memeService){
 app.controller('dataCtrl', function($scope,$http,$location,$timeout,config,dataService){
 
 
-  console.log($location.$$absUrl);
+  // get location and name
+  // console.log($location.$$absUrl);
   var url=getLocation($location.$$absUrl); // default
   
   var safename=url.pathname.slice(1,url.pathname.length);
   console.log(safename);
 
   if(safename == undefined) safename="biaoge"
-  console.log(safename);
-
+  // console.log(safename);
 
   function getLocation(href) {
     var match = href.match(/^(https?\:)\/\/(([^:\/?#]*)(?:\:([0-9]+))?)(\/[^?#]*)(\?[^#]*|)(#.*|)$/);
@@ -38,23 +39,14 @@ app.controller('dataCtrl', function($scope,$http,$location,$timeout,config,dataS
         hash: match[7]
     }
   }
-    
-  
 
   config.setName(safename);   //default
 
 
-  $http.get("data/"+safename).success(function(data) {
-
-    $scope.rawdata=data;
-    $scope.data=data;
-
-    console.log(data);
+  $http.get("times/"+safename).success(function(_time_data) {
 
     // TIME
-    $scope.timeSeriesData=data.map(function(d){
-      return {"count":d.count, "timestamp":d.time}
-    });
+    $scope.timeSeriesData=_time_data
 
     // sort time frames
     $scope.timeSeriesData.sort(function(a,b){ return a.timestamp-b.timestamp});
@@ -64,19 +56,19 @@ app.controller('dataCtrl', function($scope,$http,$location,$timeout,config,dataS
     // init scope values
     $scope.timeMax=$scope.timeSeriesData.length;
     $scope.start=$scope.timeSeriesData[0].timestamp;
-    $scope.end=$scope.timeSeriesData[data.length-1].timestamp;
+    $scope.end=$scope.timeSeriesData[_time_data.length-1].timestamp;
     config.setStart($scope.start)
     config.setEnd($scope.end)    
     // socket.emit('config', config.toJSON());
     
     $scope.updateTimeData();
 
-    $scope.updateData();
+    // $scope.updateData();
   });
 
 
   $scope.stop = function(){
-    $timeout.cancel(playAll);
+    $timeout.cancel($scope.playFrame);
   }
 
   var i,step,frames;
@@ -133,140 +125,40 @@ app.controller('dataCtrl', function($scope,$http,$location,$timeout,config,dataS
         d.date=new Date(d.timestamp);
     });
   }
-
+  
   $scope.updateData=function () {
 
-      $scope.data=$scope.rawdata.map(function(d) {
-        if(d.time>(config.start/1000) && d.time<(config.end/1000)) return d
+    
+    if($scope.start!=undefined && $scope.end!=undefined && ($scope.prevStart!=$scope.start || $scope.prevEnd!=$scope.end)) {
+
+      var url="datatime/"+safename+"/"+$scope.start+"/"+$scope.end
+      // console.log(url);
+
+      $http.get(url).success(function(_data) {
+
+        // $scope.data=_data;
+        dataService.users.nodes=_data.users.nodes 
+        dataService.users.edges=_data.users.edges,
+        dataService.users.index=_data.users.index,
+        dataService.words.nodes=_data.words.nodes 
+        dataService.words.edges=_data.words.edges,
+        dataService.words.index=_data.words.index,
+        dataService.geo=_data.geo,
+        dataService.wordsProvince=_data.wordsProvince
+        dataService.trigger++;
+        // console.log(dataService);
       })
-  
-    // console.log($scope.data);
-      
-      // init
-      dataService.users.nodes=[], 
-      dataService.users.edges=[],
-      dataService.users.index=[],
-      dataService.words.nodes=[], 
-      dataService.words.edges=[],
-      dataService.words.index=[],
-      dataService.geo=[],
-      dataService.wordsProvince={};
-
-
-      // update data
-      console.log($scope.data.length);
-      // for (var i = 0; i < $scope.data.length; i++) {
-      //   console.log($scope.data);
-      //   var d=$scope.data[i];
-      
-      $scope.data.forEach(function (d){
-        if(d==undefined) return; // remove empty timeframes
-        if(d!=undefined) console.log('times...');
-        // user nodes
-        d.data.user_nodes.forEach(function(v){  
-          if(dataService.users.index.indexOf(v.name) == -1 ) {
-            dataService.users.nodes.push(v);
-            dataService.users.index.push(v.name);
-          }
-        });
-
-        // user edges
-        d.data.user_edges.forEach(function(v){  
-          if(dataService.users.index.indexOf(v.source) !=-1 && dataService.users.index.indexOf(v.target) != -1 
-            ) {
-              // check if already exists
-              var index=-1;
-              for (var j = 0; j < dataService.users.edges.length; j++) {
-                var e=dataService.users.edges[j];
-                if (v.source===e.source && v.target ===e.target) {
-                  index=j;
-                  break;
-                } 
-              }   
-              if(index!=-1) dataService.users.edges[index].weight+=v.weight;
-              else dataService.users.edges.push(v);
-          }
-        });
-
-        // word nodes
-        d.data.words_nodes.forEach(function(v){  
-          if(dataService.words.index.indexOf(v.name) == -1 ) {
-            dataService.words.nodes.push(v);
-            dataService.words.index.push(v.name);
-          }
-        });
-
-        // words edges
-        d.data.words_edges.forEach(function(v){  
-
-          // check if in scope
-          if(dataService.words.index.indexOf(v.source) !=-1 && dataService.words.index.indexOf(v.target) != -1) {
-              
-              // check if already exists
-              var index=-1;
-              for (var j = 0; j < dataService.words.edges.length; j++) {
-                var e=dataService.words.edges[j];
-                if (v.source===e.source && v.target ===e.target) {
-                  index=j;
-                  break;
-                } 
-              }   
-
-              if(index!=-1) dataService.words.edges[index].weight+=v.weight;
-              else dataService.words.edges.push(v);
-          }
-        });
-
-        // geo (provinces edges)
-        d.data.provinces_edges.forEach(function(v){  
-            
-            if (v.source == "Qita" || v.source == 0 || v.source =="Haiwai") return 
-            if (v.target == "Qita" || v.target == 0 || v.target =="Haiwai") return 
-
-            var index=-1;
-            // console.log(v);
-
-            for (var j = 0; j < dataService.geo.length; j++) {
-              var e=dataService.geo[j];
-              if (v.source===e.source && v.target ===e.target) {
-                index=j;
-                break;
-              } 
-            }
-            // console.log(index);
-            if(index!=-1) dataService.geo[index].weight+=v.weight;
-            else dataService.geo.push(v);
-              // dataService.geo.push(v);
-        });
-
-        // provinces_words
-        d.data.words_provinces.forEach(function(v){
-
-          // init word
-          if(dataService.wordsProvince[v.word]==undefined) dataService.wordsProvince[v.word]=[]
-
-          //check if province already exists
-          var index=-1;
-          for (var j = 0; j < dataService.wordsProvince[v.word].length; j++) {
-            var e=dataService.wordsProvince[v.word][j];
-            if (v.province===e.label) {
-              index=j;
-              break;
-            } 
-          }
-          if(index==-1) dataService.wordsProvince[v.word].push({"label":v.province,"value":v.weight, "color":color(v.province)});
-          else dataService.wordsProvince[v.word][index]["value"]+=v.weight;
-        })
-      });
+    
+      $scope.prevStart=$scope.start
+      $scope.prevEnd=$scope.end;
     }
+
+  }
 
 });
 
 
-// app.controller("dataCtrl", function($scope,$http,socket,config,dataService){
-//   console.log("dataCtrl");
-//   console.log(dataService);
-// })
+
 
 app.controller('geoCtrl', function($scope,$http,config,geoService,dataService){
   
@@ -291,13 +183,10 @@ app.controller('geoCtrl', function($scope,$http,config,geoService,dataService){
 
     
     // update geoData
-    $scope.$watch(function() { return config.end; }, function(newVal,oldVal){
-      $scope.geoEdges=dataService.geo;
+    $scope.$watch(function() { return dataService.trigger }, function(newVal,oldVal){
+      if(newVal!=oldVal && newVal!=0) $scope.geoEdges=dataService.geo;
     })
 
-    $scope.$watch(function() { return config.start; }, function(newVal,oldVal){
-      $scope.geoEdges=dataService.geo;
-    })
 
     $scope.saveGeo=function(){
       var sv=new Simg($(".geo-container svg")[0]);
@@ -309,18 +198,15 @@ app.controller('geoCtrl', function($scope,$http,config,geoService,dataService){
 app.controller('wordCtrl', function($scope,$http,config,dataService){
 
   $scope.wordForceStarted=true;
+  $scope.memeName=config.name
 
-  $scope.$watch(function() { return config.end; }, function(newVal,oldVal){
-    $scope.words=dataService.words;
-    if(dataService.words.index!=undefined) $scope.wordsLength=dataService.words.index.length;
-    $scope.wordProvinces=dataService.wordsProvince;
+  $scope.$watch(function() { return dataService.trigger }, function(newVal,oldVal){
+    if(newVal!=oldVal && newVal!=0) {
+      $scope.words=dataService.words;
+      if(dataService.words.index!=undefined) $scope.wordsLength=dataService.words.index.length;
+      $scope.wordProvinces=dataService.wordsProvince;
+    }
 
-  })
-
-  $scope.$watch(function() { return config.start; }, function(newVal,oldVal){
-    $scope.words=dataService.words;
-    if(dataService.words.index!=undefined) $scope.wordsLength=dataService.words.index.length;
-    $scope.wordProvinces=dataService.wordsProvince;
   })
 
   $scope.saveWords=function(){
@@ -333,17 +219,16 @@ app.controller('wordCtrl', function($scope,$http,config,dataService){
 app.controller('userCtrl', function($scope,$http,config,dataService){
 
   $scope.userForceStarted=true;
+  $scope.memeName=config.name
 
-  $scope.$watch(function() { return config.end; }, function(newVal,oldVal){
-    $scope.users=dataService.users;
-    if(dataService.users.index!=undefined) $scope.usersLength=dataService.users.index.length;
+  $scope.$watch(function() { return dataService.trigger }, function(newVal,oldVal){
+    if(newVal!=oldVal && newVal!=0) {
+      $scope.users=dataService.users;
+      if(dataService.users.index!=undefined) $scope.usersLength=dataService.users.index.length;      
+    }
 
   })
 
-  $scope.$watch(function() { return config.start; }, function(newVal,oldVal){
-    $scope.users=dataService.users;
-    if(dataService.users.index!=undefined) $scope.usersLength=dataService.users.index.length;
-  })
 
   $scope.saveUsers=function(){
     var sv=new Simg($(".user-container svg")[0]);

@@ -14,21 +14,23 @@ import locale
 from lib.mongo import MongoDB
 
 results_path="/home/clemsos/Dev/mitras/results/"
-meme_names=["qiegao"]
+
 
 # meme_names=[ meme for meme in os.listdir(results_path) if meme[-3:] != "csv"]
-# meme_names=[
-#  # 'biaoge',
-#  # 'thevoice',
-#  'moyan',
-#  'hougong',
-#  'gangnam',
-#  'sextape',
-#  # 'dufu',
-#  'ccp',
-#  'yuanfang',
-#  # 'qiegao']
+meme_names=[
+ # 'biaoge',
+ # 'thevoice',
+ 'moyan',
+ 'hougong',
+ 'gangnam',
+ 'sextape',
+ # 'dufu',
+ 'ccp',
+ 'yuanfang',
+ 'qiegao']
 
+
+meme_names=["thevoice"]
 
 print meme_names
 
@@ -78,10 +80,11 @@ for meme_name in meme_names:
     words=[]
     words_users=[]
     words_edges={}
+    # words_edges=[]
 
     count=0
 
-    #  words_time={}
+    # words_time={}
     # user_edges_time=[]
     # words_users_time={}
 
@@ -119,7 +122,7 @@ for meme_name in meme_names:
                 # user_edges_time.append((row[7],row[0],timestamp))
                 if row[7] not in user_diff : user_diff.append(row[7])
             
-            users_edges+=users_to_users # store all interactions
+            users_edges+=users_to_users # store all users interactions
             users+=user_diff # store all users
             
             # extract text 
@@ -129,8 +132,12 @@ for meme_name in meme_names:
             clean_dico=nlp.remove_stopwords(dico)
             
             # remove more stopwords
-            tmp_words=[w for w in clean_dico if w.encode('utf-8') not in stoplist and w[0] != "u" ]
-            words+=tmp_words # global list for counter  
+            tmp_words=[
+                    w for w in clean_dico 
+                    if w.encode('utf-8') not in stoplist 
+                    and w[0] != "u" ]
+
+            words+=tmp_words # store all words
             
             # words edges
             words_to_words=[]
@@ -145,10 +152,11 @@ for meme_name in meme_names:
                 
                 try: words_edges[w]
                 except KeyError: words_edges[w]=[]
-                words_edges[w]+=[(w,t) for t in tmp_words if t!=w]
+                words_edges[w]+=[t for t in tmp_words if t!=w]
             
             # words_edges+=words_to_words
             words_users+=words_to_users
+            # words_edges+=words_to_words # store all interactions
             
             # store data by time
             try : by_time[timestamp]
@@ -185,30 +193,39 @@ for meme_name in meme_names:
             by_time[timestamp]["words_to_users"]+=words_to_users
 
     print "processing done"
-
-
-    # parse provinces for all users
-    user_provinces={}
-    unique_users=[u[0] for u in Counter(users).most_common()]
-    for user in unique_users:
-        province=get_province(user)
-        user_provinces[user]=province
+    print "%d tweets"%count
+    print 
 
     # User graph info
     print "USER GRAPH"
     print "-"*20
     print "Edges (total number) : %d edges"%len(users_edges)
 
-    # remove users edges that have a minium value of minimum_exchange
-    graphsize=[c[1] for c in Counter(users_edges).most_common()]
-    occurences=Counter(graphsize).most_common()
-    # print occurences
-    minimum_exchange=1
+    top_users_limit=500
+    users_edges_limit=500
+    users_minimum_exchange=1
 
-    # create graph object
-    edges_weighted=[str(p[0][0]+" "+p[0][1]+" "+str(p[1])) for p in Counter(users_edges).most_common() if p[1] > minimum_exchange]
+    top_users=[c[0] for c in Counter(users).most_common(top_users_limit)]
+    print "%d top_users"%len(top_users)
+
+    print "Parsing user provinces"
+    # parse provinces for all users
+    user_provinces={}
+    for user in top_users:
+        province=get_province(user)
+        user_provinces[user]=province
+
+    # top edges
+    edges_weighted=[
+            str(p[0][0]+" "+p[0][1]+" "+str(p[1])) 
+            for p in Counter(users_edges).most_common(users_edges_limit) 
+            if p[0][0] in top_users
+            and p[0][1] in top_users
+            and p[1] > users_minimum_exchange] # remove users edges that have a minium value of minimum_exchange
+
     print "Weighted edges %d"%len(edges_weighted)
 
+    # create graph object
     G = nx.read_weighted_edgelist(edges_weighted, nodetype=str, delimiter=" ",create_using=nx.DiGraph())
 
     # dimensions
@@ -217,6 +234,7 @@ for meme_name in meme_names:
     print "Edges: ", K
 
     allowed_users=G.nodes()
+    print "%d allowed_users"%len(allowed_users)
 
     # Average degree
     avg_deg = float(K)/N
@@ -239,42 +257,54 @@ for meme_name in meme_names:
     print "computing done"
 
     # WORD graph info
+    print 
     print "WORD GRAPH"
     print "-"*20
     print "%d words edges"%len(words_edges)
 
-    words_edges_weighted=[]
-    words_minimum_exchange=200
+    # words_minimum_exchange
     top_words_limit=500
+    words_edges_limit=350
 
-    words_allowed=[c[0] for c in Counter(words).most_common(top_words_limit)]
+    top_words=[c[0] for c in Counter(words).most_common(top_words_limit)]
+    print "%d top_words"%len(top_words)
 
-    # for 
-    #     try: 
-    #         int(c[0])
-    #         words_allowed.append(c[0])
-    #     except ValueError:
-    #         pass
-
-    print "%d words_allowed"%len(words_allowed)
-
+    top_words_edges=[]
     for word in words_edges:
-        if word in words_allowed:
-            targets=[(c[0][1],c[1]) 
-                     for c in Counter(words_edges[word]).most_common() 
-                     if  c[0][0] in words_allowed
-                     and c[0][1] in words_allowed
-                     and  c[1]>words_minimum_exchange
-                     ]    
-            words_edges_weighted+=[(word,w[0],w[1]) for w in targets]
-        
+        if word in top_words: 
+            for c in Counter(words_edges[word]).most_common():
+                if c[0][0] in top_words:
+                    a=[word,c[0][0]]
+                    a.sort() # to_undirected
+                    top_words_edges.append(tuple(a))
+
+    print "%d top words edges"%len(top_words_edges)
+
+    # define acceptable minimum value
+    words_minimum_exchange=0
+    edges_count=[p[1] for p in Counter(top_words_edges).most_common()]
+
+    i=0
+    for x in reversed(Counter(edges_count).most_common()):
+        i+=x[1]
+        words_minimum_exchange=x[0]
+        if i> words_edges_limit: break
+    print words_minimum_exchange
+
+    words_edges_weighted=[
+            (p[0][0],p[0][1],p[1]) 
+            for p in Counter(top_words_edges).most_common()
+            if p[1]>words_minimum_exchange
+            ]
     print "Words weighted edges %d"%len(words_edges_weighted)
 
     wordIndex={}
-    for i,w in enumerate(words_allowed): wordIndex[w]=i;
+    indexWords={}
+    for i,w in enumerate(top_words): wordIndex[w]=i;
 
-    words_edges_weightedlist=[str(wordIndex[w[0]])+" "+str(wordIndex[w[1]])+" "+str(w[2]) for w in words_edges_weighted]    
-    # print words_edges_weightedlist
+    words_edges_weightedlist=[
+                str(wordIndex[w[0]])+" "+str(wordIndex[w[1]])+" "+str(w[2]) 
+                for w in words_edges_weighted]    
 
     Gw = nx.read_weighted_edgelist(words_edges_weightedlist, nodetype=str, delimiter=" ",create_using=nx.DiGraph())
 
@@ -282,6 +312,9 @@ for meme_name in meme_names:
     Nw,Kw = Gw.order(), Gw.size()
     print "Nodes: ", Nw
     print "Edges: ", Kw
+
+    words_allowed=[top_words[int(w)] for w in Gw.nodes()]
+    print "%d words_allowed"%len(words_allowed)
 
     # Average degree
     words_avg_deg = float(Kw)/Nw
@@ -310,11 +343,12 @@ for meme_name in meme_names:
     word_edge_median=25
     multi_median=15
 
+    print "processing time frames..."
     for _time in by_time:
     #    if(time=="1346572800"): break # single row for test 
         
-        print 
-        print _time, "-"*20
+        # print 
+        # print _time, "-"*20
         
         tf=by_time[_time]
         timeframe={}
@@ -330,7 +364,7 @@ for meme_name in meme_names:
                                  for u in Counter(tf["user_nodes"]).most_common() 
                                  if u[0] in allowed_users]
         
-        print "%d users"%len(timeframe["user_nodes"])
+        # print "%d users"%len(timeframe["user_nodes"])
         
         timeframe["user_edges"]=[{
                                   "source":u[0][0],
@@ -340,7 +374,7 @@ for meme_name in meme_names:
                                   for u in Counter(tf["user_edges"]).most_common()
                                   if u[0][0] in allowed_users and u[0][1] in allowed_users]
         
-        print "%d users edges"%len(timeframe["user_edges"])
+        # print "%d users edges"%len(timeframe["user_edges"])
         
         timeframe["provinces_edges"]=[]
         for u in timeframe["user_edges"]:
@@ -350,7 +384,7 @@ for meme_name in meme_names:
             except KeyError: pass    
             if source and target : timeframe["provinces_edges"].append({"source":source,"target":target, "weight":u["weight"]})
         
-        print "%d provinces edges"%len(timeframe["provinces_edges"])
+        # print "%d provinces edges"%len(timeframe["provinces_edges"])
         
         timeframe["words_nodes"]=[{
                                     "name":w[0],
@@ -362,7 +396,7 @@ for meme_name in meme_names:
                                   if w[0] in words_allowed
                                   if w[1]>word_median]
         
-        print "%d words"%len(timeframe["words_nodes"])
+        # print "%d words"%len(timeframe["words_nodes"])
         
         words_edges_allowed= [w
                               for w in tf["words_edges"] 
@@ -373,7 +407,6 @@ for meme_name in meme_names:
         
         # timeframe["words_edges"]=[{"source":w[0][0],"target":w[0][1],"weight":w[1]} for w in Counter(words_edges_allowed).most_common()]
         # print "%d words edges"%len(timeframe["words_edges"])
-        
         
         words_edges_undirected=[]
         for we in words_edges_allowed:
@@ -388,7 +421,7 @@ for meme_name in meme_names:
                                                 for w in  Counter(words_edges_undirected).most_common()
                                                 if w[1]>word_edge_median]
         
-        print "%d words_edges"%len(timeframe["words_edges"])
+        # print "%d words_edges"%len(timeframe["words_edges"])
         
 
         word_2_provinces=[]
@@ -410,7 +443,7 @@ for meme_name in meme_names:
                                         and w[0][1] !="0"
                                     ]
 
-        print "%d provinces interactions"%len(timeframe["words_provinces"])
+        # print "%d provinces interactions"%len(timeframe["words_provinces"])
                     
         timeframes.append({"time":_time, "data":timeframe, "count":tf["count"]})
 

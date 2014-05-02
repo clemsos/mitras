@@ -7,13 +7,8 @@
     , "ejs": "0.8.4"
     , "socket.io": "0.9.16"
     , "moment":   "latest"
-    , "geoip-lite"  : "latest"
-    , "redis" : "0.7.3"
     , "mongodb" : "1.4"
     , "monk" : "latest"
-    , "country-data" : "0.0.6"
-    , "datauri":"latest"
-    , "jschardet" : "1.0.2"
-    , "node-csv" : "latest"
+    , "d3" : "latest"
   }
 }
