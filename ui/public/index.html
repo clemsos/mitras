@@ -24,9 +24,37 @@
             padding-top: 45px;
         }
 
-        .btn-save-png {
+        /*.btn-save-png {
             position: relative;
             top: 300px;
+        }*/
+        .d3-tip {
+          line-height: 1;
+          font-weight: bold;
+          padding: 12px;
+          background: rgba(0, 0, 0, 0.8);
+          color: #fff;
+          border-radius: 2px;
+        }
+
+        /* Creates a small triangle extender for the tooltip */
+        .d3-tip:after {
+          box-sizing: border-box;
+          display: inline;
+          font-size: 10px;
+          width: 100%;
+          line-height: 1;
+          color: rgba(0, 0, 0, 0.8);
+          content: "\25BC";
+          position: absolute;
+          text-align: center;
+        }
+
+        /* Style northward tooltips differently */
+        .d3-tip.n:after {
+          margin: -1px 0 0 0;
+          top: 100%;
+          left: 0;
         }
         
     </style>
@@ -146,6 +174,7 @@
                 <div class="col-xs-3 col-sm-3">
                     <a type="button" ng-click="saveWords(); $event.preventDefault()" class="btn-sm btn-default btn-save btn-save-png"><span class="glyphicon glyphicon-save" ></span> Save</a>
                     <div class="wordpie-container"></div>
+
                 </div>
             </div> 
             <!-- 
@@ -166,11 +195,20 @@
                     <div map start="start" end="end" geo-data="geoData" class="geo-container"></div>
                 </div>
                 <div class="col-xs-3 col-sm-3">
+                    <h5>User distribution by province</h5>
+                    <div class="geo-pie-container"></div>
+                    <h5>Province clusters</h5>
+                    <a class="btn-sm btn-default " href="#" ng-click="toggleClusters(); $event.preventDefault()"><span class="glyphicon glyphicon-play"></span>Show/Hide</a>
+                    <div class="province-clusters-legend"></div>
+                    <h5>Province word</h5>
+                    <div class="province-words"></div>
+
+  
                     <a type="button" ng-click="saveGeo(); $event.preventDefault()" class="btn-sm btn-default btn-save btn-save-png"><span class="glyphicon glyphicon-save" ></span> Save</a>
                 </div>
             </div>    
             <div class="row well" id="timeline"u>
-                <slider id="time-slider" model="timeframe" type="text" data-slider-min="0"  data-slider-step="1" data-slider-orientation="horizontal" data-slider-selection="after" data-slider-tooltip="show"></slider>
+                <timeslider id="time-slider" model="timeframe" type="text" data-slider-min="0"  data-slider-step="1" data-slider-orientation="horizontal" data-slider-selection="after" data-slider-tooltip="show"></timeslider>
                 <div timeserie time-data="timeSeriesData" start="start" end="end" >
                 </div>
                 <p>
@@ -189,10 +227,12 @@
         <script type="text/javascript" src="/libs/bootstrap.min.js"></script>
         <script type="text/javascript" src="/libs/bootstrap-slider.js"></script>
         <script type="text/javascript" src="/libs/d3.v3.min.js"></script>
+        <script type="text/javascript" src="/libs/d3tooltip.js"></script>
+        <script type="text/javascript" src="/libs/d3.layout.cloud.js"></script>
         <script type="text/javascript" src="/libs/queue.v1.min.js"></script>
         <script type="text/javascript" src="/libs/colorbrewer.v1.min.js"></script>
         <script type="text/javascript" src="/libs/topojson.v1.min.js"></script>   
-        <script type="text/javascript" src="libs/simg.js"></script> 
+        <script type="text/javascript" src="/libs/simg.js"></script> 
         <!-- 
         <script src="/socket.io/socket.io.js"></script> 
         <script src="/libs/angular/angular.js"></script>

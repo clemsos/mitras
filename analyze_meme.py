@@ -16,28 +16,29 @@ from lib.mongo import MongoDB
 results_path="/home/clemsos/Dev/mitras/results/"
 
 
+# Connect to Mongo
+collection="memes"
+db=MongoDB("weibodata").db
+# count = db[collection].count()
+
 # meme_names=[ meme for meme in os.listdir(results_path) if meme[-3:] != "csv"]
 meme_names=[
  # 'biaoge',
  # 'thevoice',
- 'moyan',
- 'hougong',
- 'gangnam',
- 'sextape',
+ # 'hougong',
+ # 'gangnam',
+ # 'sextape',
  # 'dufu',
- 'ccp',
- 'yuanfang',
+ # 'moyan',
+ # 'ccp',
+ # 'yuanfang',
  'qiegao']
 
-
-meme_names=["thevoice"]
-
+meme_names=['biaoge']
 print meme_names
-
 
 t0=time()
 minetweet.init_tweet_regex()
-
 
 locale.setlocale(locale.LC_ALL, "")
 
@@ -47,7 +48,6 @@ stoplist=[i.strip() for i in open("lib/stopwords/zh-stopwords","r")]
 stoplist+=[i.strip() for i in open("lib/stopwords/stopwords.txt","r")]
 stoplist+=["转发","微博","说 ","一个","【 ","年 ","转 ","请","＂ ","问题","知道","中 ","已经","现在","说","【",'＂',"年","中","今天","应该","真的","月","希望","想","日","这是","太","转","支持"]
 # stoplist+=["事儿","中国"]
-
 
 api=UserAPI()
 words_users_time=[]
@@ -80,16 +80,11 @@ for meme_name in meme_names:
     words=[]
     words_users=[]
     words_edges={}
-    # words_edges=[]
-
-    count=0
-
-    # words_time={}
-    # user_edges_time=[]
-    # words_users_time={}
+    tweets_count=0
 
     by_time={}
     print "processing tweets..."
+    
     # process the data
     with open(meme_csv, 'rb') as csvfile:
         memecsv=csv.reader(csvfile)
@@ -98,11 +93,12 @@ for meme_name in meme_names:
         for row in memecsv:
             # extract text
             t=row[1]    
-            count+=1
+            tweets_count+=1
             
             # time (round and store)
             d=datetime.datetime.strptime(row[9], "%Y-%m-%dT%H:%M:%S")
-            day = datetime.datetime(d.year,d.month,d.day,d.hour,0,0)
+            day = datetime.datetime(d.year,d.month,d.day,d.hour,0,0) # round to hour
+            # day = datetime.datetime(d.year,d.month,d.day,0,0,0) # round to day
             timestamp=day.strftime("%s")
             
             # regexp extract tweet entities
@@ -193,35 +189,63 @@ for meme_name in meme_names:
             by_time[timestamp]["words_to_users"]+=words_to_users
 
     print "processing done"
-    print "%d tweets"%count
-    print 
+    print "%d tweets"%tweets_count
+    print "%d timeframes "%len(by_time)
 
-    # User graph info
-    print "USER GRAPH"
-    print "-"*20
-    print "Edges (total number) : %d edges"%len(users_edges)
+    print "USERS"
+    print "-"*10
 
-    top_users_limit=500
+    top_users_limit=500 # only 500 top users
     users_edges_limit=500
-    users_minimum_exchange=1
 
+    # limit to 500 users
     top_users=[c[0] for c in Counter(users).most_common(top_users_limit)]
     print "%d top_users"%len(top_users)
 
+    # only edges that contains top users
+    top_users_edges=[e for e in users_edges if e[0] in top_users and e[1] in top_users ]
+    print "%d top_users_edges"%len(top_users_edges)
+
     print "Parsing user provinces"
+    print "-"*10
     # parse provinces for all users
     user_provinces={}
+    provinces_stats={}
+
     for user in top_users:
         province=get_province(user)
         user_provinces[user]=province
+        try : provinces_stats[province]
+        except KeyError: provinces_stats[province]=0
+        provinces_stats[province]+=1
 
-    # top edges
+    # stats by province
+    users_by_provinces_stats=[{
+                                "label": p,
+                                "count":provinces_stats[p]
+                                } for p in provinces_stats]
+
+    # User graph info
+    print "USER GRAPH"
+    print "-"*10
+    print "Edges (total number) : %d edges"%len(users_edges)
+
+    # define acceptable minimum value
+    users_minimum_exchange=0
+    users_edges_count=[p[1] for p in Counter(top_users_edges).most_common()]
+
+    i=0
+    for x in reversed(Counter(users_edges_count).most_common()):
+        i+=x[1]
+        users_minimum_exchange=x[0]
+        if i> users_edges_limit: break
+    print "users_minimum_exchange: %d"%users_minimum_exchange
+    
+    # Weighted users edges that have a minimum value of minimum_exchange
     edges_weighted=[
             str(p[0][0]+" "+p[0][1]+" "+str(p[1])) 
-            for p in Counter(users_edges).most_common(users_edges_limit) 
-            if p[0][0] in top_users
-            and p[0][1] in top_users
-            and p[1] > users_minimum_exchange] # remove users edges that have a minium value of minimum_exchange
+            for p in Counter(top_users_edges).most_common(users_edges_limit) 
+            if p[1] > users_minimum_exchange] 
 
     print "Weighted edges %d"%len(edges_weighted)
 
@@ -237,24 +261,52 @@ for meme_name in meme_names:
     print "%d allowed_users"%len(allowed_users)
 
     # Average degree
-    avg_deg = float(K)/N
-    print "Average degree: ", avg_deg
+    # avg_deg = float(K)/N
+    # print "Average degree: ", avg_deg
 
     # Average clustering coefficient
-    ccs = nx.clustering(G.to_undirected())
-    avg_clust_coef = sum(ccs.values()) / len(ccs) 
-    print "Average clustering coeficient: %f"%avg_clust_coef
+    # ccs = nx.clustering(G.to_undirected())
+    # avg_clust_coef = sum(ccs.values()) / len(ccs) 
+    # print "Average clustering coeficient: %f"%avg_clust_coef
         
     # Communities
     user_communities = community.best_partition(G.to_undirected()) 
-    modularity=community.modularity(user_communities,G.to_undirected())
-    print "Modularity of the best partition: %f"%modularity
     print "Number of partitions : ", len(set(user_communities.values()))
+    # modularity=community.modularity(user_communities,G.to_undirected())
+    # print "Modularity of the best partition: %f"%modularity
 
     # betweeness_centrality
-    print "computing betweeness_centrality... (this may take some time)"
-    # users_btw_cent=nx.betweenness_centrality (G.to_undirected())
-    print "computing done"
+    # print "computing betweeness_centrality... (this may take some time)"
+    # # users_btw_cent=nx.betweenness_centrality (G.to_undirected())
+    # print "computing done"
+
+    
+    # PROVINCES graph
+    print 
+    print "PROVINCES GRAPH"
+    print "-"*20
+    province_edges_weighted=[]
+    for edge in edges_weighted:
+        e=edge.split()
+        try : s=user_provinces[e[0]]
+        except KeyError: pass
+        try : t=user_provinces[e[1]]
+        except KeyError: pass 
+        if s!=0 and t!=0: province_edges_weighted.append((str(s)+" "+str(t)+" "+str(e[2])))
+
+    Gp = nx.read_weighted_edgelist(province_edges_weighted, nodetype=str, delimiter=" ",create_using=nx.DiGraph())
+
+    # dimensions
+    Np,Kp = Gp.order(), Gp.size()
+    print "Nodes: ", Np
+    print "Edges: ", Kp
+
+    # Communities
+    provinces_communities = community.best_partition(Gp.to_undirected())
+    print "Number of partitions : ", len(set(provinces_communities.values()))
+    # modularity=community.modularity(user_communities,Gp.to_undirected())
+    # print "Modularity of the best partition: %f"%modularity
+
 
     # WORD graph info
     print 
@@ -282,14 +334,14 @@ for meme_name in meme_names:
 
     # define acceptable minimum value
     words_minimum_exchange=0
-    edges_count=[p[1] for p in Counter(top_words_edges).most_common()]
+    words_edges_count=[p[1] for p in Counter(top_words_edges).most_common()]
 
     i=0
-    for x in reversed(Counter(edges_count).most_common()):
+    for x in reversed(Counter(words_edges_count).most_common()):
         i+=x[1]
         words_minimum_exchange=x[0]
         if i> words_edges_limit: break
-    print words_minimum_exchange
+    print "words_minimum_exchange: %d"%words_minimum_exchange
 
     words_edges_weighted=[
             (p[0][0],p[0][1],p[1]) 
@@ -316,20 +368,22 @@ for meme_name in meme_names:
     words_allowed=[top_words[int(w)] for w in Gw.nodes()]
     print "%d words_allowed"%len(words_allowed)
 
+    words_edges_allowed=[(top_words[int(w[0])],top_words[int(w[1])]) for w in Gw.edges()]
+
     # Average degree
-    words_avg_deg = float(Kw)/Nw
-    print "Average degree: ", words_avg_deg
+    # words_avg_deg = float(Kw)/Nw
+    # print "Average degree: ", words_avg_deg
 
     # Average clustering coefficient
-    ccsw = nx.clustering(Gw.to_undirected())
-    words_avg_clust_coef = sum(ccsw.values()) / len(ccsw) 
-    print "Average clustering coeficient: %f"%words_avg_clust_coef
+    # ccsw = nx.clustering(Gw.to_undirected())
+    # words_avg_clust_coef = sum(ccsw.values()) / len(ccsw) 
+    # print "Average clustering coeficient: %f"%words_avg_clust_coef
         
     # Communities
     words_communities = community.best_partition(Gw.to_undirected()) 
-    words_modularity=community.modularity(words_communities,Gw.to_undirected())
-    print "Modularity of the best partition: %f"%words_modularity
     print "Number of partitions : ", len(set(words_communities.values()))
+    # words_modularity=community.modularity(words_communities,Gw.to_undirected())
+    # print "Modularity of the best partition: %f"%words_modularity
 
     # betweeness_centrality
     print "computing betweeness_centrality... (this may take some time)"
@@ -340,15 +394,13 @@ for meme_name in meme_names:
 
     timeframes=[]
     word_median=5
-    word_edge_median=25
     multi_median=15
 
     print "processing time frames..."
     for _time in by_time:
     #    if(time=="1346572800"): break # single row for test 
-        
-        # print 
-        # print _time, "-"*20
+        print 
+        print _time, "-"*20
         
         tf=by_time[_time]
         timeframe={}
@@ -372,9 +424,11 @@ for meme_name in meme_names:
                                   "weight":u[1]
                                   } 
                                   for u in Counter(tf["user_edges"]).most_common()
-                                  if u[0][0] in allowed_users and u[0][1] in allowed_users]
+                                  if u[0][0] in allowed_users 
+                                  and u[0][1] in allowed_users
+                                  and u[1] > users_minimum_exchange]
         
-        # print "%d users edges"%len(timeframe["user_edges"])
+        print "%d users edges"%len(timeframe["user_edges"])
         
         timeframe["provinces_edges"]=[]
         for u in timeframe["user_edges"]:
@@ -382,86 +436,91 @@ for meme_name in meme_names:
             except KeyError: pass
             try : target=user_provinces[u["target"]]
             except KeyError: pass    
-            if source and target : timeframe["provinces_edges"].append({"source":source,"target":target, "weight":u["weight"]})
+            if source and target : 
+                timeframe["provinces_edges"].append(
+                    {"source":source,
+                    "target":target, 
+                    "weight":u["weight"]}
+                    )
         
-        # print "%d provinces edges"%len(timeframe["provinces_edges"])
+        print "%d provinces edges"%len(timeframe["provinces_edges"])
         
         timeframe["words_nodes"]=[{
                                     "name":w[0],
-                                    "count":w[1]
+                                    "count":w[1],
+                                    "community":words_communities[str(wordIndex[w[0]])]
                                     # "btw_cent":words_btw_cent[str(wordIndex[w[0]])],
-                                    # "community":words_communities[str(wordIndex[w[0]])]
                                   } 
                                   for w in Counter(tf["words_nodes"]).most_common()
-                                  if w[0] in words_allowed
-                                  if w[1]>word_median]
+                                  if w[0] in words_allowed]
         
-        # print "%d words"%len(timeframe["words_nodes"])
-        
-        words_edges_allowed= [w
-                              for w in tf["words_edges"] 
-                              if w[0]!=w[1]  
-                              and w[0] in words_allowed
-                              and w[1] in words_allowed
-                              ]
-        
-        # timeframe["words_edges"]=[{"source":w[0][0],"target":w[0][1],"weight":w[1]} for w in Counter(words_edges_allowed).most_common()]
-        # print "%d words edges"%len(timeframe["words_edges"])
+        print "%d words"%len(timeframe["words_nodes"])
         
         words_edges_undirected=[]
-        for we in words_edges_allowed:
+        for we in tf["words_edges"]:
             a=[we[0],we[1]]
             a.sort()
-            words_edges_undirected.append(tuple(a))
+            if tuple(a) in words_edges_allowed: words_edges_undirected.append(tuple(a))
 
-        
         timeframe["words_edges"]=[{ "source":w[0][0],
-                                               "target":w[0][1],
-                                               "weight":w[1]}
-                                                for w in  Counter(words_edges_undirected).most_common()
-                                                if w[1]>word_edge_median]
+                                   "target":w[0][1],
+                                   "weight":w[1]}
+                                    for w in Counter(words_edges_undirected).most_common()
+                                    if w[1]>words_minimum_exchange]
         
-        # print "%d words_edges"%len(timeframe["words_edges"])
+        print "%d words_edges"%len(timeframe["words_edges"])
+
+        words_2_users=[ 
+                (c[0][0],c[0][1],c[1]) for c in Counter(tf["words_to_users"]).most_common() 
+                if c[0][0] in words_allowed 
+                and c[0][1] in allowed_users
+                and c[1]>1 # at least 1 exchange
+                ]
+        print "%d word to users edges"%len(words_2_users)
+
+        words_2_provinces={}
+        i=""
+        for w in words_2_users:
+            try: 
+                p=user_provinces[w[1]]
+                i=str(wordIndex[w[0]])+"_"+str(p) # use index instead of word
+            except KeyError: 
+                i=0
+            if(i!=0):
+                try : words_2_provinces[i]
+                except KeyError: words_2_provinces[i]=0
+                words_2_provinces[i]+=w[2]
         
-
-        word_2_provinces=[]
-        for w in Counter(tf["words_to_users"]).most_common():
-            word=w[0][0]
-            user=w[0][1]
-            weight=w[1]
-            if user in allowed_users and word in words_allowed:
-                try : province=user_provinces[user]
-                except KeyError: province=""
-            word_2_provinces.append( (word,province) )
-
-
-        timeframe["words_provinces"]=[{ "word":w[0][0],
-                                        "province":w[0][1],
-                                        "weight":w[1]} 
-                                        for w in Counter(word_2_provinces).most_common()
-                                        if w[0][1] !=""
-                                        and w[0][1] !="0"
+        for wp in words_2_provinces:
+            e=wp.split("_")
+            w=words_2_provinces[wp]
+            
+        timeframe["words_provinces"]=[ { 
+                                        "word":top_words[int(w.split("_")[0])], # parse word from index
+                                        "province":w.split("_")[1],
+                                        "weight":words_2_provinces[wp] } 
+                                        for w in words_2_provinces
                                     ]
-
-        # print "%d provinces interactions"%len(timeframe["words_provinces"])
+        print "%d provinces interactions"%len(timeframe["words_provinces"])
                     
         timeframes.append({"time":_time, "data":timeframe, "count":tf["count"]})
 
+
+    print " %d timeframes"%len(timeframes)
     timeframes_file=meme_path+"/"+meme_name+"_timeframes.json"
 
     with open(timeframes_file, 'w') as outfile:
         json.dump(timeframes, outfile)
         print "json data have been saved to %s"%(timeframes_file)
 
+    meme={
+        "name":meme_name,
+        "data":timeframes,
+        "tweets_count":tweets_count,
+        "geoclusters": provinces_communities,
+        "provincesCount":users_by_provinces_stats
+        }
 
-    # Variables
-    collection="memes"
-
-    # Connect to Mongo
-    db=MongoDB("weibodata").db
-    # count = db[collection].count()
-
-    meme={"name":meme_name,"data":timeframes}
     db[collection].insert(meme)
-        
-    
+
+    print "data saved to %s collection on mongodb"%collection

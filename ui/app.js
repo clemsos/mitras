@@ -55,18 +55,26 @@
 
 /////////////////////////// ROUTES
 
-    
-
     // serve data 
     app.get('/time', function(req, res){
         res.render('timeline', {layout: false});
     });
 
     var provinces_info=require("./data/nb_of_users_by_provinces")
-    // console.log(info);
-    
+    var provincesRatio={}
+    var provincesInfo={};
+    for (var i = 0; i < provinces_info.provinces.length; i++) {
+        var p=provinces_info.provinces[i];
+        provincesInfo[p.name]=p;
+        provincesRatio[p.name]=p.percent;
+    }
+
     app.get('/info', function(req, res){
-        res.send(provinces_info);
+        res.send(provincesInfo);
+    });
+
+    app.get('/ratio', function(req, res){
+        res.send(provincesRatio);
     });
 
     var memeList=require("./data/2012_sina-weibo-memes_list.json")
@@ -93,9 +101,6 @@
 
     app.get("/times/:meme", function(req, res){
         
-        console.log(req.params.meme)
-        var meme_name=req.params.meme;
-
         memes.findOne({"name":req.params.meme}, 
                     {limit : 1, sort : { _id : -1 } }, 
                     function (err, doc) {
@@ -106,6 +111,30 @@
                         }))
         });
     });
+
+    app.get("/geoclusters/:meme",  function(req, res){
+        console.log(req.params.meme)
+        memes.find({"name":req.params.meme}, 
+                      { fields : {"geoclusters": 1 },limit : 1, sort : { _id : -1 } },     
+                      function (err, doc) {
+                        console.log(doc);
+                        if(doc==null) res.send("meme doesn't exist")
+                        else res.send(doc[0].geoclusters)
+        });
+
+    })
+
+    app.get("/provincesCount/:meme",  function(req, res){
+        console.log(req.params.meme)
+        memes.find({"name":req.params.meme}, 
+                      { fields : {"provincesCount": 1 },limit : 1, sort : { _id : -1 } },     
+                      function (err, doc) {
+                        console.log(doc);
+                        if(doc==null) res.send("meme doesn't exist")
+                        else res.send(doc[0].provincesCount)
+        });
+
+    })
 
     var color=d3.scale.category20()
 

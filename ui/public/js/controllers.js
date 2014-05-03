@@ -1,7 +1,6 @@
 // controllers.js
 
 app.controller('navCtrl', function($scope,config,memeService){
-
   memeService.list.getData(function(memeList){ 
     $scope.memeList=[];
     memeList.memes.forEach(function(meme){
@@ -9,9 +8,7 @@ app.controller('navCtrl', function($scope,config,memeService){
        var memelist=['biaoge','thevoice','moyan','hougong', 'gangnam','sextape','dufu','ccp','yuanfang','qiegao']
         if (memelist.indexOf(meme.safename)!=-1) $scope.memeList.push(meme)
     });
-
   })
-
 })
 
 app.controller('dataCtrl', function($scope,$http,$location,$timeout,config,dataService){
@@ -158,13 +155,8 @@ app.controller('dataCtrl', function($scope,$http,$location,$timeout,config,dataS
 });
 
 
-
-
 app.controller('geoCtrl', function($scope,$http,config,geoService,dataService){
   
-    // var mapFile="../data/"+safename+"/"+safename+"_usermap.json";
-  
-    // $scope.sort=["gdp","population","meme"]
     $scope.centroidsOnMap=true;
     $scope.memeName=config.name
 
@@ -172,25 +164,61 @@ app.controller('geoCtrl', function($scope,$http,config,geoService,dataService){
     geoService.taiwan.getData(function(data){ $scope.taiwan=data })
     geoService.hkmacau.getData(function(data){ $scope.hkmacau=data })
 
-    geoService.ratio.getData(function(data){ 
-      var provinceUsersRatio={}
-      data.nb_of_users_by_provinces.forEach(function(d){
-        provinceUsersRatio[d.name]=d.percent;
-      })
 
-      $scope.ratio=provinceUsersRatio;
+    geoService.info.getData(function(data){ 
+      $scope.provincesInfo=data
     })
 
+    geoService.ratio.getData(function(data){ 
+      $scope.ratio=data
+    })
+
+    // console.log($scope);
+    $http.get("/geoclusters/"+config.name).success(function(_geoclusters_data) {
+      $scope.clusters=_geoclusters_data;
+      $scope.showClusters=true;
+      $scope.showEdges=false;
+    })
+
+    $scope.toggleClusters =function(){
+      console.log($scope.showClusters);
+      // config.showClusters=false;
+      $scope.showClusters=!$scope.showClusters;
+
+    }
+
+    $http.get("/provincesCount/"+config.name).success(function(_provincesCount_data) {
+      $scope.provincesCount=_provincesCount_data;
+    })
     
     // update geoData
+    var isSetup=false;
     $scope.$watch(function() { return dataService.trigger }, function(newVal,oldVal){
-      if(newVal!=oldVal && newVal!=0) $scope.geoEdges=dataService.geo;
+      if(newVal!=oldVal && newVal!=0) {
+        // parse words data 
+        if(!isSetup){
+          // console.log("setup provinces to words ");
+          $scope.provincesWords={};
+          // console.log(dataService.wordsProvince);
+          for (word in dataService.wordsProvince) {
+            var p=dataService.wordsProvince[word];
+            p.forEach(function(d){
+              if($scope.provincesWords[d.label] ==undefined) $scope.provincesWords[d.label]=[]
+              $scope.provincesWords[d.label].push({"text":word,"count":d.value})
+            })
+          }
+          isSetup=true
+        }
+        $scope.geoEdges=dataService.geo;
+      }
     })
 
-
     $scope.saveGeo=function(){
+      
       var sv=new Simg($(".geo-container svg")[0]);
-      sv.download();
+      var fn="map_"+config.getFilename()
+      // console.log(fn);
+      sv.download(fn);
     }
 
 })
@@ -210,10 +238,9 @@ app.controller('wordCtrl', function($scope,$http,config,dataService){
   })
 
   $scope.saveWords=function(){
-    var sv=new Simg($(".word-container svg")[0]);
+    var sv=new Simg($(".words-container svg")[0]);
     sv.download();
   }
-
 })
 
 app.controller('userCtrl', function($scope,$http,config,dataService){
@@ -234,5 +261,4 @@ app.controller('userCtrl', function($scope,$http,config,dataService){
     var sv=new Simg($(".user-container svg")[0]);
     sv.download();
   }
-
 })

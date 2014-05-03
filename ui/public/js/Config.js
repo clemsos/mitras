@@ -36,6 +36,13 @@ var Config = function() {
       self.end = end;
     }
 
+    self.getFilename = function() {
+      var s=String(new Date(self.start)).split(" ").slice(1,4).join("_")
+      var e=String(new Date(self.end)).split(" ").slice(1,4).join("_")
+      return self.name+"_"+s+"_"+e;
+    }
+
+
     self.toJSON = function() {
       return JSON.stringify({
         start: self.start,

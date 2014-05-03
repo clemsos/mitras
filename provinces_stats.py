@@ -64,7 +64,7 @@ for province in api.provinces:
     province_name=api.provinces[province]
     if province_name in provinces:  # avoid useless
 
-        clean_name=province 
+        clean_name=province_name 
 
         if province=="Xianggang"  : clean_name="Hong Kong"
         elif province=="Aomen" : clean_name="Macau"

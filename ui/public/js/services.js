@@ -40,10 +40,14 @@ app.factory('geoService', function($resource) {
       $resource("maps/zh-hkg-mac.topo.json",{ }, {
         getData: {method:'GET', isArray: false}
       }),
-    "ratio":
+    "info":
       $resource("info",{ }, {
         getData: {method:'GET', isArray: false}
       }),
+      "ratio":
+      $resource("ratio",{ }, {
+        getData: {method:'GET', isArray: false}
+      })
 
   }
 });

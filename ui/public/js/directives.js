@@ -1,6 +1,6 @@
 // directives.js
 
-app.directive('slider', function ($parse) {
+app.directive('timeslider', function ($parse) {
     return {
       restrict: 'E',
       replace: true,
@@ -199,9 +199,11 @@ app.directive('timeserie', function () {
 
 app.directive("map", function () {
     return {
-        replace: false,
+        // replace: false,
         controller: 'geoCtrl',
+        restrict : "AE",
         scope: { 
+            province : "="
          },
         link: function ($scope, element, attrs) {
             
@@ -231,7 +233,9 @@ app.directive("map", function () {
                 var mapLegend=geo.append("g").attr("class","map-legend")
                                 .attr("transform", "translate("+(100)+","+(map_height-200)+")");
                                 // console.log($scope);
-                    
+                var mapControls=geo.append("g").attr("class","map-controls")
+                                .attr("transform", "translate("+(map_width-100)+","+(100)+")");
+
                 $scope.$watch('memeName', function(newVal, oldVal) {
                     console.log(newVal);
                     if(newVal!=undefined) {                           
@@ -244,8 +248,6 @@ app.directive("map", function () {
                             .style("font-size",10)
                             .call(wrap, 135);
                     }
-
-                    
                 })
 
                 function wrap(text, width) {
@@ -289,28 +291,34 @@ app.directive("map", function () {
                 var defaultFillColor="#eee",
                     defaultStrokeColor="#404040";
 
-            $scope.$watch('mainland', function(newVal, oldVal) {
-                if(newVal!=undefined) {
-                    var features=topojson.feature(newVal, newVal.objects.provinces).features;
-                    drawProvinces(features);    
-                    parseCentroids(features);
-                }
-            })
-            
-            $scope.$watch('taiwan', function(newVal, oldVal) {
-                if(newVal!=undefined) {
-                    var features=topojson.feature(newVal, newVal.objects.layer1).features.filter(function(d) { return d.properties.GU_A3 === 'TWN'; })
-                    parseCentroids(features)
-                    drawTaiwan(features)
-                }
-            })
 
-            $scope.$watch('hkmacau', function(newVal, oldVal) {
-                if(newVal!=undefined) {
-                    var features=topojson.feature(newVal, newVal.objects.layer1).features;
-                    parseCentroids(features)
-                    drawHkMacau(features)
-                }
+            $scope.$watch("provincesInfo",function (val){
+
+                if(val==undefined) return
+            
+                $scope.$watch('mainland', function(newVal, oldVal) {
+                    if(newVal!=undefined) {
+                        var features=topojson.feature(newVal, newVal.objects.provinces).features;
+                        drawProvinces(features);    
+                        parseCentroids(features);
+                    }
+                })
+                
+                $scope.$watch('taiwan', function(newVal, oldVal) {
+                    if(newVal!=undefined) {
+                        var features=topojson.feature(newVal, newVal.objects.layer1).features.filter(function(d) { return d.properties.GU_A3 === 'TWN'; })
+                        parseCentroids(features)
+                        drawTaiwan(features)
+                    }
+                })
+
+                $scope.$watch('hkmacau', function(newVal, oldVal) {
+                    if(newVal!=undefined) {
+                        var features=topojson.feature(newVal, newVal.objects.layer1).features;
+                        parseCentroids(features)
+                        drawHkMacau(features)
+                    }
+                })
             })
 
             // draw edges
@@ -319,6 +327,21 @@ app.directive("map", function () {
             var geoDefs=geo.append("defs").attr("class","geo-arrows")
 
             var geoStrokeColor="#428bca"
+                            
+            var tip = d3.tip()
+                  .attr('class', 'd3-tip')
+                  .offset([10, 0])
+                  .html(function(d) {
+                    return "<small> "+ "<strong>Name: </strong><em>"+d.name+"</em><br />"+"<strong>Population: </strong><em>"+d.population+"</em><br />"+"<strong>Gdp: </strong><em>"+d.gdp+"</em>"+"</small>";
+                  })
+
+            geo.call(tip);
+
+            $scope.$watch("provincesCount", function(newVal, oldVal) {
+                if (newVal!= undefined) {
+                    drawUserPie(d3.select(".geo-pie-container"),newVal)
+                }
+            })
 
             $scope.$watch('geoEdges', function(newVal, oldVal) {
 
@@ -354,7 +377,6 @@ app.directive("map", function () {
                             .attr("y1", function(d) { return $scope.centroidsXY[d.source].y; })
                             .attr("x2", function(d) { return $scope.centroidsXY[d.target].x; })
                             .attr("y2", function(d) { return $scope.centroidsXY[d.target].y; })
-
                 }
 
                 if($scope.ratio!=undefined) {
@@ -372,8 +394,6 @@ app.directive("map", function () {
                     });
 
                     //legend
-
-                    
                     d3.select(".legend-rates").remove()
 
                     var mapRates=mapLegend.append("g")
@@ -418,7 +438,7 @@ app.directive("map", function () {
 
                 geoPaths.exit().remove();
             })
-          
+            
             function parseCentroids (features) {
                 var vizWidth=900,
                     cnt=0,
@@ -455,10 +475,12 @@ app.directive("map", function () {
                     else if (d.properties.name==undefined && d.properties.NAME=="Macao") centroid.name='Aomen';
                     else centroid.name='Xianggang';
 
+                    d.name=centroid.name;
                     centroid.type="province";
-                    // centroid.cleanName=provincesInfo[centroid.name].clean_name
-                    // centroid.gdp=provincesInfo[centroid.name].gdp
-                    // centroid.population=provincesInfo[centroid.name].population
+
+                    d.cleanName=$scope.provincesInfo[centroid.name].clean_name
+                    d.gdp=$scope.provincesInfo[centroid.name].gdp
+                    d.population=$scope.provincesInfo[centroid.name].population
 
                     $scope.centroids.push(centroid);
                     
@@ -466,19 +488,293 @@ app.directive("map", function () {
                 });
             }
 
-            // function sortCentroids () {
-            // // sort according to selected value
-            // if (centroidsSort=="gdp") mapCentroids.sort(function(a,b){ return b.gdp-a.gdp;})
-            // else if (centroidsSort=="population") mapCentroids.sort(function(a,b){ return b.population-a.population;})
-            // else if (centroidsSort == "meme") mapCentroids.sort(function(a,b){return umap[b.name]-umap[a.name] })
-            // }
-            
+        
+            $scope.$watch('showClusters', function(newVal, oldVal) {
+                if(newVal!=undefined && newVal!=oldVal) setupLegend($scope.clusters)
+            }) 
+
+            function setupLegend(_data) {
+                // console.log(_data);
+                var mColor=d3.scale.category10();
+                // controls 
+                var toggleGeoClustersButton=mapControls.append("g").attr("class","toggleClusters")
+                    .on("click",function (d){ 
+                       toggleClusters();
+                    })
+                toggleGeoClustersButton.append("circle")
+                    .attr("r",5)
+                    .attr("cx",10)
+                    .attr("cy",20)
+                toggleGeoClustersButton.append("text")
+                    .attr("dx",20)
+                    .attr("dy",20)
+                    .style("fill","#404040")
+                    .style("font-size",10)
+                    .text(function (d) {
+                        if($scope.showClusters) return "Hide clustering"
+                        else return "Show clustering"
+                    })
+
+
+                var toggleGeoEdgesButton=mapControls.append("g").attr("class","toggleEdges")
+                    .on("click",function (d){ 
+                       toggleEdges();
+                    })
+
+                    toggleGeoEdgesButton.append("circle")
+                        .attr("r",5)
+                        .attr("cx",10)
+                        .attr("cy",45)
+                    
+                    toggleGeoEdgesButton.append("text")
+                        .attr("dx",20)
+                        .attr("dy",45)
+                        .style("fill","#404040")
+                        .style("font-size",10)
+                        .text(function (d) {
+                            if($scope.showClusters) return "Hide edges"
+                            else return "Show edges"
+                        })
+
+                var data=[];
+                for (province in _data) {
+                    var d="path."+province
+                    d3.select(d)
+                        .attr("fill", mColor(_data[province]))
+                    if(data.indexOf(_data[province])==-1) data.push(_data[province])
+                };
+                console.log(_data);
+                var svgClusterLegend=geo
+                       .append("g")
+                       .attr("class","geo-clusters-legend")
+                        .attr("width", 200)
+                        .attr("height", data.length/2*20)
+                        .attr("transform","translate("+(map_width-200)+",300)")
+                
+                svgClusterLegend.selectAll("*").remove()
+
+                svgClusterLegend.append("text")
+                    .style("font-size", 10)
+                    .text("Province users interactions groups ")
+                
+                var i=0,
+                    r=5;
+                
+                var clustersLegend=svgClusterLegend
+                        .selectAll(".cluster-legend-item")
+                       .data(data.sort(function(a,b){ return a-b}))
+                       .enter()
+                       .append("g")
+                       .attr("class","cluster-legend-item")
+                       .attr("transform",'translate(0,20)')
+
+                clustersLegend
+                    .append("circle")
+                    .attr("cx",function (d,i){
+                        if (d<data.length/2) return 10
+                        else return 110
+                    })
+                    .attr("cy",function (d,i){
+                        if (d<data.length/2) return i*r*3
+                        else return (i-data.length/2)*r*3
+                    })
+                    .attr("r",r)
+                    .style("fill",function(d,i){ return mColor(d)});
+
+                clustersLegend
+                    .append("text")
+                    .attr("dx",function (d,i){
+                        if (d<data.length/2) return 20
+                        else return 120
+                    })
+                    .attr("dy",function (d,i){
+                        if (d<data.length/2) return i*r*3
+                        else return (i-data.length/2)*r*3
+                    })
+                    .style("text-anchor", "start")
+                    .style("font-size", "10px")
+                    .attr("fill", "#404040")
+                    .text(function(d){ return "community "+(d+1)})
+            }
+        
+            function toggleClusters (){
+                if($scope.showClusters) tickMapColor($scope.clusters);
+                else tickMapColor(null);
+                $scope.showClusters= !$scope.showClusters;
+                d3.select(".toggleClusters").select("text").text(function (d) {
+                        if($scope.showClusters) return "Hide clustering"
+                        else return "Show clustering"
+                    })
+            }
+
+            function toggleEdges (){
+                console.log("edges");
+                if($scope.showEdges) d3.selectAll(".geoPath").style("display","none")
+                else d3.selectAll(".geoPath").style("display",null)
+                $scope.showEdges= !$scope.showEdges;
+                d3.select(".toggleEdges").select("text").text(function (d) {
+                        if($scope.showEdges) return "Hide edges"
+                        else return "Show edges"
+                    })
+            }
+
+            function tickMapColor(_data) {
+                if (_data==null) {
+                    d3.selectAll(".province").select("path").attr("fill",defaultFillColor);
+                } else {
+                    console.log('test');
+                    var mColor=d3.scale.category10();
+                    for (province in _data) {
+                        // console.log(province);
+                        var d="path."+province
+                        d3.select(d)
+                            .attr("fill", mColor(_data[province]))
+                    };
+
+                }
+            }
+
+            function drawUserPie(element, _data) {
+
+                var mcolor=d3.scale.category20c();
+
+                element.select(".pie-chart").remove()
+                
+                var data=[];
+                var t=d3.sum(_data.map(function(d){ return d.count }));
+                var others=0;
+                
+                _data.forEach(function (d){
+                    if(d.label == 0) return
+                    if(d.count/t*100>3) data.push({"label":d.label,
+                                "color": mcolor(d.label), 
+                                "value": d.count})
+                    else others+=d.count
+                })
+                data.push({"label":"Others",
+                            "color": mcolor("Others"), 
+                            "value": others})
+
+                data.map(function(d){
+
+                })
+
+                var width = 200,
+                    height = 130,
+                    radius = Math.min(width, height) / 2,
+                    labelr=radius + 10;
+
+                var arc = d3.svg.arc()
+                      .outerRadius(radius - 10)
+                      .innerRadius(0);
+
+                var pie = d3.layout.pie()
+                      .sort(null)
+                      .value(function(d) { return d.value; });
+
+                var svg = element
+                      .append("svg")
+                      .attr("class","pie-chart")
+                      .attr("width", width)
+                      .attr("height", height)
+                      .append("g")
+                      .attr("transform", "translate(" + width / 2 + "," + height / 2 + ")");
+
+                var g = svg.selectAll(".arc")
+                      .data(pie(data))
+                    .enter().append("g")
+                      .attr("class", "arc");
+
+                g.append("path")
+                      .attr("d", arc)
+                      .attr("data-legend", function(d){ return d.data.label})
+                      .style("fill", function(d) { return d.data.color});
+
+                g.append("text")
+                    .attr("transform", function(d) { 
+                        var c = arc.centroid(d),
+                            x = c[0],
+                            y = c[1],
+                            // pythagorean theorem for hypotenuse
+                            h = Math.sqrt(x*x + y*y);
+                        return "translate(" + (x/h * labelr) +  ',' +
+                           (y/h * labelr) +  ")"; 
+                    })
+                    .attr("dy", ".25em")
+                    .attr("text-anchor", "middle") //center the text on it's origin
+                    .style("fill-opacity","0.8")
+                    .style("text-anchor", "middle")
+                    .style("font-size", "10px")
+                      .attr("fill", "#404040")
+                    .text(function(d) { return d.data.label; });
+
+                  // svg.append("text")
+                  //     .attr("class", "legend")
+                  //     .attr("transform", "translate("+(-(width/2))+","+(height-30)+")")
+                  //     .style("text-anchor", "start")
+                  //     .style("font-size", "12px")
+                  //     .attr("fill", "#404040")
+                  //     .text("User distribution by province")
+                  //     // .call("wrap",50)
+            }
+
+            var clickMap = function (d){
+                $scope.province=d.name;
+                createCloud(d3.select(".province-words"),$scope.provincesWords[d.name])
+            }
+
+            function createCloud(div,_words) {
+                div.select("svg").remove()
+
+                var w=200,
+                    h=300,
+                    fill = d3.scale.category20(), 
+                    fontScale=[15,30],
+                    cloudScale=_words.map(function(d){return d.count}),
+                    cloudScaleFont=d3.scale.linear().domain(d3.extent(cloudScale)).range(fontScale);
+
+                d3.layout.cloud().size([w, h])
+                      .words(_words)
+                      .padding(1)
+                      .rotate(function() { return ~~(Math.random() * 2) * 90; })
+                      .font("Impact")
+                      .fontSize(function(d) { return cloudScaleFont(d.count); })
+                      .on("end", draw)
+                      .start();
+
+                function draw(words) {
+                    div.append("svg")
+                        .attr("width", w)
+                        .attr("height", h)
+                        .append("g")
+                        .attr("transform","translate("+(w/2)+","+(h/2)+")")
+                      .selectAll("text")
+                        .data(words)
+                      .enter().append("text")
+                        .style("font-size", function(d) { return d.size + "px"; })
+                        .style("font-family", "Impact")
+                        .style("fill", function(d, i) { return fill(i); })
+                        .attr("text-anchor", "middle")
+                        .attr("transform", function(d) {
+                          return "translate(" + [d.x, d.y] + ")"+" rotate(" + d.rotate + ")";
+                        })
+                        .text(function(d) { return d.text; });
+                }
+            } 
+
+            var mapColor = function(d,i){
+                console.log(d.name);
+                return defaultFillColor;
+                // console.log($scope.clusters);
+                // console.log($scope.clusters[d.name]);
+            }
+
             // Mainland provinces
             function drawProvinces(features) {
                 map.append("g")
                     .attr("class", "mainland")
                     .selectAll("path")
-                    .data(features)
+                        .data(features)
                     .enter()
                     .append("g")
                     .attr("class", "province")
@@ -487,17 +783,12 @@ app.directive("map", function () {
                     // .attr("id", function(d) { return d.id; })
                     .attr("class", "province")
                     .attr("class", function(d){ return d.properties.name })
-                    .attr("fill", defaultFillColor)
+                    .attr("fill", mapColor)
                     .attr("stroke", defaultStrokeColor)
                     .attr("stroke-width", "0.35")
-                    .on("click",function(d){
-                        
-                        console.log(d);
-                        // update users mentioned
-                        // if(provinceToUsers[d.properties.name]!=undefined) updateSelection(provinceToUsers[d.properties.name]);
-
-                        
-                    });
+                    .on("click", clickMap)
+                    .on('mouseover', tip.show)
+                    .on('mouseout', tip.hide);
             }
 
             // Taiwan
@@ -517,14 +808,9 @@ app.directive("map", function () {
                     // .attr("fill", function(d) { return mapColor(umap["Taiwan"]); })
                     .attr("stroke", defaultStrokeColor)
                     .attr("stroke-width", "0.35")
-                    .on("click",function(d){
-                        
-                        console.log(d);
-                        // update users mentioned
-                        // if(provinceToUsers["Taiwan"]!=undefined) updateSelection(provinceToUsers["Taiwan"]);
-
-                        
-                    });
+                    .on("click", clickMap)
+                    .on('mouseover', tip.show)
+                    .on('mouseout', tip.hide);
             }
 
             // HK and Macau
@@ -545,9 +831,13 @@ app.directive("map", function () {
                     .attr("class", "province")
                     .attr("class", "Xianggang")
                     .attr("fill", defaultFillColor)
+
                     // .attr("fill", function(d) { return mapColor(umap["Xianggang"]); })
                     .attr("stroke", defaultStrokeColor)
-                    .attr("stroke-width", "0.35");
+                    .attr("stroke-width", "0.35")
+                    .on("click", clickMap)
+                    .on('mouseover', tip.show)
+                    .on('mouseout', tip.hide);
 
                 geo.select(".hk")
                     .append("text") //add some text
@@ -587,11 +877,9 @@ app.directive("map", function () {
                         .data($scope.centroids)
                     .enter()
                     .append("g")
-                    .attr("class", "centroid")
-                    .on("click",function(d){
-                        console.log(d);
-                        if(provinceToUsers[d.name]!=undefined) updateSelection(provinceToUsers[d.name]);
-                    })
+                    .attr("class", "centroid")                    
+                    .on("click", clickMap);
+
 
                 $scope.nodeCentroids
                         .data($scope.centroids)
@@ -650,8 +938,7 @@ app.directive("map", function () {
                         else
                             self.select("text")
                                 .attr("transform", "rotate(0)")
-                })
-
+            })
                 
             }
 
@@ -714,8 +1001,6 @@ app.directive("words", function () {
                         .call(wrap, 150);
                 }
             });
-
-
 
             function wrap(text, width) {
                 text.each(function() {
@@ -1019,7 +1304,6 @@ app.directive("words", function () {
         }
     }
 })
-
 
 app.directive("users", function () {
      return {
@@ -1465,3 +1749,30 @@ app.directive("users", function () {
         }
     }
 })
+
+// app.directive('slider', function ($parse) {
+//     return {
+//       restrict: 'E',
+//       replace: true,
+//       template: '<input type="text" />',
+//       link: function ($scope, element, attrs) {
+
+//         var model = $parse(attrs.model);
+        
+//         var slider = $(element[0]).slider({
+//             "max": updatedTimeMax,
+//             "value": [0,updatedTimeMax]
+//         });
+
+//         slider.on('slide', function(ev) {
+//             model.assign($scope, ev.value);
+
+//             $scope.start=$scope.timeSeriesData[ev.value[0]].timestamp;
+//             $scope.end=$scope.timeSeriesData[ev.value[1]-1].timestamp;
+
+//             $scope.$apply();
+
+//         });
+//       }
+//     }
+// });
