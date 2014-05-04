@@ -9,6 +9,49 @@ app.controller('navCtrl', function($scope,config,memeService){
         if (memelist.indexOf(meme.safename)!=-1) $scope.memeList.push(meme)
     });
   })
+
+  $('body').keydown(function (e) {
+      console.log(e.which);
+      if(e.which==87 && e.shiftKey==true) $scope.saveWords() // W
+      else if (e.which==71 && e.shiftKey==true) $scope.saveMap() // G
+      else if (e.which==67 && e.shiftKey==true) $scope.saveUsers() //C
+      else if (e.which==84 && e.shiftKey==true) $scope.saveTime()
+      else if (e.which==65 && e.shiftKey==true) $scope.saveAll()
+  });
+
+  $scope.saveAll = function () {
+    $scope.saveTime();
+    $scope.saveWords();
+    $scope.saveMap();
+    $scope.saveUsers();
+  }
+
+  $scope.saveTime = function(){
+      //time 
+      var sv=new Simg($(".time-container svg")[0]);
+      var fn="time_"+config.getFilename()
+      sv.download(fn);
+  }
+  $scope.saveWords = function(){
+    var sv=new Simg($(".words-container svg")[0]);
+    var fn="words_"+config.getFilename()
+    sv.download(fn);
+  }
+  $scope.saveMap = function(){
+      // map 
+      $(".map-controls").hide()
+      var sv=new Simg($(".geo-container svg")[0]);
+      var fn="map_"+config.getFilename()
+      sv.download(fn);
+      $(".map-controls").show()
+  }
+  $scope.saveUsers = function(){
+    var sv=new Simg($(".user-container svg")[0]);
+    var fn="time_"+config.getFilename()
+    sv.download(fn);
+  }
+
+
 })
 
 app.controller('dataCtrl', function($scope,$http,$location,$timeout,config,dataService){
@@ -39,8 +82,9 @@ app.controller('dataCtrl', function($scope,$http,$location,$timeout,config,dataS
 
   config.setName(safename);   //default
 
-
   $http.get("times/"+safename).success(function(_time_data) {
+
+    $scope.memeName=safename;
 
     // TIME
     $scope.timeSeriesData=_time_data
@@ -177,7 +221,8 @@ app.controller('geoCtrl', function($scope,$http,config,geoService,dataService){
     $http.get("/geoclusters/"+config.name).success(function(_geoclusters_data) {
       $scope.clusters=_geoclusters_data;
       $scope.showClusters=true;
-      $scope.showEdges=false;
+      $scope.showEdges=true;
+      $scope.showCentroids=true;
     })
 
     $scope.toggleClusters =function(){
@@ -214,11 +259,11 @@ app.controller('geoCtrl', function($scope,$http,config,geoService,dataService){
     })
 
     $scope.saveGeo=function(){
-      
+      $(".map-controls").hide()
       var sv=new Simg($(".geo-container svg")[0]);
       var fn="map_"+config.getFilename()
-      // console.log(fn);
       sv.download(fn);
+      $(".map-controls").show()
     }
 
 })
@@ -238,8 +283,9 @@ app.controller('wordCtrl', function($scope,$http,config,dataService){
   })
 
   $scope.saveWords=function(){
+    var fn="words_"+config.getFilename()
     var sv=new Simg($(".words-container svg")[0]);
-    sv.download();
+    sv.download(fn);
   }
 })
 
@@ -259,6 +305,7 @@ app.controller('userCtrl', function($scope,$http,config,dataService){
 
   $scope.saveUsers=function(){
     var sv=new Simg($(".user-container svg")[0]);
-    sv.download();
+    var fn="time_"+config.getFilename()
+    sv.download(fn);
   }
 })

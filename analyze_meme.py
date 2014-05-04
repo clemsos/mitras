@@ -22,7 +22,7 @@ db=MongoDB("weibodata").db
 # count = db[collection].count()
 
 # meme_names=[ meme for meme in os.listdir(results_path) if meme[-3:] != "csv"]
-meme_names=[
+# meme_names=[
  # 'biaoge',
  # 'thevoice',
  # 'hougong',
@@ -32,9 +32,13 @@ meme_names=[
  # 'moyan',
  # 'ccp',
  # 'yuanfang',
- 'qiegao']
+ # 'qiegao']
 
-meme_names=['biaoge']
+meme_names=[
+ 'tuhao',
+ 'diaosi'
+]
+# meme_names=['biaoge']
 print meme_names
 
 t0=time()
@@ -59,7 +63,6 @@ def get_province(_userid):
         return api.provinces[province_code]
     except KeyError :
         return 0
-        pass
 
 for meme_name in meme_names:
 
@@ -292,7 +295,7 @@ for meme_name in meme_names:
         except KeyError: pass
         try : t=user_provinces[e[1]]
         except KeyError: pass 
-        if s!=0 and t!=0: province_edges_weighted.append((str(s)+" "+str(t)+" "+str(e[2])))
+        if s!=0 and t!=0: province_edges_weighted.append((str(s).replace(" ","_")+" "+str(t).replace(" ","_")+" "+str(e[2])))
 
     Gp = nx.read_weighted_edgelist(province_edges_weighted, nodetype=str, delimiter=" ",create_using=nx.DiGraph())
 
@@ -306,7 +309,6 @@ for meme_name in meme_names:
     print "Number of partitions : ", len(set(provinces_communities.values()))
     # modularity=community.modularity(user_communities,Gp.to_undirected())
     # print "Modularity of the best partition: %f"%modularity
-
 
     # WORD graph info
     print 

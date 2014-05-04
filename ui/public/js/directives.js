@@ -42,16 +42,17 @@ app.directive('timeserie', function () {
         scope: { 
             timeData: '=timeData',
             start: '=start',
-            end: '=end'
+            end: '=end',
+            memeName: "=memeName"
 
          },
         link: function ($scope, element, attrs) {
             
             // console.log("timeline binded");
 
-            var margin = {top: 20, right: 20, bottom: 40, left: 40},
+            var margin = {top: 20, right: 20, bottom: 80, left: 40},
                         width = 900,
-                        height = 200,
+                        height = 250,
                         gap = 0,
                         ease = 'cubic-in-out',
                         bars;
@@ -64,6 +65,7 @@ app.directive('timeserie', function () {
             // Construct our SVG object.
             var svg = d3.select(element[0])
                 .append("svg")
+                .style("background","#fff")
                 .attr("width", time_width + margin.left + margin.right)
                 .attr("height", time_height + margin.top + margin.bottom)
                     .append("g")
@@ -107,12 +109,23 @@ app.directive('timeserie', function () {
                         .duration(duration)
                         .ease(ease)
                         .call(xAxis);
+
+                   
                     
                     // Draw bars. 
                     bars = svg.append("g")
                         .attr("class","timebar")
                         .selectAll(".timebar")
                         .data( _data, function(d) { return d.date; });
+
+                    console.log($scope);
+                    d3.select(".timebar")
+                        .append("g")
+                        .attr("transform","translate(50,10)")
+                        .append("text")
+                        .style("font-size",9)
+                        .style("color", "#404040")
+                        .text("Volume of tweets in meme "+$scope.memeName +" (year 2012)")
 
                     bars.transition()
                         .duration(duration)
@@ -171,6 +184,10 @@ app.directive('timeserie', function () {
                             .attr("font-size", 10)
                             .text("Qty per day (tweets)")
                   
+                    svg.selectAll(".domain")
+                        .attr("fill", "none")
+                        .attr("stroke", "#000")
+
                     bars.exit().transition().style({opacity: 0}).remove();
 
                     duration = 500;
@@ -213,11 +230,11 @@ app.directive("map", function () {
                     centroidsSort="gdp";
                     mapY=100,
                     map_width=800,
-                    map_height=600,
+                    map_height=500,
                     vizWidth=1000;
 
                 var geo = d3.select(element[0]).append("svg")
-
+                    .style("background","#fff")
                     .attr("width", map_width)
                     .attr("height", map_height)
                     .attr("preserveAspectRatio", "xMidYMid")
@@ -231,10 +248,10 @@ app.directive("map", function () {
                     .projection(projection);
 
                 var mapLegend=geo.append("g").attr("class","map-legend")
-                                .attr("transform", "translate("+(100)+","+(map_height-200)+")");
+                                .attr("transform", "translate("+(50)+","+(10)+")");
                                 // console.log($scope);
                 var mapControls=geo.append("g").attr("class","map-controls")
-                                .attr("transform", "translate("+(map_width-100)+","+(100)+")");
+                                .attr("transform", "translate("+(map_width-150)+","+(50)+")");
 
                 $scope.$watch('memeName', function(newVal, oldVal) {
                     console.log(newVal);
@@ -246,7 +263,7 @@ app.directive("map", function () {
                             .style("fill","#404040")
                             .style("margin-left",5)
                             .style("font-size",10)
-                            .call(wrap, 135);
+                            .call(wrap, 115);
                     }
                 })
 
@@ -291,7 +308,7 @@ app.directive("map", function () {
                 var defaultFillColor="#eee",
                     defaultStrokeColor="#404040";
 
-
+            // draw map
             $scope.$watch("provincesInfo",function (val){
 
                 if(val==undefined) return
@@ -327,7 +344,8 @@ app.directive("map", function () {
             var geoDefs=geo.append("defs").attr("class","geo-arrows")
 
             var geoStrokeColor="#428bca"
-                            
+            
+            // tooltip  
             var tip = d3.tip()
                   .attr('class', 'd3-tip')
                   .offset([10, 0])
@@ -337,6 +355,7 @@ app.directive("map", function () {
 
             geo.call(tip);
 
+            // total pie
             $scope.$watch("provincesCount", function(newVal, oldVal) {
                 if (newVal!= undefined) {
                     drawUserPie(d3.select(".geo-pie-container"),newVal)
@@ -380,7 +399,6 @@ app.directive("map", function () {
                 }
 
                 if($scope.ratio!=undefined) {
-                    
                     // poids de l'échange pondéré par la population totale de Weibo
                     var geoExt=newVal.map(function(d){
                             return (d.weight*$scope.ratio[d.source])/100;
@@ -489,7 +507,7 @@ app.directive("map", function () {
             }
 
         
-            $scope.$watch('showClusters', function(newVal, oldVal) {
+            $scope.$watch('clusters', function(newVal, oldVal) {
                 if(newVal!=undefined && newVal!=oldVal) setupLegend($scope.clusters)
             }) 
 
@@ -524,16 +542,34 @@ app.directive("map", function () {
                     toggleGeoEdgesButton.append("circle")
                         .attr("r",5)
                         .attr("cx",10)
-                        .attr("cy",45)
+                        .attr("cy",50)
                     
                     toggleGeoEdgesButton.append("text")
                         .attr("dx",20)
-                        .attr("dy",45)
+                        .attr("dy",50)
                         .style("fill","#404040")
                         .style("font-size",10)
                         .text(function (d) {
                             if($scope.showClusters) return "Hide edges"
                             else return "Show edges"
+                        })
+
+                var toggleCentroidsButton=mapControls.append("g").attr("class","toggleCentroids")
+                    .on("click",function (d){ 
+                       toggleCentroids();
+                    })
+                    toggleCentroidsButton.append("circle")
+                        .attr("r",5)
+                        .attr("cx",10)
+                        .attr("cy",35)
+                    toggleCentroidsButton.append("text")
+                        .attr("dx",20)
+                        .attr("dy",35)
+                        .style("fill","#404040")
+                        .style("font-size",10)
+                        .text(function (d) {
+                            if($scope.showClusters) return "Hide centroids"
+                            else return "Show centroids"
                         })
 
                 var data=[];
@@ -543,13 +579,13 @@ app.directive("map", function () {
                         .attr("fill", mColor(_data[province]))
                     if(data.indexOf(_data[province])==-1) data.push(_data[province])
                 };
-                console.log(_data);
+                // console.log(_data);
                 var svgClusterLegend=geo
                        .append("g")
                        .attr("class","geo-clusters-legend")
                         .attr("width", 200)
                         .attr("height", data.length/2*20)
-                        .attr("transform","translate("+(map_width-200)+",300)")
+                        .attr("transform","translate("+(50)+","+(map_height-100)+")")
                 
                 svgClusterLegend.selectAll("*").remove()
 
@@ -561,45 +597,51 @@ app.directive("map", function () {
                     r=5;
                 
                 var clustersLegend=svgClusterLegend
-                        .selectAll(".cluster-legend-item")
-                       .data(data.sort(function(a,b){ return a-b}))
-                       .enter()
-                       .append("g")
-                       .attr("class","cluster-legend-item")
-                       .attr("transform",'translate(0,20)')
+                    .selectAll(".cluster-legend-item")
+                   .data(data.sort(function(a,b){ return a-b}))
+                   .enter()
+                   .append("g")
+                   .attr("class","cluster-legend-item")
+                   .attr("transform",'translate(0,20)')
 
-                clustersLegend
-                    .append("circle")
-                    .attr("cx",function (d,i){
-                        if (d<data.length/2) return 10
-                        else return 110
-                    })
-                    .attr("cy",function (d,i){
-                        if (d<data.length/2) return i*r*3
-                        else return (i-data.length/2)*r*3
-                    })
-                    .attr("r",r)
-                    .style("fill",function(d,i){ return mColor(d)});
+                    clustersLegend
+                        .append("circle")
+                        .attr("cx",function (d,i){
+                            if (d<data.length/2) return 10
+                            else return 110
+                        })
+                        .attr("cy",function (d,i){
+                            if (d<data.length/2) return i*r*3
+                            else return (i-data.length/2)*r*3
+                        })
+                        .attr("r",r)
+                        .style("fill",function(d,i){ return mColor(d)});
 
-                clustersLegend
-                    .append("text")
-                    .attr("dx",function (d,i){
-                        if (d<data.length/2) return 20
-                        else return 120
-                    })
-                    .attr("dy",function (d,i){
-                        if (d<data.length/2) return i*r*3
-                        else return (i-data.length/2)*r*3
-                    })
-                    .style("text-anchor", "start")
-                    .style("font-size", "10px")
-                    .attr("fill", "#404040")
-                    .text(function(d){ return "community "+(d+1)})
+                    clustersLegend
+                        .append("text")
+                        .attr("dx",function (d,i){
+                            if (d<data.length/2) return 20
+                            else return 120
+                        })
+                        .attr("dy",function (d,i){
+                            if (d<data.length/2) return i*r*3
+                            else return (i-data.length/2)*r*3
+                        })
+                        .style("text-anchor", "start")
+                        .style("font-size", "10px")
+                        .attr("fill", "#404040")
+                        .text(function(d){ return "community "+(d+1)})
             }
         
             function toggleClusters (){
-                if($scope.showClusters) tickMapColor($scope.clusters);
-                else tickMapColor(null);
+                if($scope.showClusters){ 
+                    tickMapColor($scope.clusters);
+                    d3.selectAll(".geo-clusters-legend").style("display",null)
+                }
+                else {
+                    tickMapColor(null);
+                    d3.selectAll(".geo-clusters-legend").style("display","none")
+                }
                 $scope.showClusters= !$scope.showClusters;
                 d3.select(".toggleClusters").select("text").text(function (d) {
                         if($scope.showClusters) return "Hide clustering"
@@ -608,13 +650,39 @@ app.directive("map", function () {
             }
 
             function toggleEdges (){
-                console.log("edges");
-                if($scope.showEdges) d3.selectAll(".geoPath").style("display","none")
-                else d3.selectAll(".geoPath").style("display",null)
+
+                if($scope.showEdges) {
+                    d3.selectAll(".geoPath").style("display","none")
+                    d3.selectAll(".legend-rates").style("display","none")
+
+                }
+                else {
+                    d3.selectAll(".geoPath").style("display",null)
+                    d3.selectAll(".legend-rates").style("display",null)
+                }
+
                 $scope.showEdges= !$scope.showEdges;
                 d3.select(".toggleEdges").select("text").text(function (d) {
                         if($scope.showEdges) return "Hide edges"
                         else return "Show edges"
+                    })
+            }
+
+            function toggleCentroids (){
+                // console.log("edges");
+                if($scope.showCentroids) {
+                    d3.select(".centroids").style("display","none")
+                    // d3.selectAll(".centroid").select("circle").style("display","none")
+                }
+                else {
+                    // d3.selectAll(".centroid").select("circle").style("display",null)
+                    d3.selectAll(".centroids").style("display",null)
+                }
+
+                $scope.showCentroids= !$scope.showCentroids;
+                d3.select(".toggleCentroids").select("text").text(function (d) {
+                        if($scope.showCentroids) return "Hide centroids"
+                        else return "Show centroids"
                     })
             }
 
@@ -655,9 +723,6 @@ app.directive("map", function () {
                             "color": mcolor("Others"), 
                             "value": others})
 
-                data.map(function(d){
-
-                })
 
                 var width = 200,
                     height = 130,
@@ -961,6 +1026,7 @@ app.directive("words", function () {
 
             var viz=d3.select(element[0]).append("svg")
                 .attr("class","svg-viz")
+                .style("background","#fff")
                 .attr("width", w)
                 .attr("height", h)
                 .attr("preserveAspectRatio", "xMidYMid")
@@ -1118,9 +1184,10 @@ app.directive("words", function () {
                 function drawWords() {
 
                     var ext=wordsData.nodes.map(function(d){ return d.children.length }), 
-                        wordScaleSize=d3.scale.linear().domain(d3.extent(ext)).range([15, 35]),
+                        wordScaleSize=d3.scale.linear().domain(d3.extent(ext)).range([15, 45]),
                         wordScaleOpacity=d3.scale.linear().domain(d3.extent(ext)).range([.5,1]),
-                        wordColor = d3.scale.linear().domain(d3.extent(ext)).range(["#a1d99b","#006d2c"]);
+                        wordColor = d3.scale.linear().domain(d3.extent(ext)).range(["#a1d99b","#006d2c"]),
+                        c=d3.scale.category10();
 
                     wordNodes.each(function (d, i) {
 
@@ -1136,7 +1203,12 @@ app.directive("words", function () {
                             .attr("dx", 12)
                             .attr("dy", 8)
                             .style("font-size", function(d) { return wordScaleSize(d.children.length) })//scale_size(d.btw_cent) })
-                            .style("fill", function(d) {  return "#006d2c" })
+                            .style("fill", function(d) {  
+                                // return 
+                                // "#006d2c" 
+                                // console.log(d);
+                                return c(d.community)
+                            })
                             // .style("fill-opacity", function(d) {  return "#006d2c" })
                             // .style("fill-opacity", function(d) {  return wordScaleOpacity(d.count) })
                             .attr("text-anchor", "middle") // text-align: right
@@ -1147,7 +1219,8 @@ app.directive("words", function () {
 
                         wordsX[d.name]=x;
                         wordsY[d.name]=y;
-                    }).on("mouseover",function(d,i){
+                    }).on("mouseover",function(d,i,event){
+                        // console.log(d3.mouse());
                         
                         $scope.selection=true;
                         d.selected=true;
@@ -1155,27 +1228,50 @@ app.directive("words", function () {
                             e.selected=true;
                         })
                         
-                        drawWordPie(d3.select(".wordpie-container"),$scope.wordProvinces[d.name])
+                        drawWordPie(divWords.append("g").attr("transform",'translate(100,50)'),$scope.wordProvinces[d.name])
 
                     }).on("mouseout",function(d,i){
+
                         $scope.selection=false;
                         d.selected=false;
                         d.children.forEach(function(e){
                             e.selected=false;
                         })
-                        d3.select(".wordpie-chart").remove()
+                        d3.select(".pie-chart").remove()
 
                     });
+                    // .on("click",function(d){
+                    //     console.log(d);
+                    // })
+                    // ;
 
                     drawWordPath();
                 }
 
-                function drawWordPie(element, data) {
+                function drawWordPie(element, _data) {
 
-                  d3.select(".wordpie-chart").remove()
-                  data.map(function(d){
-                    if(d.label != 0) return d
-                  })
+                  element.select(".pie-chart").remove()
+
+                    var mcolor=d3.scale.category20c();
+
+
+                  // parse only more than 3 % and group others
+                  data=[];
+                  var t=d3.sum(_data.map(function(d){ return d.value }));
+                  var others=0;
+
+                    
+                    _data.forEach(function (d){
+                        if(d.label == 0) return
+                        if(d.value/t*100>7) data.push({"label":d.label,
+                                    "color": mcolor(d.label), 
+                                    "value": d.value})
+                        else others+=d.value
+                    })
+
+                  data.push({"label":"Others",
+                            "color": "#CCC", 
+                            "value": others})
 
                   var width = 200,
                     height = 200,
@@ -1190,8 +1286,8 @@ app.directive("words", function () {
                       .value(function(d) { return d.value; });
 
                   var svg = element
-                      .append("svg")
-                      .attr("class","wordpie-chart")
+                      .append("g")
+                      .attr("class","pie-chart")
                       .attr("width", 200)
                       .attr("height", 200)
                       .append("g")
@@ -1213,6 +1309,8 @@ app.directive("words", function () {
                       .style("fill","#000")
                       .style("fill-opacity","0.8")
                       .style("text-anchor", "middle")
+                      .style("font-size", 10)
+                      .style("fill","#000")
                       .text(function(d) { return d.data.label; });
 
                   svg.append("g")
@@ -1257,10 +1355,11 @@ app.directive("words", function () {
                         return "translate(" + x + "," + y + ")"; 
 
                     }).attr("fill-opacity",function(d){
+                        // return 1
                         if($scope.selection) {
-                            if(!d.selected) return 0;
-                            else return wordScaleOpacity(d.children.length);
-                        } else return wordScaleOpacity(d.children.length);
+                            if(!d.selected) return 0.2;
+                            else return 1 // wordScaleOpacity(d.children.length);
+                        } else return 1 // wordScaleOpacity(d.children.length);
                     });
 
                     tickWordPath();
@@ -1324,6 +1423,7 @@ app.directive("users", function () {
 
             var viz=d3.select(element[0]).append("svg")
                 .attr("class","svg-viz")
+                .style("background","#fff")
                 .attr("width", svg_w)
                 .attr("height", h)
                 .attr("preserveAspectRatio", "xMidYMid")
@@ -1524,8 +1624,7 @@ app.directive("users", function () {
                         d.children.forEach(function(e){
                             e.selected=true;
                         })
-                        
-                        drawUserPie(d3.select(".pie-container"),myProvinces[d.community])
+                        drawUserPie(divUsers.append("g").attr("transform",'translate(-100,200)'),myProvinces[d.community])
                     }).on("mouseout",function(d,i){
                         $scope.selection=false;
                         d.selected=false;
@@ -1607,7 +1706,7 @@ app.directive("users", function () {
 
                         self.attr("stroke-opacity",function(e){
                             if($scope.selection) {
-                                if(!d.selected) return 0;
+                                if(!d.selected) return 0.2;
                                 else return 1;
                             } else return 1;
                         })
@@ -1638,7 +1737,7 @@ app.directive("users", function () {
                             return "translate(" + x + "," + y + ")"; 
                         }).attr("fill-opacity",function(d){
                             if($scope.selection) {
-                                if(!d.selected) return 0;
+                                if(!d.selected) return 0.3;
                                 else return 1;
                             } else return 1;
                         });
@@ -1692,13 +1791,31 @@ app.directive("users", function () {
                   };
                 }
 
-                function drawUserPie(element, data) {
+                function drawUserPie(element, _data) {
 
-                  d3.select(".pie-chart").remove()
+                  element.select(".pie-chart").remove()
 
-                  data.map(function(d){
-                    if(d.label != 0) return d
-                  })
+                  var mcolor=d3.scale.category20c();
+
+
+                  // parse only more than 3 % and group others
+                  data=[];
+                  var t=d3.sum(_data.map(function(d){ return d.value }));
+                  var others=0;
+                  console.log(t);
+                    
+                    _data.forEach(function (d){
+                        if(d.label == 0) return
+                        if(d.value/t*100>7) data.push({"label":d.label,
+                                    "color": mcolor(d.label), 
+                                    "value": d.value})
+                        else others+=d.value
+                    })
+                    console.log(others);
+                  data.push({"label":"Others",
+                            "color": "#ccc", 
+                            "value": others})
+
 
                   var width = 200,
                     height = 200,
@@ -1713,7 +1830,7 @@ app.directive("users", function () {
                       .value(function(d) { return d.value; });
 
                   var svg = element
-                      .append("svg")
+                      .append("g")
                       .attr("class","pie-chart")
                       .attr("width", 200)
                       .attr("height", 200)
@@ -1733,16 +1850,16 @@ app.directive("users", function () {
                   g.append("text")
                       .attr("transform", function(d) { return "translate(" + arc.centroid(d) + ")"; })
                       .attr("dy", ".25em")
-                      .style("fill","#000")
                       .style("fill-opacity","0.8")
                       .style("text-anchor", "middle")
+                      .style("font-size", 10)
+                      .style("fill","#000")
                       .text(function(d) { return d.data.label; });
 
-                  svg.append("g")
-                      .attr("class", "legend")
-                      .attr("transform", "translate(50,30)")
-                      .style("font-size", "12px")
-                      // .call(d3.legend)
+                  // svg.append("g")
+                  //     .attr("class", "legend")
+                  //     .attr("transform", "translate(50,30)")
+                  //     .call(d3.legend)
                 }
 
             })
